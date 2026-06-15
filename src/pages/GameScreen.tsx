@@ -6,6 +6,8 @@ import { getTheme } from '../themes/boardThemes';
 import Board2D from '../components/Board2D';
 import TutorPanel from '../components/TutorPanel';
 import ThemePicker from '../components/ThemePicker';
+import { isMuted, toggleMuted, resumeAudio } from '../audio/sound';
+import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
 import type { Difficulty, MoveBase, Player } from '../engine/types';
 import './GameScreen.css';
 
@@ -24,6 +26,16 @@ export default function GameScreen() {
   const store = useGameStore();
   const [tab, setTab] = useState<'tutor' | 'moves' | 'setup'>('tutor');
   const [themeOpen, setThemeOpen] = useState(false);
+  const [muted, setMutedState] = useState(isMuted());
+  const rating = useProfile((s) => s.rating);
+  const lastUnlocked = useProfile((s) => s.lastUnlocked);
+  const clearLastUnlocked = useProfile((s) => s.clearLastUnlocked);
+
+  useEffect(() => {
+    if (!lastUnlocked) return;
+    const t = setTimeout(() => clearLastUnlocked(), 5000);
+    return () => clearTimeout(t);
+  }, [lastUnlocked, clearLastUnlocked]);
 
   useEffect(() => {
     if (gameId && getGame(gameId)) useGameStore.getState().newGame(gameId);
@@ -77,12 +89,14 @@ export default function GameScreen() {
           </div>
         </div>
         <div className="row gap-xs">
+          <span className="chip rating-chip hide-sm" title="Your rating">⚡ {rating} · {ratingTitle(rating)}</span>
           <div className="seg">
             <button className={store.view === '2d' ? 'on' : ''} onClick={() => store.setView('2d')}>2D</button>
             <button className={store.view === '3d' ? 'on' : ''} onClick={() => store.setView('3d')}>3D</button>
           </div>
+          <button className="btn icon sm" title={muted ? 'Unmute' : 'Mute'} onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
           <button className="btn sm" onClick={() => setThemeOpen(true)}>🎨 Theme</button>
-          <Link className="btn sm ghost" to={`/learn/${def.id}`}>📖 Learn</Link>
+          <Link className="btn sm ghost hide-sm" to={`/learn/${def.id}`}>📖 Learn</Link>
         </div>
       </header>
 
@@ -138,6 +152,22 @@ export default function GameScreen() {
       {themeOpen && <ThemePicker current={store.themeId} onPick={(id) => store.setTheme(id)} onClose={() => setThemeOpen(false)} />}
       {store.promotion && <Promotion store={store} />}
       {store.toast && <div className="toast glass">{store.toast}</div>}
+      {lastUnlocked && <AchievementToast id={lastUnlocked} />}
+    </div>
+  );
+}
+
+function AchievementToast({ id }: { id: string }) {
+  const a = ACHIEVEMENTS.find((x) => x.id === id);
+  if (!a) return null;
+  return (
+    <div className="achievement-toast glass">
+      <span className="at-ic">{a.icon}</span>
+      <div className="col">
+        <span className="at-title">Achievement unlocked</span>
+        <strong>{a.title}</strong>
+        <span className="faint" style={{ fontSize: 12 }}>{a.desc}</span>
+      </div>
     </div>
   );
 }

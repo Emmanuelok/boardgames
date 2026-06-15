@@ -1,6 +1,7 @@
 import { useGameStore } from '../store/useGameStore';
 import { BAND_META } from '../engine/grade';
 import type { GameStatus, MoveExplanation, Player } from '../engine/types';
+import GameReview from './GameReview';
 import './TutorPanel.css';
 
 export default function TutorPanel() {
@@ -33,7 +34,7 @@ export default function TutorPanel() {
 
       <div className="tutor-body">
         {status.kind === 'win' || status.kind === 'draw' ? (
-          <ResultBanner def={def} status={status} />
+          <GameReview def={def} log={log} status={status} />
         ) : null}
 
         {thinking && (

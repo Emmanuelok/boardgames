@@ -3,6 +3,8 @@ import type { Difficulty, GameDefinition, GameStatus, MoveBase, MoveExplanation,
 import { getGame } from '../engine/registry';
 import { engine } from '../engine/engineClient';
 import { resolveClick } from '../engine/interaction';
+import { playSound, resumeAudio, type SoundName } from '../audio/sound';
+import { useProfile } from '../profile/profile';
 import { DEFAULT_THEME_ID } from '../themes/boardThemes';
 
 export interface LogEntry {
@@ -72,6 +74,29 @@ function ensureNotation(def: GameDefinition, state: any, move: MoveBase): MoveBa
 }
 
 export const useGameStore = create<State>((set, get) => {
+  let recorded = false; // ensure a finished game updates the profile only once
+
+  /** Sound + profile side-effects after a move lands. */
+  const afterEffects = (move: MoveBase, status: GameStatus) => {
+    let snd: SoundName = 'move';
+    const m = move as any;
+    if (move.to === -1) snd = 'click';
+    else if (status.kind === 'win') snd = get().mode === 'ai' && status.winner !== get().humanColor ? 'lose' : 'win';
+    else if (status.kind === 'draw') snd = 'draw';
+    else if (status.kind === 'check') snd = 'check';
+    else if (m.castle) snd = 'castle';
+    else if (m.promo || m.promotion) snd = 'promote';
+    else if (move.capture) snd = 'capture';
+    playSound(snd);
+
+    if ((status.kind === 'win' || status.kind === 'draw') && !recorded && get().mode === 'ai') {
+      recorded = true;
+      const hc = get().humanColor;
+      const result = status.kind === 'draw' ? 'draw' : status.winner === hc ? 'win' : 'loss';
+      try { useProfile.getState().recordResult(get().gameId!, result, get().difficulty); } catch { /* ignore */ }
+    }
+  };
+
   /** Apply a move, record it, snapshot for undo, and fetch its tutor note. */
   const commit = (move: MoveBase, before: any) => {
     const def = get().def!;
@@ -98,6 +123,7 @@ export const useGameStore = create<State>((set, get) => {
         })))
         .catch(() => set((s) => ({ log: s.log.map((e, i) => (i === idx ? { ...e, analyzing: false } : e)) })));
     }
+    afterEffects(move, status);
     return after;
   };
 
@@ -146,6 +172,7 @@ export const useGameStore = create<State>((set, get) => {
     newGame(gameId) {
       const def = getGame(gameId);
       if (!def) return;
+      recorded = false;
       const state = def.createInitialState();
       set({
         gameId, def, state, past: [], future: [], log: [],
@@ -162,6 +189,7 @@ export const useGameStore = create<State>((set, get) => {
     },
 
     onCellClick(cell) {
+      resumeAudio();
       const { def, state, status, mode, humanColor, selected, thinking } = get();
       if (!def || thinking) return;
       if (status.kind === 'win' || status.kind === 'draw') return;
@@ -178,7 +206,7 @@ export const useGameStore = create<State>((set, get) => {
       const r = resolveClick(def, state, selected, get().targets, cell);
       switch (r.kind) {
         case 'play': commit(r.move, state); setTimeout(drive, 120); break;
-        case 'select': set({ selected: r.cell, targets: r.targets }); break;
+        case 'select': set({ selected: r.cell, targets: r.targets }); playSound('select'); break;
         case 'promote': set({ promotion: { from: r.from, to: r.to, options: r.options } }); break;
         case 'clear': set({ selected: null, targets: [] }); break;
         case 'none': break;
