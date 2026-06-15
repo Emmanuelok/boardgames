@@ -17,6 +17,8 @@ interface Props {
   status: GameStatus;
   hint: MoveBase | null;
   onCell: (cell: number) => void;
+  /** Hero/idle mode: slowly auto-rotate and disable interaction. */
+  autoRotate?: boolean;
 }
 
 export default function Board3D(props: Props) {
@@ -46,10 +48,13 @@ export default function Board3D(props: Props) {
         <ContactShadows position={[0, -0.12, 0]} opacity={0.5} scale={span * 2.2} blur={2.4} far={6} resolution={512} color="#000000" />
         <OrbitControls
           enablePan={false}
+          enableZoom={!props.autoRotate}
+          enableRotate={!props.autoRotate}
           minDistance={span * 0.7}
           maxDistance={span * 2.2}
           maxPolarAngle={Math.PI / 2.05}
-          autoRotate={false}
+          autoRotate={!!props.autoRotate}
+          autoRotateSpeed={0.7}
           target={[0, 0.2, 0]}
         />
       </Canvas>

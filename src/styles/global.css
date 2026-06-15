@@ -43,41 +43,58 @@ button { font-family: inherit; cursor: pointer; }
 .app-bg {
   position: fixed;
   inset: 0;
-  z-index: -2;
+  z-index: -3;
   background:
-    radial-gradient(60% 50% at 15% 10%, rgba(124, 92, 255, 0.22), transparent 60%),
-    radial-gradient(55% 55% at 85% 15%, rgba(34, 211, 238, 0.18), transparent 60%),
-    radial-gradient(60% 60% at 50% 100%, rgba(244, 114, 182, 0.16), transparent 60%),
-    linear-gradient(180deg, var(--bg-1), var(--bg-0));
+    radial-gradient(70% 55% at 12% 6%, rgba(124, 92, 255, 0.30), transparent 60%),
+    radial-gradient(60% 60% at 88% 12%, rgba(34, 211, 238, 0.22), transparent 60%),
+    radial-gradient(70% 65% at 50% 108%, rgba(244, 114, 182, 0.20), transparent 60%),
+    radial-gradient(50% 50% at 78% 82%, rgba(245, 185, 69, 0.12), transparent 60%),
+    linear-gradient(180deg, #0b0e1c, #06070f 60%, #050509);
+}
+.app-bg::before {
+  content: '';
+  position: absolute; inset: -30%;
+  background: conic-gradient(from 0deg at 50% 50%, transparent, rgba(124,92,255,0.10), transparent 30%, rgba(34,211,238,0.08), transparent 60%, rgba(244,114,182,0.08), transparent);
+  animation: spin 70s linear infinite;
+  mix-blend-mode: screen;
 }
 .app-bg::after {
   content: '';
   position: absolute;
   inset: -20%;
   background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0);
-  background-size: 26px 26px;
+  background-size: 28px 28px;
   mask-image: radial-gradient(70% 60% at 50% 40%, black, transparent 75%);
   animation: drift 40s linear infinite;
 }
-@keyframes drift { to { transform: translate3d(26px, 26px, 0); } }
+@keyframes drift { to { transform: translate3d(28px, 28px, 0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Fine film grain for a premium, less "flat" feel */
+.grain {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+}
 
 .blob {
   position: fixed;
-  z-index: -1;
-  filter: blur(70px);
-  opacity: 0.55;
+  z-index: -2;
+  filter: blur(80px);
+  opacity: 0.6;
   border-radius: 50%;
   pointer-events: none;
-  animation: float 22s ease-in-out infinite;
+  animation: float 24s ease-in-out infinite;
 }
-.blob.a { width: 420px; height: 420px; background: #6d3cff; top: -80px; left: -60px; }
-.blob.b { width: 380px; height: 380px; background: #1ea7c4; right: -60px; top: 20%; animation-delay: -6s; }
-.blob.c { width: 300px; height: 300px; background: #d6428a; left: 30%; bottom: -100px; animation-delay: -12s; }
+.blob.a { width: 540px; height: 540px; background: #6d3cff; top: -120px; left: -100px; }
+.blob.b { width: 480px; height: 480px; background: #1ea7c4; right: -90px; top: 14%; animation-delay: -7s; }
+.blob.c { width: 420px; height: 420px; background: #d6428a; left: 26%; bottom: -160px; animation-delay: -13s; }
+.blob.d { width: 360px; height: 360px; background: #e0a13a; right: 18%; bottom: -120px; animation-delay: -4s; opacity: 0.4; }
 @keyframes float {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(40px, -30px) scale(1.08); }
-  66% { transform: translate(-30px, 20px) scale(0.95); }
+  33% { transform: translate(50px, -36px) scale(1.10); }
+  66% { transform: translate(-36px, 26px) scale(0.94); }
 }
+.glow { box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 18px 50px -18px var(--accent); }
 
 /* Glass surfaces */
 .glass {
