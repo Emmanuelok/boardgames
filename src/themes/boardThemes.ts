@@ -188,7 +188,7 @@ export const THEME_CATEGORIES: ThemeCategory[] = [
   'Liquid Glass', 'Classic', 'Wood', 'Marble', 'Neon', 'Nature', 'Gemstone', 'Gradient', 'Minimal', 'Mono',
 ];
 
-export const DEFAULT_THEME_ID = 'glass-crystal';
+export const DEFAULT_THEME_ID = 'wood-walnut';
 
 export function getTheme(id: string | undefined): BoardTheme {
   return (id && THEME_MAP[id]) || THEME_MAP[DEFAULT_THEME_ID];

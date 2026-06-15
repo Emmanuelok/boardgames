@@ -19,8 +19,10 @@
   --glass-bd: rgba(255, 255, 255, 0.12);
   --glass-blur: 22px;
   --font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', ui-sans-serif, system-ui, sans-serif;
   color-scheme: dark;
 }
+h1, h2, h3, .brand-name, .hero-title, .gradient-text { font-family: var(--font-display); letter-spacing: -0.015em; }
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
@@ -136,6 +138,7 @@ button { font-family: inherit; cursor: pointer; }
 .btn.ghost { background: transparent; }
 .btn.icon { padding: 10px; }
 .btn.sm { padding: 7px 11px; font-size: 13px; }
+.btn.lg { padding: 14px 24px; font-size: 15.5px; border-radius: 14px; }
 
 .chip {
   display: inline-flex;

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { GameDefinition } from '../engine/types';
 import type { BoardTheme } from '../themes/boardThemes';
 import { pieceStyleFor } from './pieceStyle';
+import ChessPiece from './ChessPiece';
 import './Board2D.css';
 import './MiniBoard.css';
 
@@ -86,7 +87,9 @@ export default function MiniBoard({ def, setup, highlight = [], arrows = [], the
               )}
               {cell.piece && (
                 <div className={`pc ${style}`} style={pieceStyleFor(style, cell.piece.player, pieceColor(cell.piece.player))}>
-                  {(style === 'chess' || style === 'mark' || style === 'xiangqi') && <span className="glyph">{cell.piece.glyph}</span>}
+                  {style === 'chess'
+                    ? <ChessPiece kind={cell.piece.kind} fill={pieceColor(cell.piece.player)} stroke={cell.piece.player === 0 ? '#3b3f4a' : '#05070c'} shine={cell.piece.player === 1 ? 'rgba(255,255,255,0.13)' : undefined} />
+                    : (style === 'mark' || style === 'xiangqi') ? <span className="glyph">{cell.piece.glyph}</span> : null}
                   {cell.piece.crowned && <span className="crown">♛</span>}
                 </div>
               )}

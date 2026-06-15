@@ -1,78 +1,87 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { GAMES } from '../engine/registry';
-import { BOARD_THEMES } from '../themes/boardThemes';
+import { GAMES, getGame } from '../engine/registry';
+import { BOARD_THEMES, getTheme } from '../themes/boardThemes';
+import MiniBoard from '../components/MiniBoard';
 import './Home.css';
 
 const FEATURES = [
-  { icon: '🧠', title: 'World-class move tutor', body: 'Every move is graded from Brilliant to Blunder and explained in plain English — captures, forks, hanging pieces, plans and the stronger idea you missed.' },
-  { icon: '🎮', title: 'Stunning 2D & 3D boards', body: 'Play in a crisp animated 2D view or swing around a fully interactive 3D board with real lighting and shadows.' },
-  { icon: '💎', title: 'Hundreds of board themes', body: `Dress your board in any of ${BOARD_THEMES.length}+ templates — from tournament wood to neon, marble and our signature Liquid Glass.` },
-  { icon: '⚙️', title: 'An opponent for everyone', body: 'Dial the AI from a gentle beginner to a genuinely strong master, with an opening book and real search behind every move.' },
+  { icon: '🧠', title: 'A tutor, not just an opponent', body: 'Every move is graded Brilliant → Blunder and explained in plain English — captures, forks, pins, hanging pieces, plans, and the stronger move you missed.' },
+  { icon: '🎮', title: 'Stunning 2D & 3D boards', body: 'A crisp animated 2D view with a hand-crafted piece set, or a fully interactive 3D board with real lighting, shadows and orbit controls.' },
+  { icon: '💎', title: `${BOARD_THEMES.length}+ board themes`, body: 'From tournament wood and marble to neon, gemstone and the signature Liquid Glass — preview and switch instantly.' },
+  { icon: '📚', title: 'Interactive lessons', body: 'Guided, hands-on courses for every game: learn the rules, then solve real positions on the board with instant feedback.' },
 ];
 
 export default function Home() {
   const nav = useNavigate();
-  const chess = GAMES.find((g) => g.id === 'chess')!;
+  const chess = getGame('chess')!;
+  const heroTheme = getTheme('wood-walnut');
 
   return (
     <div className="home">
       <nav className="nav">
         <Link to="/" className="brand">
-          <span className="brand-mark">♛</span>
-          <span className="brand-name">GrandMaster<span className="brand-dot">.</span></span>
+          <span className="brand-mark">♞</span>
+          <span className="brand-name">GrandMaster</span>
         </Link>
         <div className="row gap-sm">
           <a className="chip clickable" href="#games">Games</a>
           <a className="chip clickable" href="#features">Features</a>
+          <button className="btn primary sm" onClick={() => nav('/play/chess')}>Play</button>
         </div>
       </nav>
 
       <header className="hero">
-        <div className="hero-inner fade-in">
+        <div className="hero-copy fade-in">
           <span className="eyebrow">AI Game Center · 2D &amp; 3D · Step-by-step tutor</span>
           <h1 className="hero-title">
-            The most <span className="gradient-text">intelligent</span><br />board game center in the world.
+            The board game center that <span className="gradient-text">teaches you</span> to win.
           </h1>
           <p className="hero-sub">
-            Master Chess and a growing universe of board games against an AI that doesn&apos;t just beat you —
-            it <strong>teaches you</strong>, explaining the meaning behind every single move.
+            Play Chess and a growing universe of board games against an AI that explains the meaning behind
+            every move — in stunning 2D and 3D, dressed in any of {BOARD_THEMES.length}+ themes.
           </p>
-          <div className="row gap-sm wrap" style={{ justifyContent: 'center' }}>
-            <button className="btn primary" onClick={() => nav(`/play/${chess.id}`)}>♟ Play Chess</button>
-            <a className="btn" href="#games">Browse all games</a>
-            <button className="btn ghost" onClick={() => nav(`/learn/${chess.id}`)}>📖 Learn to play</button>
+          <div className="row gap-sm wrap">
+            <button className="btn primary lg" onClick={() => nav('/play/chess')}>♟ Play Chess</button>
+            <button className="btn lg" onClick={() => nav('/learn/chess')}>📖 Learn to play</button>
           </div>
           <div className="hero-stats">
             <Stat n={`${GAMES.length}`} l="games" />
-            <Stat n={`${BOARD_THEMES.length}+`} l="board themes" />
-            <Stat n="2D / 3D" l="every board" />
+            <Stat n={`${BOARD_THEMES.length}+`} l="themes" />
+            <Stat n="2D · 3D" l="every board" />
             <Stat n="∞" l="lessons" />
           </div>
+        </div>
+        <div className="hero-board fade-in">
+          <div className="hero-board-frame">
+            <MiniBoard def={chess} theme={heroTheme} />
+          </div>
+          <div className="hero-board-glow" />
         </div>
       </header>
 
       <section id="games" className="section">
         <div className="section-head">
           <h2>Choose your game</h2>
-          <p className="muted">Each one ships with a full rules course and a move-by-move AI tutor.</p>
+          <p className="muted">Each one ships with a full course and a move-by-move AI tutor.</p>
         </div>
         <div className="game-grid">
           {GAMES.map((g, i) => (
-            <div className="game-card glass fade-in" style={{ animationDelay: `${i * 60}ms`, ['--accent' as any]: g.accent }} key={g.id}>
-              <div className="gc-glow" />
-              <div className="gc-top">
+            <div className="game-card glass fade-in" style={{ animationDelay: `${i * 45}ms`, ['--accent' as any]: g.accent }} key={g.id}>
+              <div className="gc-art">
                 <span className="gc-emoji">{g.emoji}</span>
                 <span className="chip gc-cat">{g.category}</span>
               </div>
-              <h3 className="gc-name">{g.name}</h3>
-              <p className="gc-tag">{g.tagline}</p>
-              <div className="gc-meta">
-                <Depth depth={g.depth} />
-                <span className="faint">{g.players[0].name} vs {g.players[1].name}</span>
-              </div>
-              <div className="gc-actions">
-                <Link className="btn primary sm" to={`/play/${g.id}`}>Play</Link>
-                <Link className="btn sm" to={`/learn/${g.id}`}>Learn</Link>
+              <div className="gc-body">
+                <h3 className="gc-name">{g.name}</h3>
+                <p className="gc-tag">{g.tagline}</p>
+                <div className="gc-meta">
+                  <Depth depth={g.depth} />
+                  <span className="faint">{g.players[0].name} v {g.players[1].name}</span>
+                </div>
+                <div className="gc-actions">
+                  <Link className="btn primary sm" to={`/play/${g.id}`}>Play</Link>
+                  <Link className="btn sm" to={`/learn/${g.id}`}>Learn</Link>
+                </div>
               </div>
             </div>
           ))}
@@ -96,7 +105,7 @@ export default function Home() {
       </section>
 
       <footer className="footer">
-        <span className="brand"><span className="brand-mark">♛</span> GrandMaster</span>
+        <span className="brand"><span className="brand-mark sm">♞</span> GrandMaster</span>
         <span className="faint">Crafted for players who want to understand the game, not just play it.</span>
       </footer>
     </div>
@@ -104,18 +113,8 @@ export default function Home() {
 }
 
 function Stat({ n, l }: { n: string; l: string }) {
-  return (
-    <div className="stat">
-      <div className="stat-n">{n}</div>
-      <div className="stat-l">{l}</div>
-    </div>
-  );
+  return <div className="stat"><div className="stat-n">{n}</div><div className="stat-l">{l}</div></div>;
 }
-
 function Depth({ depth }: { depth: number }) {
-  return (
-    <span className="depth" title={`Depth ${depth} / 5`}>
-      {[1, 2, 3, 4, 5].map((i) => <i key={i} className={i <= depth ? 'on' : ''} />)}
-    </span>
-  );
+  return <span className="depth" title={`Depth ${depth} / 5`}>{[1, 2, 3, 4, 5].map((i) => <i key={i} className={i <= depth ? 'on' : ''} />)}</span>;
 }

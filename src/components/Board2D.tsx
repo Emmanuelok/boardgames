@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import type { BoardView, GameDefinition, GameStatus, MoveBase, Player } from '../engine/types';
 import type { BoardTheme } from '../themes/boardThemes';
 import { pieceStyleFor } from './pieceStyle';
+import ChessPiece from './ChessPiece';
 import './Board2D.css';
 
 interface Props {
@@ -138,7 +139,9 @@ export default function Board2D(props: Props) {
                   transition={{ type: 'spring', stiffness: 700, damping: 42, mass: 0.6 }}
                   style={pieceStyleFor(style, cell.piece.player, pieceColor(cell.piece.player))}
                 >
-                  {(style === 'chess' || style === 'mark' || style === 'xiangqi') && <span className="glyph">{cell.piece.glyph}</span>}
+                  {style === 'chess'
+                    ? <ChessPiece kind={cell.piece.kind} fill={pieceColor(cell.piece.player)} stroke={cell.piece.player === 0 ? '#3b3f4a' : '#05070c'} shine={cell.piece.player === 1 ? 'rgba(255,255,255,0.13)' : undefined} />
+                    : (style === 'mark' || style === 'xiangqi') ? <span className="glyph">{cell.piece.glyph}</span> : null}
                   {cell.piece.crowned && <span className="crown">♛</span>}
                 </motion.div>
               )}
