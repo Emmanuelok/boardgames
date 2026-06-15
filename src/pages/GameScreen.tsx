@@ -112,6 +112,7 @@ export default function GameScreen() {
   const top: Player = (1 - bottom) as Player;
   const over = store.status.kind === 'win' || store.status.kind === 'draw';
   const canDrop = (p: Player) => turn === p && !over && (store.mode === 'pass' || p === store.humanColor);
+  const opening = def.identifyOpening?.(store.log.map((e) => e.notation)) ?? null;
 
   return (
     <div className="game-screen" style={{ ['--accent' as any]: def.accent }}>
@@ -165,6 +166,16 @@ export default function GameScreen() {
         </div>
 
         <aside className="side-col">
+          {opening && (
+            <div className="opening-chip glass-soft" title={opening.idea}>
+              <span className="oc-emoji">📖</span>
+              <div className="col">
+                <strong>{opening.name}</strong>
+                {opening.idea && <span className="oc-idea">{opening.idea}</span>}
+              </div>
+              {opening.eco && <span className="oc-eco">{opening.eco}</span>}
+            </div>
+          )}
           <div className="controls glass-soft">
             <button className="btn sm primary" onClick={store.restart} title="New game (N)">↻ New</button>
             <button className="btn sm" onClick={store.undo} disabled={store.past.length === 0} title="Undo (Z)">↶ Undo</button>

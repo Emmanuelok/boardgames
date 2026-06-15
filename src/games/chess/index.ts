@@ -7,6 +7,7 @@ import {
 import { evaluatePosition } from './evaluate';
 import { bestMove, searchBest, MATE } from './search';
 import { explainChessMove, chessHint } from './tutor';
+import { identifyOpening } from './openings';
 import tutorial from './tutorial';
 
 const SOLID: Record<number, string> = { [PAWN]: '♟', [KNIGHT]: '♞', [BISHOP]: '♝', 4: '♜', 5: '♛', [KING]: '♚' };
@@ -101,6 +102,8 @@ const def: GameDefinition<ChessState, ChessMove> = {
   explainMove: (before, move, after) => explainChessMove(before, move, after),
 
   hint: (s) => chessHint(s),
+
+  identifyOpening: (san) => identifyOpening(san),
 
   serialize: (s) => new Position(s).fen(),
   deserialize: (str) => fromFen(str),

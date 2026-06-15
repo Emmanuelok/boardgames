@@ -135,6 +135,13 @@ export interface LiveEval {
   mate?: number;
 }
 
+/** A recognised opening/phase name for the tutor, e.g. the chess opening. */
+export interface OpeningId {
+  eco?: string;
+  name: string;
+  idea?: string;
+}
+
 export interface InteractionModel {
   /**
    * - `move`     : select a source cell, then a destination (Chess, Checkers).
@@ -246,6 +253,9 @@ export interface GameDefinition<S = any, M extends MoveBase = MoveBase> {
   explainMove(before: S, move: M, after: S): MoveExplanation;
   /** Suggest the human's best move and why (the "Hint" button). */
   hint(s: S): { move: M; text: string } | null;
+  /** Name the opening from the moves played so far (SAN). Optional; chess
+   *  implements it to give the tutor classical opening context. */
+  identifyOpening?(movesSan: string[]): OpeningId | null;
 
   serialize(s: S): string;
   deserialize(str: string): S;
