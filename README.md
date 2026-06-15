@@ -48,10 +48,14 @@ Dial the AI from a gentle **Beginner** to a relentless **Master**, play
 | Game | Board | Highlights |
 |------|-------|-----------|
 | **Chess** | 8×8 | Full rules, opening book, SEE-based tactical tutor |
+| **Xiangqi (Chinese Chess)** | 9×10 | Cannons, the river & palace, flying-general rule |
 | **Checkers** | 8×8 | Mandatory captures, multi-jumps, kings |
+| **International Draughts** | 10×10 | Flying kings, capture-the-maximum rule |
 | **Reversi (Othello)** | 8×8 | Corner strategy, mobility, forced passes |
 | **Connect Four** | 7×6 | Drop mechanics, double-threat tutoring |
+| **Go** | 9×9 | Liberties, captures, ko, area scoring, passing |
 | **Gomoku** | 15×15 | Five-in-a-row, open-three / four detection |
+| **Pente** | 13×13 | Five-in-a-row + custodial pair captures |
 | **Tic-Tac-Toe** | 3×3 | Perfect-play AI, fork lessons |
 
 Every game ships with a **classical, in-depth tutorial** (rules → strategy)
@@ -75,7 +79,8 @@ src/
     engineClient.ts # promise-based worker client (with main-thread fallback)
   games/
     chess/          # the flagship: engine, evaluate, search, book, tutor, tutorial
-    checkers.ts  reversi.ts  connectFour.ts  gomoku.ts  ticTacToe.ts
+    xiangqi.ts  checkers.ts  draughts.ts  reversi.ts
+    connectFour.ts  go.ts  gomoku.ts  pente.ts  ticTacToe.ts
   components/
     Board2D.tsx  Board3D.tsx  TutorPanel.tsx  ThemePicker.tsx  MiniBoard.tsx
   themes/boardThemes.ts   # 200+ templates incl. Liquid Glass

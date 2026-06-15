@@ -4,7 +4,7 @@ import { createElement as h } from 'react';
 import App from '../src/App';
 import Board2D from '../src/components/Board2D';
 import MiniBoard from '../src/components/MiniBoard';
-import { getGame } from '../src/engine/registry';
+import { getGame, GAMES } from '../src/engine/registry';
 import { getTheme } from '../src/themes/boardThemes';
 
 let fail = 0;
@@ -26,11 +26,10 @@ for (const route of ['/', '/learn/chess', '/learn/reversi', '/play/chess']) {
 }
 
 const theme = getTheme('glass-crystal');
-for (const id of ['chess', 'checkers', 'reversi', 'connect-four', 'gomoku', 'tic-tac-toe']) {
-  const def = getGame(id)!;
+for (const def of GAMES) {
   const state = def.createInitialState();
   const view = def.getBoardView(state);
-  check(`Board2D ${id}`, () =>
+  check(`Board2D ${def.id}`, () =>
     renderToStaticMarkup(
       h(Board2D as any, {
         def, view, theme, turn: def.getTurn(state), flipped: false,

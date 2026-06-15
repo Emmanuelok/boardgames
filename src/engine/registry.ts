@@ -5,6 +5,10 @@ import gomoku from '../games/gomoku';
 import reversi from '../games/reversi';
 import checkers from '../games/checkers';
 import chess from '../games/chess';
+import draughts from '../games/draughts';
+import pente from '../games/pente';
+import go from '../games/go';
+import xiangqi from '../games/xiangqi';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -13,10 +17,14 @@ import chess from '../games/chess';
  */
 export const GAMES: GameDefinition[] = [
   chess,
+  xiangqi,
   checkers,
+  draughts,
   reversi,
   connectFour,
+  go,
   gomoku,
+  pente,
   ticTacToe,
 ];
 
