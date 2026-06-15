@@ -10,6 +10,7 @@ export default function TutorPanel() {
   const thinking = useGameStore((s) => s.thinking);
   const status = useGameStore((s) => s.status);
   const hintText = useGameStore((s) => s.hintText);
+  const liveThreats = useGameStore((s) => s.liveThreats);
   const autoTutor = useGameStore((s) => s.autoTutor);
   const toggleAutoTutor = useGameStore((s) => s.toggleAutoTutor);
   if (!def) return null;
@@ -41,6 +42,16 @@ export default function TutorPanel() {
           <div className="tutor-thinking fade-in">
             <span className="dots"><i /><i /><i /></span>
             <span className="muted">The engine is calculating its reply…</span>
+          </div>
+        )}
+
+        {!thinking && liveThreats.length > 0 && (
+          <div className="threat-warn fade-in">
+            <span className="tw-ic">⚠</span>
+            <div className="tw-body">
+              <strong className="tw-title">Watch out</strong>
+              {liveThreats.map((t, i) => <div key={i} className="tw-line">{t}</div>)}
+            </div>
           </div>
         )}
 

@@ -49,6 +49,17 @@
 }
 .hint-ic { font-size: 18px; }
 
+.threat-warn {
+  display: flex; gap: 11px; padding: 12px 14px; border-radius: 14px;
+  background: linear-gradient(120deg, rgba(248, 113, 113, 0.16), rgba(251, 146, 60, 0.07));
+  border: 1px solid rgba(248, 113, 113, 0.42);
+  font-size: 14px; line-height: 1.55;
+}
+.threat-warn .tw-ic { font-size: 18px; line-height: 1.3; }
+.threat-warn .tw-title { display: block; color: #fca5a5; margin-bottom: 3px; }
+.threat-warn .tw-line { color: var(--ink); }
+.threat-warn .tw-line + .tw-line { margin-top: 4px; }
+
 .analyzing { display: flex; flex-direction: column; gap: 8px; }
 .shimmer {
   height: 12px;

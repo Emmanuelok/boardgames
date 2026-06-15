@@ -42,6 +42,8 @@ interface State {
   // live engine evaluation (the advantage bar); null when the game has no liveEval
   liveEval: LiveEval | null;
   liveEvalLoading: boolean;
+  // proactive coaching: what the opponent threatens on the human's turn
+  liveThreats: string[];
 
   // online (P2P)
   net: OnlineSession | null;
@@ -155,6 +157,7 @@ export const useGameStore = create<State>((set, get) => {
     }
     afterEffects(move, status);
     requestEval();
+    requestThreats();
     return after;
   };
 
@@ -207,6 +210,17 @@ export const useGameStore = create<State>((set, get) => {
       .catch(() => { if (seq === evalSeq) set({ liveEvalLoading: false }); });
   };
 
+  /** Warn the human, on their turn, about what the opponent is threatening. */
+  let threatSeq = 0;
+  const requestThreats = () => {
+    const { def, gameId, state, autoTutor } = get();
+    const seq = ++threatSeq;
+    if (!def || !gameId || !def.threats || !autoTutor || !localCanMove()) { set({ liveThreats: [] }); return; }
+    engine.threats(gameId, state)
+      .then((t) => { if (seq === threatSeq) set({ liveThreats: t }); })
+      .catch(() => { if (seq === threatSeq) set({ liveThreats: [] }); });
+  };
+
   /** Apply an incoming network message from the peer. */
   const handleMsg = (m: NetMsg) => {
     if (m.t === 'init') {
@@ -230,7 +244,7 @@ export const useGameStore = create<State>((set, get) => {
     selected: null, targets: [], selectedDrop: null, lastMove: null,
     status: { kind: 'playing' }, thinking: false,
     hintMove: null, hintText: null, promotion: null, toast: null,
-    liveEval: null, liveEvalLoading: false,
+    liveEval: null, liveEvalLoading: false, liveThreats: [],
     net: null, onlineStatus: 'idle', onlineCode: '', onlineColor: 0, chat: [],
     mode: 'ai', humanColor: 0, difficulty: 'medium', view: '2d',
     themeId: DEFAULT_THEME_ID, autoTutor: true, flipped: false,
@@ -248,6 +262,7 @@ export const useGameStore = create<State>((set, get) => {
         liveEval: null,
       });
       requestEval();
+      requestThreats();
       setTimeout(drive, 350);
     },
 
@@ -371,6 +386,7 @@ export const useGameStore = create<State>((set, get) => {
         };
       });
       requestEval();
+      requestThreats();
     },
 
     redo() {
@@ -387,6 +403,7 @@ export const useGameStore = create<State>((set, get) => {
         };
       });
       requestEval();
+      requestThreats();
     },
 
     requestHint() {

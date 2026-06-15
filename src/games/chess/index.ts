@@ -6,7 +6,7 @@ import {
 } from './engine';
 import { evaluatePosition } from './evaluate';
 import { bestMove, searchBest, MATE } from './search';
-import { explainChessMove, chessHint } from './tutor';
+import { explainChessMove, chessHint, chessThreats } from './tutor';
 import { identifyOpening } from './openings';
 import tutorial from './tutorial';
 
@@ -103,6 +103,8 @@ const def: GameDefinition<ChessState, ChessMove> = {
   explainMove: (before, move, after) => explainChessMove(before, move, after),
 
   hint: (s) => chessHint(s),
+
+  threats: (s) => chessThreats(s),
 
   identifyOpening: (san) => identifyOpening(san),
 

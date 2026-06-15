@@ -49,6 +49,7 @@ function mainThread<T>(payload: Record<string, any>): Promise<T> {
       else if (payload.type === 'explain') resolve(g.explainMove(payload.before, payload.move, payload.after) as T);
       else if (payload.type === 'hint') resolve(g.hint(payload.state) as T);
       else if (payload.type === 'analyze') resolve((g.liveEval ? g.liveEval(payload.state) : { score: g.evaluate(payload.state), depth: 0 }) as T);
+      else if (payload.type === 'threats') resolve((g.threats ? g.threats(payload.state) : []) as T);
     }, 10);
   });
 }
@@ -62,4 +63,6 @@ export const engine = {
     call<{ move: MoveBase; text: string } | null>({ type: 'hint', gameId, state }),
   analyze: (gameId: string, state: unknown) =>
     call<LiveEval>({ type: 'analyze', gameId, state }),
+  threats: (gameId: string, state: unknown) =>
+    call<string[]>({ type: 'threats', gameId, state }),
 };

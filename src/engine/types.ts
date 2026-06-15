@@ -258,6 +258,9 @@ export interface GameDefinition<S = any, M extends MoveBase = MoveBase> {
   explainMove(before: S, move: M, after: S): MoveExplanation;
   /** Suggest the human's best move and why (the "Hint" button). */
   hint(s: S): { move: M; text: string } | null;
+  /** Proactive coaching: what the opponent threatens against the side to move
+   *  right now (mate threats, hanging pieces…). Optional; chess implements it. */
+  threats?(s: S): string[];
   /** Name the opening from the moves played so far (SAN). Optional; chess
    *  implements it to give the tutor classical opening context. */
   identifyOpening?(movesSan: string[]): OpeningId | null;

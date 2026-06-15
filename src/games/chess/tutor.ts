@@ -283,6 +283,47 @@ function collectThreats(posAfter: Position, mover: Color, threats: string[]) {
   }
 }
 
+/**
+ * Proactive coaching: what is the opponent threatening against the side to move
+ * *right now*? Detects a one-move mate threat and the biggest material win the
+ * opponent could grab (by static exchange evaluation), phrased as a warning.
+ */
+export function chessThreats(state: ChessState): string[] {
+  const me = state.turn as Color;
+  const opp = (me ^ 1) as Color;
+  const oppName = opp === 0 ? 'White' : 'Black';
+  const out: string[] = [];
+
+  // Imagine it were the opponent's move.
+  const probe = new Position(state);
+  (probe as any).turn = opp;
+
+  // 1) Mate threat: an opponent move that delivers checkmate.
+  for (const m of probe.legalMoves()) {
+    const p2 = new Position(probe.toState());
+    p2.make(m);
+    if (p2.inCheck(me) && p2.legalMoves().length === 0) {
+      out.push(`${oppName} is threatening mate with ${probe.toSAN(m)} — you must deal with it.`);
+      break;
+    }
+  }
+
+  // 2) Material threat: the biggest of your pieces the opponent can win cleanly.
+  let bestGain = 0, bestSq = -1;
+  for (let sq = 0; sq < 64; sq++) {
+    const p = probe.board[sq];
+    if (p === 0 || colorOf(p) === opp || typeOf(p) === KING) continue; // only your non-king pieces
+    if (probe.attackersOf(sq, opp).length === 0) continue;
+    const g = see(probe, sq, opp);
+    if (g > bestGain) { bestGain = g; bestSq = sq; }
+  }
+  if (bestGain >= 120 && bestSq >= 0) {
+    out.push(`${oppName} threatens to win your ${PIECE_NAME[typeOf(probe.board[bestSq])]} on ${algebraic(bestSq)}.`);
+  }
+
+  return out.slice(0, 2);
+}
+
 function reasonFor(before: ChessState, m: ChessMove): string {
   const pos = new Position(before);
   if (m.castle) return 'it castles the king to safety';
