@@ -9,6 +9,7 @@ import TutorPanel from '../components/TutorPanel';
 import ThemePicker from '../components/ThemePicker';
 import HandStrip from '../components/HandStrip';
 import BackgammonGame from '../components/BackgammonGame';
+import DotsAndBoxesGame from '../components/DotsAndBoxesGame';
 import { isMuted, toggleMuted, resumeAudio } from '../audio/sound';
 import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
 import type { Difficulty, MoveBase, Player } from '../engine/types';
@@ -90,7 +91,8 @@ export default function GameScreen() {
     return <div className="loading">Loading…</div>;
   }
 
-  // Games with a bespoke renderer (Backgammon: dice, stacks) bypass the board flow.
+  // Games with a bespoke renderer (Backgammon dice/stacks, Dots & Boxes edges)
+  // bypass the standard board flow.
   if (def.custom) {
     const diff = store.difficulty === 'easy' ? 'easy' : store.difficulty === 'hard' || store.difficulty === 'master' ? 'hard' : 'medium';
     return (
@@ -100,7 +102,9 @@ export default function GameScreen() {
           <div className="gs-title"><span className="gs-emoji">{def.emoji}</span><div className="col"><strong>{def.name}</strong><span className="faint" style={{ fontSize: 12 }}>vs AI · {diff}</span></div></div>
           <Link className="btn sm ghost" to={`/learn/${def.id}`}>📖 Learn</Link>
         </header>
-        <BackgammonGame aiDifficulty={diff} autoJoin={params.get('join') || undefined} autoHost={params.get('host') || undefined} />
+        {def.id === 'dots-and-boxes'
+          ? <DotsAndBoxesGame aiDifficulty={diff} />
+          : <BackgammonGame aiDifficulty={diff} autoJoin={params.get('join') || undefined} autoHost={params.get('host') || undefined} />}
       </div>
     );
   }

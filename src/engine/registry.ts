@@ -19,6 +19,7 @@ import linesOfAction from '../games/linesOfAction';
 import konane from '../games/konane';
 import clobber from '../games/clobber';
 import amazons from '../games/amazons';
+import dotsAndBoxes from '../games/dotsandboxes';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -34,6 +35,7 @@ export const GAMES: GameDefinition[] = [
   breakthrough,
   ninemensmorris,
   backgammon,
+  dotsAndBoxes,
   reversi,
   linesOfAction,
   konane,
