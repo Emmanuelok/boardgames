@@ -1,0 +1,20 @@
+import chromium from '@sparticuz/chromium';
+import puppeteer from 'puppeteer-core';
+
+const browser = await puppeteer.launch({ args: [...chromium.args, '--no-sandbox'], executablePath: await chromium.executablePath(), headless: chromium.headless });
+const page = await browser.newPage();
+await page.setViewport({ width: 1240, height: 940 });
+await page.goto('http://localhost:4195/#/play/chess', { waitUntil: 'networkidle0', timeout: 40000 });
+await new Promise((r) => setTimeout(r, 900));
+const click = (txt) => page.evaluate((t) => { const b = [...document.querySelectorAll('button')].find((e) => (e.textContent || '').trim() === t || (e.textContent || '').includes(t)); b && b.click(); }, txt);
+await click('⚙ Setup'); await new Promise((r) => setTimeout(r, 300));
+await click('Online'); await new Promise((r) => setTimeout(r, 400));
+const panel1 = await page.evaluate(() => document.querySelector('.online-panel')?.textContent || 'NO PANEL');
+console.log('panel (idle):', panel1.slice(0, 90));
+await click('Create room'); await new Promise((r) => setTimeout(r, 1500));
+const info = await page.evaluate(() => ({ code: document.querySelector('.online-code')?.textContent || '', status: document.querySelector('.online-status')?.textContent || '' }));
+console.log('after create:', JSON.stringify(info));
+const panel = await page.$('.side-col');
+if (panel) await panel.screenshot({ path: '/tmp/online.png' });
+await browser.close();
+console.log('SAVED /tmp/online.png');

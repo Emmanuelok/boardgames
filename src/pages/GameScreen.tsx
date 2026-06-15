@@ -269,16 +269,47 @@ function badge(entry: any) {
 
 function Setup({ store, def }: any) {
   const restartWith = (fn: () => void) => { fn(); setTimeout(() => useGameStore.getState().restart(), 0); };
+  const [showOnline, setShowOnline] = useState(store.mode === 'online');
+  const [joinCode, setJoinCode] = useState('');
   return (
     <div className="setup glass-soft">
       <Field label="Opponent">
         <div className="seg full">
-          <button className={store.mode === 'ai' ? 'on' : ''} onClick={() => restartWith(() => store.setMode('ai'))}>vs AI</button>
-          <button className={store.mode === 'pass' ? 'on' : ''} onClick={() => restartWith(() => store.setMode('pass'))}>Pass &amp; Play</button>
+          <button className={store.mode !== 'online' && store.mode === 'ai' && !showOnline ? 'on' : ''} onClick={() => { setShowOnline(false); restartWith(() => store.setMode('ai')); }}>vs AI</button>
+          <button className={store.mode === 'pass' && !showOnline ? 'on' : ''} onClick={() => { setShowOnline(false); restartWith(() => store.setMode('pass')); }}>Pass &amp; Play</button>
+          <button className={showOnline || store.mode === 'online' ? 'on' : ''} onClick={() => setShowOnline(true)}>Online</button>
         </div>
       </Field>
 
-      {store.mode === 'ai' && (
+      {showOnline && (
+        <Field label="Online (P2P)">
+          <div className="online-panel">
+            {store.mode !== 'online' || store.onlineStatus === 'idle' ? (
+              <>
+                <button className="btn sm primary" onClick={store.hostOnline}>Create room</button>
+                <div className="row gap-xs">
+                  <input className="tp-search" style={{ flex: 1 }} placeholder="Enter code (GM-XXXXX)" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
+                  <button className="btn sm" onClick={() => store.joinOnline(joinCode)} disabled={joinCode.trim().length < 5}>Join</button>
+                </div>
+                <span className="faint" style={{ fontSize: 12 }}>Create a room and share the code, or join a friend’s. Runs peer-to-peer; no account needed.</span>
+              </>
+            ) : (
+              <>
+                {store.onlineCode && <div className="online-code">{store.onlineCode}</div>}
+                <div className={`online-status ${store.onlineStatus}`}>
+                  {store.onlineStatus === 'waiting' && (store.onlineCode ? 'Share the code — waiting for opponent…' : 'Connecting…')}
+                  {store.onlineStatus === 'connected' && `Connected! You play ${def.players[store.onlineColor].name}.`}
+                  {store.onlineStatus === 'error' && 'Connection failed — check the code and try again.'}
+                  {store.onlineStatus === 'closed' && 'Disconnected.'}
+                </div>
+                <button className="btn sm ghost" onClick={() => { store.leaveOnline(); setShowOnline(false); }}>Leave room</button>
+              </>
+            )}
+          </div>
+        </Field>
+      )}
+
+      {store.mode === 'ai' && !showOnline && (
         <>
           <Field label="AI strength">
             <div className="diff-grid">

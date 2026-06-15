@@ -64,6 +64,12 @@
 .diff.on { border-color: transparent; background: linear-gradient(120deg, var(--accent), var(--accent-2)); }
 .diff.on span { color: rgba(255,255,255,0.85); }
 
+.online-panel { display: flex; flex-direction: column; gap: 10px; }
+.online-code { font-family: var(--font-display); font-size: 26px; font-weight: 800; letter-spacing: 0.12em; text-align: center; padding: 12px; border-radius: 12px; background: rgba(124,92,255,0.14); border: 1px solid rgba(124,92,255,0.4); color: #fff; user-select: all; }
+.online-status { font-size: 13px; color: var(--ink-dim); }
+.online-status.connected { color: var(--good); font-weight: 600; }
+.online-status.error { color: var(--bad); }
+
 /* Modals */
 .modal-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(4, 6, 12, 0.6); backdrop-filter: blur(4px); animation: fadeIn 0.2s ease; padding: 20px; }
 .promo { padding: 18px 22px; text-align: center; }
