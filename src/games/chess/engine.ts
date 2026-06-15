@@ -118,6 +118,27 @@ const RAYS: Record<string, number[][]> = {}; // keyed "df,dr" -> per square arra
   }
 })();
 
+/* --------------------------- Zobrist hashing -------------------------- */
+// Each position gets a 64-bit key, maintained incrementally through make/unmake,
+// so the search can use a transposition table. Verified against a from-scratch
+// recompute at every node of a perft walk (see scripts).
+function pieceIndex(code: number): number { return code > 0 ? code - 1 : 6 - code - 1; }
+const CASTLE_BITS = [WK, WQ, BK, BQ];
+
+const Z = (() => {
+  let s = 0x9e3779b9 >>> 0;
+  const rng = () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return (t ^ (t >>> 14)) >>> 0;
+  };
+  const r64 = () => (BigInt(rng()) << 32n) ^ BigInt(rng());
+  const piece: bigint[][] = [];
+  for (let sq = 0; sq < 64; sq++) { piece[sq] = []; for (let p = 0; p < 12; p++) piece[sq][p] = r64(); }
+  return { piece, castle: [r64(), r64(), r64(), r64()], ep: Array.from({ length: 8 }, r64), side: r64() };
+})();
+
 /* ------------------------------ Position ------------------------------ */
 
 interface Undo {
@@ -128,6 +149,7 @@ interface Undo {
   full: number;
   captureSq: number; // where the captured piece actually was (differs for EP)
   capturedPiece: number;
+  hash: bigint;
 }
 
 /** Mutable position used for generation and search (make/unmake). */
@@ -138,6 +160,7 @@ export class Position {
   ep: number;
   half: number;
   full: number;
+  hash: bigint = 0n;
   private history: Undo[] = [];
 
   constructor(state: ChessState) {
@@ -147,6 +170,17 @@ export class Position {
     this.ep = state.ep;
     this.half = state.half;
     this.full = state.full;
+    this.hash = this.computeHash();
+  }
+
+  /** Full Zobrist key from scratch (used to seed and to verify incremental updates). */
+  computeHash(): bigint {
+    let h = 0n;
+    for (let sq = 0; sq < 64; sq++) { const p = this.board[sq]; if (p !== 0) h ^= Z.piece[sq][pieceIndex(p)]; }
+    if (this.turn === BLACK) h ^= Z.side;
+    for (let i = 0; i < 4; i++) if (this.castling & CASTLE_BITS[i]) h ^= Z.castle[i];
+    if (this.ep !== -1) h ^= Z.ep[fileOf(this.ep)];
+    return h;
   }
 
   toState(): ChessState {
@@ -399,8 +433,10 @@ export class Position {
     const us = this.turn;
     const undo: Undo = {
       move: m, castling: this.castling, ep: this.ep, half: this.half, full: this.full,
-      captureSq: -1, capturedPiece: 0,
+      captureSq: -1, capturedPiece: 0, hash: this.hash,
     };
+    let h = this.hash;
+    if (this.ep !== -1) h ^= Z.ep[fileOf(this.ep)]; // clear old ep file
 
     // Handle capture (including en passant)
     let captureSq = m.to;
@@ -408,21 +444,28 @@ export class Position {
     if (b[captureSq] !== 0 && captureSq !== m.from) {
       undo.captureSq = captureSq;
       undo.capturedPiece = b[captureSq];
+      h ^= Z.piece[captureSq][pieceIndex(b[captureSq])];
       b[captureSq] = 0;
     }
 
     // Move the piece
-    b[m.to] = m.promo ? (us === WHITE ? m.promo : -m.promo) : m.piece;
+    const placed = m.promo ? (us === WHITE ? m.promo : -m.promo) : m.piece;
+    h ^= Z.piece[m.from][pieceIndex(m.piece)];
+    h ^= Z.piece[m.to][pieceIndex(placed)];
+    b[m.to] = placed;
     b[m.from] = 0;
 
     // Rook hop for castling
     if (m.castle === 'K') {
-      if (us === WHITE) { b[61] = b[63]; b[63] = 0; } else { b[5] = b[7]; b[7] = 0; }
+      if (us === WHITE) { h ^= Z.piece[63][pieceIndex(ROOK)]; h ^= Z.piece[61][pieceIndex(ROOK)]; b[61] = b[63]; b[63] = 0; }
+      else { h ^= Z.piece[7][pieceIndex(-ROOK)]; h ^= Z.piece[5][pieceIndex(-ROOK)]; b[5] = b[7]; b[7] = 0; }
     } else if (m.castle === 'Q') {
-      if (us === WHITE) { b[59] = b[56]; b[56] = 0; } else { b[3] = b[0]; b[0] = 0; }
+      if (us === WHITE) { h ^= Z.piece[56][pieceIndex(ROOK)]; h ^= Z.piece[59][pieceIndex(ROOK)]; b[59] = b[56]; b[56] = 0; }
+      else { h ^= Z.piece[0][pieceIndex(-ROOK)]; h ^= Z.piece[3][pieceIndex(-ROOK)]; b[3] = b[0]; b[0] = 0; }
     }
 
     // Update castling rights
+    const oldC = this.castling;
     if (m.piece === KING) this.castling &= ~(WK | WQ);
     if (m.piece === -KING) this.castling &= ~(BK | BQ);
     const touch = (sq: number) => {
@@ -432,9 +475,15 @@ export class Position {
       if (sq === 0) this.castling &= ~BQ;
     };
     touch(m.from); touch(m.to);
+    const changed = oldC ^ this.castling;
+    for (let i = 0; i < 4; i++) if (changed & CASTLE_BITS[i]) h ^= Z.castle[i];
 
     // En-passant target
     this.ep = m.double ? (m.from + m.to) / 2 : -1;
+    if (this.ep !== -1) h ^= Z.ep[fileOf(this.ep)];
+
+    h ^= Z.side;
+    this.hash = h;
 
     // Clocks
     if (typeOf(m.piece) === PAWN || m.capture) this.half = 0; else this.half++;
@@ -469,6 +518,7 @@ export class Position {
     this.ep = undo.ep;
     this.half = undo.half;
     this.full = undo.full;
+    this.hash = undo.hash;
   }
 
   /** Standard Algebraic Notation for a legal move in this position. */

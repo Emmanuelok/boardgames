@@ -91,17 +91,37 @@ const PST: Record<number, number[]> = {
 
 export const MATE = 100000;
 
+const ROOK_DIR = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+const BISHOP_DIR = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+// Bonus for a passed pawn, indexed by how many ranks it has advanced (0..7).
+const PASSED = [0, 8, 14, 24, 42, 68, 100, 0];
+
+/** Sliding mobility: count reachable squares (empty or capture) along `dirs`. */
+function mobility(b: Int8Array, sq: number, dirs: number[][]): number {
+  const f = fileOf(sq), r = rankOf(sq);
+  let n = 0;
+  for (const [dr, dc] of dirs) {
+    let rr = r + dr, cc = f + dc;
+    while (rr >= 0 && rr < 8 && cc >= 0 && cc < 8) {
+      const p = b[rr * 8 + cc];
+      n++;
+      if (p !== 0) break;
+      rr += dr; cc += dc;
+    }
+  }
+  return n;
+}
+
 export function evaluatePosition(pos: Position): number {
   const b = pos.board;
-  let mg = 0; // running score (white - black), middlegame king table
-  let eg = 0; // same but endgame king table
-  let phase = 0; // 0..24, higher = more material on the board
+  let mg = 0, eg = 0, phase = 0;
   let whiteBishops = 0, blackBishops = 0;
   const pawnFilesW = [0, 0, 0, 0, 0, 0, 0, 0];
   const pawnFilesB = [0, 0, 0, 0, 0, 0, 0, 0];
   const PHASE_W: Record<number, number> = { [KNIGHT]: 1, [BISHOP]: 1, [ROOK]: 2, [QUEEN]: 4 };
-
+  const pawnsW: number[] = [], pawnsB: number[] = [], rooksW: number[] = [], rooksB: number[] = [];
   let wK = -1, bK = -1;
+
   for (let sq = 0; sq < 64; sq++) {
     const p = b[sq];
     if (p === 0) continue;
@@ -117,10 +137,17 @@ export function evaluatePosition(pos: Position): number {
     if (white) { mg += val; eg += val; } else { mg -= val; eg -= val; }
     phase += PHASE_W[t] ?? 0;
     if (t === BISHOP) white ? whiteBishops++ : blackBishops++;
-    if (t === PAWN) (white ? pawnFilesW : pawnFilesB)[fileOf(sq)]++;
+    if (t === PAWN) { (white ? pawnFilesW : pawnFilesB)[fileOf(sq)]++; (white ? pawnsW : pawnsB).push(sq); }
+    if (t === ROOK) (white ? rooksW : rooksB).push(sq);
+
+    // Mobility (sliders).
+    if (t === BISHOP || t === ROOK || t === QUEEN) {
+      const dirs = t === BISHOP ? BISHOP_DIR : t === ROOK ? ROOK_DIR : ROOK_DIR.concat(BISHOP_DIR);
+      const m = (mobility(b, sq, dirs) - 6) * (t === QUEEN ? 1 : 3);
+      if (white) { mg += m; eg += m; } else { mg -= m; eg -= m; }
+    }
   }
 
-  // Bishop pair.
   if (whiteBishops >= 2) { mg += 30; eg += 40; }
   if (blackBishops >= 2) { mg -= 30; eg -= 40; }
 
@@ -134,13 +161,33 @@ export function evaluatePosition(pos: Position): number {
     if (bIso) { mg += 14; eg += 18; }
   }
 
-  // Light king-safety: reward pawns directly in front of a home-ish king.
+  // Passed pawns (white advances toward row 0; black toward row 7).
+  for (const sq of pawnsW) {
+    const f = fileOf(sq), r = rankOf(sq);
+    const blocked = pawnsB.some((q) => Math.abs(fileOf(q) - f) <= 1 && rankOf(q) < r);
+    if (!blocked) { const adv = 6 - r; mg += PASSED[adv] >> 1; eg += PASSED[adv]; }
+  }
+  for (const sq of pawnsB) {
+    const f = fileOf(sq), r = rankOf(sq);
+    const blocked = pawnsW.some((q) => Math.abs(fileOf(q) - f) <= 1 && rankOf(q) > r);
+    if (!blocked) { const adv = r - 1; mg -= PASSED[adv] >> 1; eg -= PASSED[adv]; }
+  }
+
+  // Rooks on open / semi-open files.
+  for (const sq of rooksW) {
+    const f = fileOf(sq);
+    if (pawnFilesW[f] === 0) { mg += pawnFilesB[f] === 0 ? 22 : 11; eg += 8; }
+  }
+  for (const sq of rooksB) {
+    const f = fileOf(sq);
+    if (pawnFilesB[f] === 0) { mg -= pawnFilesW[f] === 0 ? 22 : 11; eg -= 8; }
+  }
+
   if (wK >= 0 && rankOf(wK) >= 6) mg += shield(b, wK, true);
   if (bK >= 0 && rankOf(bK) <= 1) mg -= shield(b, bK, false);
 
   const phaseClamped = Math.min(24, phase);
-  const score = (mg * phaseClamped + eg * (24 - phaseClamped)) / 24;
-  return Math.round(score);
+  return Math.round((mg * phaseClamped + eg * (24 - phaseClamped)) / 24);
 }
 
 function shield(b: Int8Array, kSq: number, white: boolean): number {
