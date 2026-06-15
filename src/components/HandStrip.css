@@ -1,0 +1,17 @@
+.hand {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 7px 12px; border-radius: 12px; min-height: 44px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid var(--line);
+}
+.hand-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-faint); font-weight: 700; margin-right: 4px; }
+.hand-empty { color: var(--ink-faint); }
+.hand-piece {
+  position: relative; width: 34px; height: 34px; border-radius: 50%; padding: 0;
+  display: grid; place-items: center; border: none; cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.18s ease;
+}
+.hand-piece:disabled { cursor: default; opacity: 0.75; }
+.hand-piece:not(:disabled):hover { transform: translateY(-2px); }
+.hand-piece.armed { box-shadow: 0 0 0 3px var(--accent), 0 0 16px -2px var(--accent); transform: translateY(-2px); }
+.hand-piece .glyph { font-size: 20px; font-weight: 800; line-height: 1; font-family: 'Songti SC', 'STSong', 'SimSun', Georgia, serif; }
+.hand-count { position: absolute; bottom: -3px; right: -3px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 800; border-radius: 999px; padding: 0 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.5); }

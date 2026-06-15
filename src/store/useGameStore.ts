@@ -29,6 +29,7 @@ interface State {
   log: LogEntry[];
   selected: number | null;
   targets: MoveBase[];
+  selectedDrop: string | null;
   lastMove: LastMove | null;
   status: GameStatus;
   thinking: boolean;
@@ -50,6 +51,7 @@ interface State {
   newGame: (gameId: string) => void;
   restart: () => void;
   onCellClick: (cell: number) => void;
+  selectHand: (kind: string) => void;
   passTurn: () => void;
   choosePromotion: (m: MoveBase | null) => void;
   undo: () => void;
@@ -113,7 +115,7 @@ export const useGameStore = create<State>((set, get) => {
       state: after,
       log: [...s.log, entry],
       lastMove: { from: (move as any).from, to: move.to, affected: (move as any).affected },
-      selected: null, targets: [], status, promotion: null, hintMove: null, hintText: null,
+      selected: null, targets: [], selectedDrop: null, status, promotion: null, hintMove: null, hintText: null,
     }));
 
     if (willAnalyze) {
@@ -163,7 +165,7 @@ export const useGameStore = create<State>((set, get) => {
   return {
     gameId: null, def: null, state: null,
     past: [], future: [], log: [],
-    selected: null, targets: [], lastMove: null,
+    selected: null, targets: [], selectedDrop: null, lastMove: null,
     status: { kind: 'playing' }, thinking: false,
     hintMove: null, hintText: null, promotion: null, toast: null,
     mode: 'ai', humanColor: 0, difficulty: 'medium', view: '2d',
@@ -176,7 +178,7 @@ export const useGameStore = create<State>((set, get) => {
       const state = def.createInitialState();
       set({
         gameId, def, state, past: [], future: [], log: [],
-        selected: null, targets: [], lastMove: null, status: def.getStatus(state),
+        selected: null, targets: [], selectedDrop: null, lastMove: null, status: def.getStatus(state),
         thinking: false, hintMove: null, hintText: null, promotion: null, toast: null,
         flipped: get().mode === 'ai' && get().humanColor === 1,
       });
@@ -202,6 +204,15 @@ export const useGameStore = create<State>((set, get) => {
         return;
       }
 
+      // Drop-from-hand (Shogi): a hand piece is armed; try to drop it here.
+      const armed = get().selectedDrop;
+      if (armed) {
+        const m = get().targets.find((mv) => mv.drop === armed && mv.to === cell);
+        set({ selectedDrop: null, targets: [], selected: null });
+        if (m) { commit(m, state); setTimeout(drive, 120); }
+        return;
+      }
+
       // Unified resolver (shared with interactive lessons).
       const r = resolveClick(def, state, selected, get().targets, cell);
       switch (r.kind) {
@@ -211,6 +222,16 @@ export const useGameStore = create<State>((set, get) => {
         case 'clear': set({ selected: null, targets: [] }); break;
         case 'none': break;
       }
+    },
+
+    selectHand(kind) {
+      const { def, state, status, mode, humanColor, thinking, selectedDrop } = get();
+      if (!def || thinking || status.kind === 'win' || status.kind === 'draw') return;
+      if (mode === 'ai' && def.getTurn(state) !== humanColor) return;
+      if (selectedDrop === kind) { set({ selectedDrop: null, targets: [] }); return; }
+      const drops = def.getLegalMoves(state, null).filter((m) => m.drop === kind);
+      set({ selectedDrop: kind, targets: drops, selected: null });
+      playSound('select');
     },
 
     passTurn() {
@@ -243,7 +264,7 @@ export const useGameStore = create<State>((set, get) => {
         }
         return {
           past, future, state: snap.state, log: snap.log, lastMove: snap.lastMove,
-          status: s.def.getStatus(snap.state), selected: null, targets: [],
+          status: s.def.getStatus(snap.state), selected: null, targets: [], selectedDrop: null,
           promotion: null, hintMove: null, hintText: null, thinking: false,
         };
       });
@@ -258,7 +279,7 @@ export const useGameStore = create<State>((set, get) => {
         const snap = future.shift()!;
         return {
           past, future, state: snap.state, log: snap.log, lastMove: snap.lastMove,
-          status: s.def.getStatus(snap.state), selected: null, targets: [],
+          status: s.def.getStatus(snap.state), selected: null, targets: [], selectedDrop: null,
           promotion: null, hintMove: null, hintText: null,
         };
       });

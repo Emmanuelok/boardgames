@@ -75,6 +75,16 @@ export interface MoveBase {
   affected?: number[];
   /** Piece kind a pawn promotes to, when relevant. */
   promotion?: string;
+  /** Piece kind being dropped from hand onto `to` (Shogi); `from` is undefined. */
+  drop?: string;
+}
+
+/** A captured piece held in hand, available to drop (Shogi). */
+export interface HandPiece {
+  kind: string;
+  player: Player;
+  count: number;
+  glyph?: string;
 }
 
 /* ----------------------------- The Tutor ------------------------------ */
@@ -205,6 +215,8 @@ export interface GameDefinition<S = any, M extends MoveBase = MoveBase> {
   getBoardView(s: S): BoardView;
   getTurn(s: S): Player;
   getStatus(s: S): GameStatus;
+  /** Captured pieces in hand, per player (Shogi). Optional. */
+  getHand?(s: S): HandPiece[];
   /** Legal moves, optionally restricted to those originating from `fromCell`. */
   getLegalMoves(s: S, fromCell?: number | null): M[];
   applyMove(s: S, m: M): S;

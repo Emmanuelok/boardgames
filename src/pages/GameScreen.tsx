@@ -6,6 +6,7 @@ import { getTheme } from '../themes/boardThemes';
 import Board2D from '../components/Board2D';
 import TutorPanel from '../components/TutorPanel';
 import ThemePicker from '../components/ThemePicker';
+import HandStrip from '../components/HandStrip';
 import { isMuted, toggleMuted, resumeAudio } from '../audio/sound';
 import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
 import type { Difficulty, MoveBase, Player } from '../engine/types';
@@ -76,6 +77,7 @@ export default function GameScreen() {
   const bottom: Player = (store.flipped ? 1 : 0) as Player;
   const top: Player = (1 - bottom) as Player;
   const over = store.status.kind === 'win' || store.status.kind === 'draw';
+  const canDrop = (p: Player) => turn === p && !over && (store.mode === 'pass' || p === store.humanColor);
 
   return (
     <div className="game-screen" style={{ ['--accent' as any]: def.accent }}>
@@ -103,6 +105,7 @@ export default function GameScreen() {
       <div className="play-area">
         <div className="board-col">
           <PlayerTag def={def} who={top} turn={turn} thinking={store.thinking} store={store} />
+          <HandStrip def={def} state={store.state} player={top} armed={store.selectedDrop} active={canDrop(top)} onPick={store.selectHand} />
           <div className="board-host">
             {store.view === '3d' ? (
               <Suspense fallback={<div className="board3d-fallback glass-soft">Loading 3D board…</div>}>
@@ -120,6 +123,7 @@ export default function GameScreen() {
               />
             )}
           </div>
+          <HandStrip def={def} state={store.state} player={bottom} armed={store.selectedDrop} active={canDrop(bottom)} onPick={store.selectHand} />
           <PlayerTag def={def} who={bottom} turn={turn} thinking={store.thinking} store={store} you />
         </div>
 
