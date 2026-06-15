@@ -20,6 +20,7 @@ import konane from '../games/konane';
 import clobber from '../games/clobber';
 import amazons from '../games/amazons';
 import dotsAndBoxes from '../games/dotsandboxes';
+import tafl from '../games/tafl';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -30,6 +31,7 @@ export const GAMES: GameDefinition[] = [
   chess,
   xiangqi,
   shogi,
+  tafl,
   checkers,
   draughts,
   breakthrough,

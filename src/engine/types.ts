@@ -44,6 +44,8 @@ export interface CellView {
   count?: number;
   /** Optional short label drawn in the cell (e.g. a Mancala store owner). */
   label?: string;
+  /** Special-square marker drawn under the piece (e.g. Tafl corners/throne). */
+  mark?: 'goal' | 'throne';
 }
 
 export interface BoardView {

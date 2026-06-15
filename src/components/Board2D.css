@@ -17,6 +17,11 @@
 }
 .drag-ghost .pc { width: 84%; height: 84%; }
 
+/* Special-square markers (Tafl corners = escape goals, throne = centre). */
+.cell-mark { position: absolute; inset: 14%; border-radius: 8px; pointer-events: none; z-index: 0; }
+.cell-mark.goal { border: 2px dashed rgba(52, 211, 153, 0.85); background: radial-gradient(circle, rgba(52, 211, 153, 0.2), transparent 70%); }
+.cell-mark.throne { border: 2px solid rgba(245, 185, 69, 0.65); border-radius: 50%; background: radial-gradient(circle, rgba(245, 185, 69, 0.16), transparent 72%); }
+
 .board {
   position: relative;
   display: grid;

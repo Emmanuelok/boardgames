@@ -181,6 +181,7 @@ export default function Board2D(props: Props) {
               {def.render.connections && cell.playable !== false && !cell.piece && cell.count === undefined && (
                 <div className="point" style={{ background: theme.grid }} />
               )}
+              {cell.mark && <div className={`cell-mark ${cell.mark}`} />}
 
               {cell.piece && (
                 <motion.div
