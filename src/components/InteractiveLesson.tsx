@@ -10,6 +10,8 @@ interface Props {
   challenge: TutorialChallenge;
   setup?: string;
   theme: BoardTheme;
+  onSolved?: () => void;
+  onFailed?: () => void;
 }
 
 const norm = (s: string) => s.replace(/[+#]/g, '').replace(/\s+/g, '').toLowerCase();
@@ -21,7 +23,7 @@ interface LocalState {
   lastMove: { from?: number; to: number; affected?: number[] } | null;
 }
 
-export default function InteractiveLesson({ def, challenge, setup, theme }: Props) {
+export default function InteractiveLesson({ def, challenge, setup, theme, onSolved, onFailed }: Props) {
   const initial = useMemo(() => {
     try { return setup ? def.deserialize(setup) : def.createInitialState(); }
     catch { return def.createInitialState(); }
@@ -42,9 +44,11 @@ export default function InteractiveLesson({ def, challenge, setup, theme }: Prop
     if (correct) {
       setResult('correct');
       setFeedback(challenge.success || 'Correct — that’s the move! ✓');
+      onSolved?.();
     } else {
       setResult('wrong');
       setFeedback(`${move.notation} isn’t the strongest here. Reset and look for a stronger idea.`);
+      onFailed?.();
     }
   };
 

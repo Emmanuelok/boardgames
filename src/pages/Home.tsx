@@ -34,8 +34,8 @@ export default function Home() {
           <span className="brand-name">GrandMaster</span>
         </Link>
         <div className="row gap-sm">
-          <a className="chip clickable hide-sm" href="#games">Games</a>
-          <a className="chip clickable hide-sm" href="#features">Features</a>
+          <Link className="chip clickable hide-sm" to="/puzzles">🧩 Puzzles</Link>
+          <Link className="chip clickable hide-sm" to="/profile">👤 Profile</Link>
           <button className="btn primary sm" onClick={() => nav('/play/chess')}>Play now</button>
         </div>
       </nav>
@@ -54,7 +54,8 @@ export default function Home() {
           </motion.p>
           <motion.div className="row gap-sm wrap" variants={fadeUp} initial="hidden" animate="show" custom={3}>
             <button className="btn primary lg glow" onClick={() => nav('/play/chess')}>♟ Start playing</button>
-            <button className="btn lg" onClick={() => nav('/learn/chess')}>📖 Learn to play</button>
+            <button className="btn lg" onClick={() => nav('/puzzles')}>🧩 Train tactics</button>
+            <button className="btn lg" onClick={() => nav('/learn/chess')}>📖 Learn</button>
           </motion.div>
           <motion.div className="hero-stats" variants={fadeUp} initial="hidden" animate="show" custom={4}>
             <Stat n={GAMES.length} l="games" />
