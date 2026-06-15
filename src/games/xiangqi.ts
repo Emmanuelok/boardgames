@@ -871,6 +871,7 @@ const def: GameDefinition<XiangqiState, XiangqiMove> = {
   ],
   interaction: { type: 'move' },
   render: { pieceStyle: 'xiangqi', showCoordinates: true, checkered: false, intersections: true },
+  evalScale: 700,
 
   createInitialState,
   cloneState,

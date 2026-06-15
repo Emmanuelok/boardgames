@@ -755,6 +755,7 @@ const def: GameDefinition<DraughtsState, DraughtsMove> = {
   ],
   interaction: { type: 'move' },
   render: { pieceStyle: 'checker', showCoordinates: true, checkered: true },
+  evalScale: 300,
 
   createInitialState,
   cloneState,

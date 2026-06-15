@@ -8,8 +8,8 @@ import type { GameStatus, LiveEval } from '../engine/types';
 import './EvalBar.css';
 
 export default function EvalBar({
-  info, loading, status, flipped,
-}: { info: LiveEval | null; loading: boolean; status: GameStatus; flipped: boolean }) {
+  info, loading, status, flipped, scale = 400,
+}: { info: LiveEval | null; loading: boolean; status: GameStatus; flipped: boolean; scale?: number }) {
   let whiteFrac = 0.5; // share of the bar belonging to White (player 0)
   let label = '…';
   let decisive = false;
@@ -27,8 +27,8 @@ export default function EvalBar({
       label = `M${Math.abs(info.mate)}`;
       decisive = true;
     } else {
-      // Logistic map from centipawns to a win-probability-like share.
-      whiteFrac = 1 / (1 + Math.pow(10, -info.score / 400));
+      // Logistic map from the score to a win-probability-like share.
+      whiteFrac = 1 / (1 + Math.pow(10, -info.score / scale));
       const pawns = info.score / 100;
       label = `${pawns >= 0 ? '+' : '−'}${Math.abs(pawns).toFixed(1)}`;
     }

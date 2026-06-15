@@ -662,6 +662,7 @@ const def: GameDefinition<CheckersState, CheckersMove> = {
   ],
   interaction: { type: 'move' },
   render: { pieceStyle: 'checker', showCoordinates: true, checkered: true },
+  evalScale: 250,
 
   createInitialState,
   cloneState,

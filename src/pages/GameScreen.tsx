@@ -142,7 +142,7 @@ export default function GameScreen() {
           <PlayerTag def={def} who={top} turn={turn} thinking={store.thinking} store={store} />
           <HandStrip def={def} state={store.state} player={top} armed={store.selectedDrop} active={canDrop(top)} onPick={store.selectHand} />
           <div className="board-stage">
-            {def.liveEval && <EvalBar info={store.liveEval} loading={store.liveEvalLoading} status={store.status} flipped={store.flipped} />}
+            {def.evalScale != null && <EvalBar info={store.liveEval} loading={store.liveEvalLoading} status={store.status} flipped={store.flipped} scale={def.evalScale} />}
             <div className="board-host">
               {store.view === '3d' ? (
                 <Suspense fallback={<div className="board3d-fallback glass-soft">Loading 3D board…</div>}>

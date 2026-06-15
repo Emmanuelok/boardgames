@@ -248,6 +248,11 @@ export interface GameDefinition<S = any, M extends MoveBase = MoveBase> {
    *  player 0, mate encoded). Games that implement it get a real-time eval bar;
    *  those that don't simply have no bar. */
   liveEval?(s: S): LiveEval;
+  /** Set this to show the live advantage bar for the game. It is the logistic
+   *  divisor mapping the (searched or static) score to a win-probability share,
+   *  tuned to the game's eval magnitudes. Games with `liveEval` use the searched
+   *  score; the rest fall back to the static `evaluate`. */
+  evalScale?: number;
 
   /** Produce the rich tutor explanation for a move that was just played. */
   explainMove(before: S, move: M, after: S): MoveExplanation;

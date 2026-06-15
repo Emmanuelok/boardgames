@@ -207,6 +207,7 @@ const def: GameDefinition<BtState, BtMove> = {
   ],
   interaction: { type: 'move' },
   render: { pieceStyle: 'checker', showCoordinates: true, checkered: true },
+  evalScale: 500,
 
   createInitialState: initialState,
   cloneState: (s) => ({ board: s.board.slice(), turn: s.turn }),

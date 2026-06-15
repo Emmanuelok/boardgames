@@ -39,6 +39,7 @@ const def: GameDefinition<ChessState, ChessMove> = {
   ],
   interaction: { type: 'move' },
   render: { pieceStyle: 'chess', showCoordinates: true, checkered: true },
+  evalScale: 400,
 
   createInitialState: () => initialState(),
   cloneState: (s) => ({ board: s.board.slice(), turn: s.turn, castling: s.castling, ep: s.ep, half: s.half, full: s.full }),

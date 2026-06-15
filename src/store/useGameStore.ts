@@ -197,7 +197,7 @@ export const useGameStore = create<State>((set, get) => {
   let evalSeq = 0;
   const requestEval = () => {
     const { def, gameId, state } = get();
-    if (!def || !gameId || !def.liveEval) { set({ liveEval: null, liveEvalLoading: false }); return; }
+    if (!def || !gameId || def.evalScale == null) { set({ liveEval: null, liveEvalLoading: false }); return; }
     const status = def.getStatus(state);
     if (status.kind === 'win' || status.kind === 'draw') { set({ liveEvalLoading: false }); return; } // bar reads the result
     const seq = ++evalSeq;
