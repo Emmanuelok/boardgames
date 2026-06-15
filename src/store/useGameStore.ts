@@ -44,6 +44,7 @@ interface State {
   onlineStatus: NetStatus;
   onlineCode: string;
   onlineColor: Player;
+  chat: { from: 'me' | 'them'; text: string }[];
 
   // settings (persist across new games)
   mode: Mode;
@@ -77,6 +78,7 @@ interface State {
   hostOnline: (code?: string) => void;
   joinOnline: (code: string) => void;
   leaveOnline: () => void;
+  sendChat: (text: string) => void;
 }
 
 function ensureNotation(def: GameDefinition, state: any, move: MoveBase): MoveBase {
@@ -195,6 +197,8 @@ export const useGameStore = create<State>((set, get) => {
       setTimeout(drive, 120);
     } else if (m.t === 'restart') {
       get().newGame(m.gameId);
+    } else if (m.t === 'chat') {
+      set((s) => ({ chat: [...s.chat, { from: 'them', text: String(m.text).slice(0, 280) }] }));
     } else if (m.t === 'bye') {
       set({ onlineStatus: 'closed', toast: 'Opponent left the game.' });
     }
@@ -206,7 +210,7 @@ export const useGameStore = create<State>((set, get) => {
     selected: null, targets: [], selectedDrop: null, lastMove: null,
     status: { kind: 'playing' }, thinking: false,
     hintMove: null, hintText: null, promotion: null, toast: null,
-    net: null, onlineStatus: 'idle', onlineCode: '', onlineColor: 0,
+    net: null, onlineStatus: 'idle', onlineCode: '', onlineColor: 0, chat: [],
     mode: 'ai', humanColor: 0, difficulty: 'medium', view: '2d',
     themeId: DEFAULT_THEME_ID, autoTutor: true, flipped: false,
 
@@ -225,6 +229,7 @@ export const useGameStore = create<State>((set, get) => {
     },
 
     hostOnline(code) {
+      if (typeof code !== 'string') code = undefined; // guard: never let a stray event become the room code
       const net = new OnlineSession();
       net.onMsg = handleMsg;
       net.onStatus = (st) => {
@@ -249,14 +254,23 @@ export const useGameStore = create<State>((set, get) => {
 
     leaveOnline() {
       get().net?.close();
-      set({ net: null, mode: 'ai', onlineStatus: 'idle', onlineCode: '' });
+      set({ net: null, mode: 'ai', onlineStatus: 'idle', onlineCode: '', chat: [] });
       const id = get().gameId;
       if (id) get().newGame(id);
     },
 
     restart() {
       const id = get().gameId;
-      if (id) get().newGame(id);
+      if (!id) return;
+      if (get().mode === 'online') get().net?.send({ t: 'restart', gameId: id });
+      get().newGame(id);
+    },
+
+    sendChat(text) {
+      const t = text.trim();
+      if (!t) return;
+      get().net?.send({ t: 'chat', text: t.slice(0, 280) });
+      set((s) => ({ chat: [...s.chat, { from: 'me', text: t.slice(0, 280) }] }));
     },
 
     onCellClick(cell) {

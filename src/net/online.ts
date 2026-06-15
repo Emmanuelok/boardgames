@@ -10,6 +10,7 @@ export type NetMsg =
   | { t: 'init'; gameId: string }
   | { t: 'move'; move: any }
   | { t: 'restart'; gameId: string }
+  | { t: 'chat'; text: string }
   | { t: 'bye' };
 
 export type NetStatus = 'idle' | 'waiting' | 'connected' | 'error' | 'closed';

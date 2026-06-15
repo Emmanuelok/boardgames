@@ -69,6 +69,15 @@
 .mlb.brilliant { color: #22d3ee; } .mlb.great { color: #34d399; } .mlb.best { color: #4ade80; }
 .mlb.good { color: #86efac; } .mlb.inaccuracy { color: #fbbf24; } .mlb.mistake { color: #fb923c; } .mlb.blunder { color: #f87171; }
 
+.chat { display: flex; flex-direction: column; overflow: hidden; }
+.chat-msgs { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 7px; min-height: 0; }
+.chat-msg { max-width: 82%; padding: 8px 12px; border-radius: 14px; font-size: 14px; line-height: 1.4; word-break: break-word; }
+.chat-msg.me { align-self: flex-end; background: linear-gradient(120deg, var(--accent), #5b8bff); color: #fff; border-bottom-right-radius: 4px; }
+.chat-msg.them { align-self: flex-start; background: rgba(255,255,255,0.08); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.chat-input { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); }
+.chat-input input { flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--line-strong); color: var(--ink); border-radius: 10px; padding: 9px 12px; font-size: 14px; font-family: inherit; }
+.chat-input input:focus { outline: none; border-color: var(--accent); }
+
 .setup { padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
 .field-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-faint); font-weight: 800; margin-bottom: 8px; }
 .diff-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }

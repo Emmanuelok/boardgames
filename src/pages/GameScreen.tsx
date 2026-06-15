@@ -26,7 +26,7 @@ const DIFFS: { id: Difficulty; label: string; sub: string }[] = [
 export default function GameScreen() {
   const { gameId } = useParams();
   const store = useGameStore();
-  const [tab, setTab] = useState<'tutor' | 'moves' | 'setup'>('tutor');
+  const [tab, setTab] = useState<'tutor' | 'moves' | 'setup' | 'chat'>('tutor');
   const [themeOpen, setThemeOpen] = useState(false);
   const [muted, setMutedState] = useState(isMuted());
   const rating = useProfile((s) => s.rating);
@@ -63,6 +63,8 @@ export default function GameScreen() {
     const t = setTimeout(() => useGameStore.getState().setToast(null), 2600);
     return () => clearTimeout(t);
   }, [store.toast]);
+
+  useEffect(() => { if (store.mode !== 'online' && tab === 'chat') setTab('tutor'); }, [store.mode, tab]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -168,9 +170,9 @@ export default function GameScreen() {
           </div>
 
           <div className="tabs">
-            {(['tutor', 'moves', 'setup'] as const).map((t) => (
+            {(store.mode === 'online' ? (['tutor', 'moves', 'chat', 'setup'] as const) : (['tutor', 'moves', 'setup'] as const)).map((t) => (
               <button key={t} className={`tab ${tab === t ? 'on' : ''}`} onClick={() => setTab(t)}>
-                {t === 'tutor' ? '🧠 Tutor' : t === 'moves' ? '📜 Moves' : '⚙ Setup'}
+                {t === 'tutor' ? '🧠 Tutor' : t === 'moves' ? '📜 Moves' : t === 'chat' ? '💬 Chat' : '⚙ Setup'}
               </button>
             ))}
           </div>
@@ -179,6 +181,7 @@ export default function GameScreen() {
             {tab === 'tutor' && <TutorPanel />}
             {tab === 'moves' && <MoveLog store={store} />}
             {tab === 'setup' && <Setup store={store} def={def} />}
+            {tab === 'chat' && store.mode === 'online' && <Chat store={store} />}
           </div>
         </aside>
       </div>
@@ -187,6 +190,25 @@ export default function GameScreen() {
       {store.promotion && <Promotion store={store} />}
       {store.toast && <div className="toast glass">{store.toast}</div>}
       {lastUnlocked && <AchievementToast id={lastUnlocked} />}
+    </div>
+  );
+}
+
+function Chat({ store }: any) {
+  const [text, setText] = useState('');
+  const endRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [store.chat.length]);
+  return (
+    <div className="chat glass-soft">
+      <div className="chat-msgs">
+        {store.chat.length === 0 && <div className="faint" style={{ padding: 12, fontSize: 13 }}>Connected — say hello to your opponent 👋</div>}
+        {store.chat.map((m: any, i: number) => <div key={i} className={`chat-msg ${m.from}`}>{m.text}</div>)}
+        <div ref={endRef} />
+      </div>
+      <form className="chat-input" onSubmit={(e) => { e.preventDefault(); store.sendChat(text); setText(''); }}>
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Message…" maxLength={280} />
+        <button className="btn sm primary" type="submit">Send</button>
+      </form>
     </div>
   );
 }
@@ -300,7 +322,7 @@ function Setup({ store, def }: any) {
           <div className="online-panel">
             {store.mode !== 'online' || store.onlineStatus === 'idle' ? (
               <>
-                <button className="btn sm primary" onClick={store.hostOnline}>Create room</button>
+                <button className="btn sm primary" onClick={() => store.hostOnline()}>Create room</button>
                 <div className="row gap-xs">
                   <input className="tp-search" style={{ flex: 1 }} placeholder="Enter code (GM-XXXXX)" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
                   <button className="btn sm" onClick={() => store.joinOnline(joinCode)} disabled={joinCode.trim().length < 5}>Join</button>
