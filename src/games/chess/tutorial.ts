@@ -191,6 +191,55 @@ const tutorial: Tutorial = {
       ],
     },
     {
+      title: 'Tactics Trainer', icon: '🎯',
+      steps: [
+        {
+          title: 'Your first puzzle: mate in one',
+          body: 'Reading about tactics is one thing — *finding* them is another. **Click a piece, then click its destination** to play. Black\'s king is walled in by its own pawns. Deliver checkmate in a single move.',
+          setup: '6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1',
+          challenge: {
+            prompt: 'White to play — checkmate in one.',
+            solution: ['Ra8'],
+            success: 'Ra8# — the rook seizes the open back rank and the king, hemmed in by its own pawns, has nowhere to go. This back-rank mate decides countless games; remember to give your own king "luft" (an escape square).',
+          },
+        },
+        {
+          title: 'The royal fork',
+          body: 'The knight is the great forker — it can attack two pieces that can never defend each other. Find the leap that checks the king **and** hits the queen at the same time.',
+          setup: '4k3/5q2/8/8/2N5/8/8/4K3 w - - 0 1',
+          challenge: {
+            prompt: 'White to play — win the queen with a fork.',
+            solution: ['Nd6'],
+            success: 'Nd6+ forks the king on e8 and the queen on f7. The king must escape check, and then you simply capture the queen — a decisive material gain.',
+          },
+        },
+        {
+          title: 'Fork the king and rook',
+          body: 'Same weapon, new targets. Jump the knight to the square that gives check **and** attacks the rook in the corner.',
+          setup: 'r3k3/8/N7/8/8/8/8/4K3 w - - 0 1',
+          challenge: {
+            prompt: 'White to play — fork the king and rook.',
+            solution: ['Nc7'],
+            success: 'Nc7+ checks the king and attacks the a8-rook. After the king steps aside, Nxa8 wins the exchange (a rook for your knight).',
+          },
+        },
+        {
+          title: 'Punish the blunder',
+          body: 'The most common way to win is the simplest: **take what is left hanging**. Black has just dropped the queen into a pawn\'s path. Grab it.',
+          setup: '4k3/8/8/3q4/4P3/8/8/4K3 w - - 0 1',
+          challenge: {
+            prompt: 'White to play — win the queen.',
+            solution: ['exd5'],
+            success: 'exd5 — a humble pawn snaffles the queen. Before every move, scan for undefended enemy pieces; in a live game our tutor flags them for you automatically.',
+          },
+        },
+        {
+          title: 'Keep training',
+          body: 'In a real game the AI tutor grades **every** move you make and shows the tactic you missed. Play at rising difficulty, read each explanation, and these patterns will start to leap off the board.',
+        },
+      ],
+    },
+    {
       title: 'Basic Checkmates', icon: '🏁',
       steps: [
         {

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Difficulty, GameDefinition, GameStatus, MoveBase, MoveExplanation, Player } from '../engine/types';
 import { getGame } from '../engine/registry';
 import { engine } from '../engine/engineClient';
+import { resolveClick } from '../engine/interaction';
 import { DEFAULT_THEME_ID } from '../themes/boardThemes';
 
 export interface LogEntry {
@@ -173,25 +174,15 @@ export const useGameStore = create<State>((set, get) => {
         return;
       }
 
-      // Unified resolver for place / move / adaptive games. A legal move may be
-      // a placement or removal (no `from`) or a relocation (`from`→`to`).
-      const legal = def.getLegalMoves(state, null);
-      const play = (m: MoveBase) => { commit(m, state); setTimeout(drive, 120); };
-      const directHere = legal.find((m) => m.from === undefined && m.to === cell);
-      const isSource = (sq: number) => legal.some((m) => m.from === sq);
-
-      if (selected === null) {
-        if (directHere) { play(directHere); return; }
-        if (isSource(cell)) set({ selected: cell, targets: def.getLegalMoves(state, cell) });
-        return;
+      // Unified resolver (shared with interactive lessons).
+      const r = resolveClick(def, state, selected, get().targets, cell);
+      switch (r.kind) {
+        case 'play': commit(r.move, state); setTimeout(drive, 120); break;
+        case 'select': set({ selected: r.cell, targets: r.targets }); break;
+        case 'promote': set({ promotion: { from: r.from, to: r.to, options: r.options } }); break;
+        case 'clear': set({ selected: null, targets: [] }); break;
+        case 'none': break;
       }
-      if (cell === selected) { set({ selected: null, targets: [] }); return; }
-      if (isSource(cell)) { set({ selected: cell, targets: def.getLegalMoves(state, cell) }); return; }
-      const matching = get().targets.filter((m) => m.to === cell);
-      if (matching.length > 1) { set({ promotion: { from: selected, to: cell, options: matching } }); return; }
-      if (matching.length === 1) { play(matching[0]); return; }
-      if (directHere) { play(directHere); return; }
-      set({ selected: null, targets: [] });
     },
 
     passTurn() {

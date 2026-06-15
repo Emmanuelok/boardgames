@@ -149,6 +149,15 @@ export interface RenderConfig {
 
 /* ----------------------------- Tutorials ------------------------------ */
 
+export interface TutorialChallenge {
+  /** What the learner must do, e.g. "White to play — win material with a fork." */
+  prompt: string;
+  /** Acceptable move notations (matched after stripping +, #). */
+  solution: string[];
+  /** Shown when solved (optional — otherwise the tutor explains the move). */
+  success?: string;
+}
+
 export interface TutorialStep {
   title: string;
   body: string;
@@ -156,6 +165,8 @@ export interface TutorialStep {
   setup?: string;
   highlight?: number[];
   arrows?: Array<{ from: number; to: number; tone?: 'good' | 'bad' | 'info' }>;
+  /** Turns the step into an interactive puzzle on a playable mini board. */
+  challenge?: TutorialChallenge;
 }
 
 export interface TutorialChapter {

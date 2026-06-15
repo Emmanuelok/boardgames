@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { getGame } from '../engine/registry';
 import { getTheme } from '../themes/boardThemes';
 import MiniBoard from '../components/MiniBoard';
+import InteractiveLesson from '../components/InteractiveLesson';
 import type { TutorialStep } from '../engine/types';
 import './Learn.css';
 
@@ -61,7 +62,9 @@ export default function Learn() {
               <h2>{active.step.title}</h2>
               <div className={`lesson-grid ${showBoard(active.step) ? 'with-board' : ''}`}>
                 <p className="lesson-body"><Rich text={active.step.body} /></p>
-                {showBoard(active.step) && (
+                {active.step.challenge ? (
+                  <InteractiveLesson key={cur} def={def} setup={active.step.setup} challenge={active.step.challenge} theme={theme} />
+                ) : showBoard(active.step) && (
                   <div className="lesson-board">
                     <MiniBoard def={def} setup={active.step.setup} highlight={active.step.highlight} arrows={active.step.arrows} theme={theme} />
                   </div>
@@ -84,7 +87,7 @@ export default function Learn() {
 }
 
 function showBoard(step: TutorialStep): boolean {
-  return !!(step.setup || (step.highlight && step.highlight.length) || (step.arrows && step.arrows.length));
+  return !!(step.challenge || step.setup || (step.highlight && step.highlight.length) || (step.arrows && step.arrows.length));
 }
 
 /** Minimal inline markdown: **bold** and `code`. */

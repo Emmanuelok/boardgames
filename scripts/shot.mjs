@@ -18,6 +18,14 @@ page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
 page.on('pageerror', (e) => errs.push('PAGEERROR: ' + e.message));
 await page.goto(url, { waitUntil: 'networkidle0', timeout: 40000 });
 await new Promise((r) => setTimeout(r, 1500));
+const clickText = process.argv[7];
+if (clickText) {
+  await page.evaluate((t) => {
+    const el = [...document.querySelectorAll('.nav-step,button,a')].find((e) => (e.textContent || '').includes(t));
+    if (el) el.click();
+  }, clickText);
+  await new Promise((r) => setTimeout(r, 900));
+}
 const sel = process.argv[6];
 if (sel) {
   const el = await page.$(sel);
