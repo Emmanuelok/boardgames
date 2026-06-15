@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   initialState, rollDice, withRoll, legalMoves, applyMove, turnIsOver, endTurn, winner, aiPlayTurn,
@@ -6,6 +6,7 @@ import {
 } from '../games/backgammon/logic';
 import { useProfile } from '../profile/profile';
 import { playSound, resumeAudio, isMuted, toggleMuted } from '../audio/sound';
+import { useBgOnline, type BgOnline } from '../net/useBgOnline';
 import './BackgammonGame.css';
 
 const WHITE = 0, BLACK = 1;
@@ -25,38 +26,58 @@ function pip(s: BgState, player: number): number {
   return n;
 }
 
-export default function BackgammonGame({ aiDifficulty = 'medium' }: { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
+export default function BackgammonGame({
+  aiDifficulty = 'medium', autoHost, autoJoin,
+}: { aiDifficulty?: 'easy' | 'medium' | 'hard'; autoHost?: string; autoJoin?: string }) {
   const [s, setS] = useState<BgState>(() => initialState());
   const [sel, setSel] = useState<Src | null>(null);
   const [thinking, setThinking] = useState(false);
   const [muted, setMutedState] = useState(isMuted());
+  const [recorded, setRecorded] = useState(false);
+  const [showOnline, setShowOnline] = useState(false);
   const recordResult = useProfile((p) => p.recordResult);
   const win = winner(s);
-  const [recorded, setRecorded] = useState(false);
 
-  const moves = useMemo(() => (s.dice.length ? legalMoves(s) : []), [s]);
+  const online = useBgOnline({
+    onReset: () => { setS(initialState()); setSel(null); setRecorded(false); },
+    onState: (st) => { setS(st); setSel(null); },
+  });
+  const isOnline = online.engaged;
+  const myColor: 0 | 1 = isOnline ? online.color : WHITE;
+  const myTurn = s.turn === myColor && win === null && (!isOnline || online.connected);
+  const flip = isOnline && myColor === BLACK; // guest (Black) sees the board from their side
+
+  // Auto host/join from an invite link (?join= / ?host=).
+  const didAuto = useRef(false);
+  useEffect(() => {
+    if (didAuto.current) return;
+    if (autoJoin) { didAuto.current = true; setShowOnline(true); online.join(autoJoin); }
+    else if (autoHost) { didAuto.current = true; setShowOnline(true); online.host(autoHost); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoJoin, autoHost]);
+
+  const moves = useMemo(() => (myTurn && s.dice.length ? legalMoves(s) : []), [s, myTurn]);
   const sources = useMemo(() => new Set<Src>(moves.map((m) => m.from)), [moves]);
   const destsOf = (from: Src) => moves.filter((m) => m.from === from);
   const selDests = sel === null ? [] : destsOf(sel);
   const destPoints = new Set<number>(selDests.filter((m) => m.to !== 'off').map((m) => m.to as number));
   const canBearSel = selDests.some((m) => m.to === 'off');
 
-  // Record the result once.
+  // Record the result once (rated vs AI only — online games are friendly).
   useEffect(() => {
     if (win === null || recorded) return;
     setRecorded(true);
-    playSound(win === WHITE ? 'win' : 'lose');
-    recordResult('backgammon', win === WHITE ? 'win' : 'loss', aiDifficulty as any);
-  }, [win, recorded, recordResult, aiDifficulty]);
+    playSound(win === myColor ? 'win' : 'lose');
+    if (!isOnline) recordResult('backgammon', win === WHITE ? 'win' : 'loss', aiDifficulty as any);
+  }, [win, recorded, recordResult, aiDifficulty, isOnline, myColor]);
 
-  // AI (Black) plays its whole turn.
+  // AI (Black) plays its whole turn — vs-AI mode only.
   useEffect(() => {
+    if (isOnline) return;
     if (win !== null || s.turn !== BLACK) return;
     setThinking(true);
     const t = setTimeout(() => {
       let st = s.dice.length ? s : withRoll(s, rollDice());
-      // Greedy: repeatedly take the move the engine's evaluate prefers.
-      // (logic.aiPlayTurn does the full sequence selection.)
       const res = aiPlay(st, aiDifficulty);
       playSound(res.hit ? 'capture' : 'move');
       setS(endTurn(res.state));
@@ -64,20 +85,22 @@ export default function BackgammonGame({ aiDifficulty = 'medium' }: { aiDifficul
     }, 750);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s, win]);
+  }, [s, win, isOnline]);
+
+  const push = (st: BgState) => { setS(st); if (isOnline) online.sendState(st); };
 
   const roll = () => {
     resumeAudio();
-    if (s.turn !== WHITE || s.dice.length || win !== null) return;
+    if (!myTurn || s.dice.length) return;
     playSound('select');
     let st = withRoll(s, rollDice());
     if (legalMoves(st).length === 0) st = endTurn(st); // no move possible
-    setS(st);
+    push(st);
   };
 
   const clickSource = (from: Src) => {
     resumeAudio();
-    if (s.turn !== WHITE || win !== null) return;
+    if (!myTurn) return;
     if (!sources.has(from)) { setSel(null); return; }
     playSound('select');
     setSel(from);
@@ -89,25 +112,37 @@ export default function BackgammonGame({ aiDifficulty = 'medium' }: { aiDifficul
     playSound(m.to === 'off' ? 'promote' : hit ? 'capture' : 'move');
     setSel(null);
     if (turnIsOver(st)) st = endTurn(st);
-    setS(st);
+    push(st);
   };
+
+  const newGame = () => {
+    if (isOnline) online.restart();
+    setS(initialState()); setSel(null); setRecorded(false);
+  };
+
+  const onDest = (p: number) => { const m = selDests.find((x) => x.to === p); if (m) play(m); };
+  const blackName = isOnline ? (myColor === BLACK ? 'You' : 'Opponent') : 'Black';
+  const whiteName = isOnline ? (myColor === WHITE ? 'You' : 'Opponent') : 'You';
 
   return (
     <div className="bg-game">
       <div className="bg-hud">
-        <PlayerChip name="Black" color="#1f2937" pips={pip(s, BLACK)} off={s.off[1]} active={s.turn === BLACK} ai thinking={thinking} />
+        <PlayerChip name={blackName} color="#1f2937" pips={pip(s, BLACK)} off={s.off[1]} active={s.turn === BLACK}
+          tag={isOnline ? 'online' : 'AI'} thinking={!isOnline && thinking} />
         <div className="bg-center-hud">
           <Dice dice={s.dice} turn={s.turn} />
-          {s.turn === WHITE && s.dice.length === 0 && win === null && <button className="btn primary" onClick={roll}>🎲 Roll</button>}
-          {win !== null && <div className="bg-result">{win === WHITE ? 'You win! 🏆' : 'Black wins'}</div>}
+          {myTurn && s.dice.length === 0 && <button className="btn primary" onClick={roll}>🎲 Roll</button>}
+          {isOnline && online.connected && win === null && !myTurn && <div className="faint" style={{ fontSize: 13 }}>Opponent’s turn…</div>}
+          {isOnline && !online.connected && win === null && <div className="faint" style={{ fontSize: 13 }}>Waiting for opponent…</div>}
+          {win !== null && <div className="bg-result">{win === myColor ? 'You win! 🏆' : `${win === WHITE ? 'White' : 'Black'} wins`}</div>}
         </div>
-        <PlayerChip name="You" color="#f1f5f9" pips={pip(s, WHITE)} off={s.off[0]} active={s.turn === WHITE} thinking={false} />
+        <PlayerChip name={whiteName} color="#f1f5f9" pips={pip(s, WHITE)} off={s.off[0]} active={s.turn === WHITE} tag={isOnline ? 'online' : 'you'} thinking={false} />
       </div>
 
       <div className="bg-board-wrap">
-        <div className="bg-board">
-          <Half points={TOP} top s={s} sel={sel} sources={sources} destPoints={destPoints} onSource={clickSource} onDest={(p: number) => { const m = selDests.find((x) => x.to === p); if (m) play(m); }} />
-          <Half points={BOT} s={s} sel={sel} sources={sources} destPoints={destPoints} onSource={clickSource} onDest={(p: number) => { const m = selDests.find((x) => x.to === p); if (m) play(m); }} />
+        <div className={`bg-board${flip ? ' flipped' : ''}`}>
+          <Half points={TOP} top s={s} sel={sel} sources={sources} destPoints={destPoints} onSource={clickSource} onDest={onDest} />
+          <Half points={BOT} s={s} sel={sel} sources={sources} destPoints={destPoints} onSource={clickSource} onDest={onDest} />
         </div>
         <div className="bg-off">
           <OffTray player={BLACK} count={s.off[1]} />
@@ -117,11 +152,82 @@ export default function BackgammonGame({ aiDifficulty = 'medium' }: { aiDifficul
       </div>
 
       <div className="bg-controls">
-        <button className="btn sm" onClick={() => { setS(initialState()); setSel(null); setRecorded(false); }}>↻ New game</button>
+        <button className="btn sm" onClick={newGame}>↻ New game</button>
         <button className="btn icon sm" onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
         <Link className="btn sm ghost" to="/learn/backgammon">📖 Rules</Link>
-        <span className="faint" style={{ fontSize: 13 }}>{s.bar[0] > 0 ? 'You have a checker on the bar — enter it first.' : sel !== null ? 'Choose a destination.' : s.turn === WHITE && s.dice.length ? 'Pick a checker to move.' : ''}</span>
+        {isOnline
+          ? <button className="btn sm ghost" onClick={() => { online.leave(); setShowOnline(false); }}>Leave room</button>
+          : <button className="btn sm" onClick={() => setShowOnline((v) => !v)}>🌐 Play online</button>}
+        <span className="faint" style={{ fontSize: 13 }}>{hintLine(s, myTurn, sel, isOnline, online.connected)}</span>
       </div>
+
+      {showOnline && <OnlinePanel online={online} myColor={myColor} />}
+    </div>
+  );
+}
+
+function hintLine(s: BgState, myTurn: boolean, sel: Src | null, isOnline: boolean, connected: boolean): string {
+  if (isOnline && !connected) return '';
+  if (!myTurn) return '';
+  if (s.bar[s.turn] > 0) return 'You have a checker on the bar — enter it first.';
+  if (sel !== null) return 'Choose a destination.';
+  if (s.dice.length) return 'Pick a checker to move.';
+  return '';
+}
+
+/* ----- Online panel (create / join / status / chat) ----- */
+function OnlinePanel({ online, myColor }: { online: BgOnline; myColor: 0 | 1 }) {
+  const [joinCode, setJoinCode] = useState('');
+  const [copied, setCopied] = useState(false);
+  if (!online.engaged) {
+    return (
+      <div className="bg-online glass-soft">
+        <div className="field-label">Play a friend online (P2P)</div>
+        <button className="btn sm primary" onClick={() => online.host()}>Create room</button>
+        <div className="row gap-xs">
+          <input className="tp-search" style={{ flex: 1 }} placeholder="Enter code (GM-XXXXX)" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
+          <button className="btn sm" onClick={() => online.join(joinCode)} disabled={joinCode.trim().length < 5}>Join</button>
+        </div>
+        <span className="faint" style={{ fontSize: 12 }}>Host plays White and rolls first. Share the code or link to invite a friend — runs peer-to-peer, no account needed.</span>
+        <Link className="chip clickable" to="/lobby" style={{ alignSelf: 'flex-start' }}>🌐 Find players in the Lobby →</Link>
+      </div>
+    );
+  }
+  return (
+    <div className="bg-online glass-soft">
+      {online.code && <div className="online-code">{online.code}</div>}
+      {online.code && myColor === WHITE && (
+        <button className="btn sm primary" onClick={() => {
+          const link = `${window.location.origin}${window.location.pathname}#/play/backgammon?join=${online.code}`;
+          navigator.clipboard?.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1800); }, () => { setCopied(true); setTimeout(() => setCopied(false), 1800); });
+        }}>{copied ? '✓ Link copied!' : '🔗 Copy invite link'}</button>
+      )}
+      <div className={`online-status ${online.status}`}>
+        {online.status === 'waiting' && (online.code ? 'Share the code or link — waiting for your opponent to join…' : 'Connecting…')}
+        {online.status === 'connected' && `Connected! You play ${myColor === WHITE ? 'White' : 'Black'}.`}
+        {online.status === 'error' && 'Connection failed — check the code and try again.'}
+        {online.status === 'closed' && 'Opponent disconnected.'}
+      </div>
+      {online.connected && <BgChat online={online} />}
+    </div>
+  );
+}
+
+function BgChat({ online }: { online: BgOnline }) {
+  const [text, setText] = useState('');
+  const endRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [online.chat.length]);
+  return (
+    <div className="bg-chat">
+      <div className="bg-chat-msgs">
+        {online.chat.length === 0 && <div className="faint" style={{ fontSize: 12, padding: '2px 2px' }}>Say hi to your opponent 👋</div>}
+        {online.chat.map((m, i) => <div key={i} className={`chat-msg ${m.from}`}>{m.text}</div>)}
+        <div ref={endRef} />
+      </div>
+      <form className="chat-input" onSubmit={(e) => { e.preventDefault(); online.sendChat(text); setText(''); }}>
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Message…" maxLength={280} />
+        <button className="btn sm primary" type="submit">Send</button>
+      </form>
     </div>
   );
 }
@@ -204,15 +310,15 @@ function pips(d: number) {
   return <span className={`die-face f${d}`}>{Array.from({ length: d }).map((_, i) => <i key={i} />)}</span>;
 }
 
-function PlayerChip({ name, color, pips, off, active, ai, thinking }: any) {
+function PlayerChip({ name, color, pips, off, active, tag, thinking }: any) {
   return (
     <div className={`bg-player ${active ? 'active' : ''}`}>
       <span className="bg-swatch" style={{ background: color }} />
       <div className="col" style={{ lineHeight: 1.15 }}>
         <strong>{name}</strong>
-        <span className="faint" style={{ fontSize: 11 }}>{ai ? 'AI' : 'You'} · {pips} pips · {off} off</span>
+        <span className="faint" style={{ fontSize: 11 }}>{tag} · {pips} pips · {off} off</span>
       </div>
-      {active && ai && thinking && <span className="bg-think">rolling…</span>}
+      {active && thinking && <span className="bg-think">rolling…</span>}
     </div>
   );
 }

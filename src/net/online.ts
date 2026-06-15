@@ -9,6 +9,7 @@ import type { DataConnection } from 'peerjs';
 export type NetMsg =
   | { t: 'init'; gameId: string }
   | { t: 'move'; move: any }
+  | { t: 'state'; state: any } // full authoritative state sync (bespoke games, e.g. backgammon dice)
   | { t: 'restart'; gameId: string }
   | { t: 'chat'; text: string }
   | { t: 'bye' };

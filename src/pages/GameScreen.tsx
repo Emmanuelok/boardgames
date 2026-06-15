@@ -51,6 +51,7 @@ export default function GameScreen() {
   // or ?host=GM-XXXXX when a lobby challenge sends both players to a shared code).
   useEffect(() => {
     if (joinedRef.current) return;
+    if (gameId && getGame(gameId)?.custom) return; // bespoke games (backgammon) auto-join themselves
     const join = params.get('join');
     const host = params.get('host');
     if (join) { joinedRef.current = true; setTimeout(() => useGameStore.getState().joinOnline(join), 450); }
@@ -98,7 +99,7 @@ export default function GameScreen() {
           <div className="gs-title"><span className="gs-emoji">{def.emoji}</span><div className="col"><strong>{def.name}</strong><span className="faint" style={{ fontSize: 12 }}>vs AI · {diff}</span></div></div>
           <Link className="btn sm ghost" to={`/learn/${def.id}`}>📖 Learn</Link>
         </header>
-        <BackgammonGame aiDifficulty={diff} />
+        <BackgammonGame aiDifficulty={diff} autoJoin={params.get('join') || undefined} autoHost={params.get('host') || undefined} />
       </div>
     );
   }
