@@ -16,6 +16,7 @@ import shogi from '../games/shogi';
 import backgammon from '../games/backgammon';
 import breakthrough from '../games/breakthrough';
 import linesOfAction from '../games/linesOfAction';
+import konane from '../games/konane';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -33,6 +34,7 @@ export const GAMES: GameDefinition[] = [
   backgammon,
   reversi,
   linesOfAction,
+  konane,
   connectFour,
   mancala,
   go,

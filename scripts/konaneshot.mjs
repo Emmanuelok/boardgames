@@ -1,0 +1,16 @@
+import chromium from '@sparticuz/chromium';
+import puppeteer from 'puppeteer-core';
+
+const browser = await puppeteer.launch({ args: [...chromium.args, '--no-sandbox'], executablePath: await chromium.executablePath(), headless: chromium.headless });
+const page = await browser.newPage();
+page.on('pageerror', (e) => console.log('PAGEERROR:', e.message));
+await page.setViewport({ width: 1280, height: 980 });
+await page.goto('http://localhost:4215/#/play/konane', { waitUntil: 'networkidle0', timeout: 40000 });
+await new Promise((r) => setTimeout(r, 1300));
+console.log('cells:', await page.evaluate(() => document.querySelectorAll('.cell').length));
+console.log('stones:', await page.evaluate(() => document.querySelectorAll('.cell [class*="piece"], .cell .stone, .cell svg circle, .cell .disc').length));
+console.log('eval bar:', await page.evaluate(() => !!document.querySelector('.eval-bar')), await page.evaluate(() => document.querySelector('.eval-label')?.textContent || ''));
+const col = await page.$('.board-col');
+if (col) await col.screenshot({ path: '/tmp/konane.png' });
+await browser.close();
+console.log('SAVED /tmp/konane.png');
