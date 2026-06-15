@@ -15,6 +15,7 @@ import ninemensmorris from '../games/ninemensmorris';
 import shogi from '../games/shogi';
 import backgammon from '../games/backgammon';
 import breakthrough from '../games/breakthrough';
+import linesOfAction from '../games/linesOfAction';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -31,6 +32,7 @@ export const GAMES: GameDefinition[] = [
   ninemensmorris,
   backgammon,
   reversi,
+  linesOfAction,
   connectFour,
   mancala,
   go,
