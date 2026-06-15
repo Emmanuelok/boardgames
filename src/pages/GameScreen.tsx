@@ -36,6 +36,23 @@ export default function GameScreen() {
     return () => clearTimeout(t);
   }, [store.toast]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
+      const s = useGameStore.getState();
+      switch (e.key.toLowerCase()) {
+        case 'z': s.undo(); break;
+        case 'y': s.redo(); break;
+        case 'f': s.toggleFlip(); break;
+        case 'h': s.requestHint(); break;
+        case 'n': s.restart(); break;
+        case 'escape': setThemeOpen(false); if (s.promotion) s.choosePromotion(null); break;
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const def = store.def;
   if (!def || !store.state || def.id !== gameId) {
     return <div className="loading">Loading…</div>;
@@ -94,11 +111,11 @@ export default function GameScreen() {
 
         <aside className="side-col">
           <div className="controls glass-soft">
-            <button className="btn sm primary" onClick={store.restart}>↻ New</button>
-            <button className="btn sm" onClick={store.undo} disabled={store.past.length === 0}>↶ Undo</button>
-            <button className="btn sm" onClick={store.redo} disabled={store.future.length === 0}>↷ Redo</button>
-            <button className="btn sm" onClick={store.requestHint} disabled={over}>💡 Hint</button>
-            <button className="btn sm" onClick={store.toggleFlip}>⇅ Flip</button>
+            <button className="btn sm primary" onClick={store.restart} title="New game (N)">↻ New</button>
+            <button className="btn sm" onClick={store.undo} disabled={store.past.length === 0} title="Undo (Z)">↶ Undo</button>
+            <button className="btn sm" onClick={store.redo} disabled={store.future.length === 0} title="Redo (Y)">↷ Redo</button>
+            <button className="btn sm" onClick={store.requestHint} disabled={over} title="Get a hint (H)">💡 Hint</button>
+            <button className="btn sm" onClick={store.toggleFlip} title="Flip board (F)">⇅ Flip</button>
           </div>
 
           <div className="tabs">
@@ -134,9 +151,30 @@ function statusLine(store: any): string {
   return who;
 }
 
+const CHESS_VAL: Record<string, number> = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 0 };
+function playerScore(def: any, state: any, who: Player): string | null {
+  if (!state) return null;
+  const cells = def.getBoardView(state).cells;
+  if (def.id === 'chess') {
+    let mine = 0, theirs = 0;
+    for (const c of cells) if (c.piece) {
+      const v = CHESS_VAL[c.piece.kind] ?? 0;
+      if (c.piece.player === who) mine += v; else theirs += v;
+    }
+    return mine - theirs > 0 ? `+${mine - theirs}` : null;
+  }
+  if (def.id === 'reversi' || def.id === 'checkers') {
+    let n = 0;
+    for (const c of cells) if (c.piece && c.piece.player === who) n++;
+    return String(n);
+  }
+  return null;
+}
+
 function PlayerTag({ def, who, turn, thinking, store, you }: any) {
   const isAI = store.mode === 'ai' && who !== store.humanColor;
   const active = turn === who && store.status.kind !== 'win' && store.status.kind !== 'draw';
+  const score = playerScore(def, store.state, who);
   return (
     <div className={`player-tag ${active ? 'active' : ''}`}>
       <span className="pt-swatch" style={{ background: def.players[who].color }} />
@@ -144,8 +182,11 @@ function PlayerTag({ def, who, turn, thinking, store, you }: any) {
         <strong>{def.players[who].name}</strong>
         <span className="faint" style={{ fontSize: 11 }}>{store.mode === 'pass' ? 'Player' : isAI ? 'AI Engine' : you ? 'You' : 'You'}</span>
       </div>
-      {active && isAI && thinking && <span className="pt-think">thinking…</span>}
-      {active && <span className="pt-pulse" />}
+      <div className="pt-right">
+        {score && <span className="pt-score">{score}</span>}
+        {active && isAI && thinking && <span className="pt-think">thinking…</span>}
+        {active && <span className="pt-pulse" />}
+      </div>
     </div>
   );
 }
