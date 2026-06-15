@@ -104,6 +104,19 @@ npm run preview    # preview the build
 
 Requires Node 18+.
 
+### Deploy (Vercel or Netlify)
+
+The repo ships with config for both — connect it in either dashboard and it
+auto-builds on every push (free tier, no settings to change):
+
+- **Vercel** — "Add New Project" → import the repo → Deploy. (`vercel.json` sets
+  framework/build/output.)
+- **Netlify** — "Add new site" → "Import an existing project" → pick the repo →
+  Deploy. (`netlify.toml` sets build command `npm run build` and publish `dist`.)
+
+The app uses relative asset paths and `HashRouter`, so it works at any domain or
+sub-path with no extra configuration.
+
 ### Developer tests
 ```bash
 node --experimental-strip-types scripts/perft.ts     # verify chess move-gen (perft)
