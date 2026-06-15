@@ -18,6 +18,7 @@ import breakthrough from '../games/breakthrough';
 import linesOfAction from '../games/linesOfAction';
 import konane from '../games/konane';
 import clobber from '../games/clobber';
+import amazons from '../games/amazons';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -37,6 +38,7 @@ export const GAMES: GameDefinition[] = [
   linesOfAction,
   konane,
   clobber,
+  amazons,
   connectFour,
   mancala,
   go,

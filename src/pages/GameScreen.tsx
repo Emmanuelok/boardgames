@@ -157,6 +157,7 @@ export default function GameScreen() {
                   def={def} view={view} theme={theme} turn={turn} flipped={store.flipped}
                   selected={store.selected} targets={store.targets} lastMove={store.lastMove}
                   status={store.status} hint={store.hintMove} onCell={store.onCellClick}
+                  pendingCell={store.pendingTo}
                 />
               )}
             </div>

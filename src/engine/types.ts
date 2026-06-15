@@ -77,6 +77,8 @@ export interface MoveBase {
   promotion?: string;
   /** Piece kind being dropped from hand onto `to` (Shogi); `from` is undefined. */
   drop?: string;
+  /** Second-stage target for move-then-shoot games (Amazons): the blocked square. */
+  arrow?: number;
 }
 
 /** A captured piece held in hand, available to drop (Shogi). */
@@ -153,8 +155,10 @@ export interface InteractionModel {
    * All non-`drop` types are handled by one unified click resolver, so a move
    * may be a placement (`from` undefined), a relocation (`from`→`to`), or a
    * removal (`from` undefined, `to` = the captured cell).
+   * - `shoot`    : two-stage — select an amazon, move it, then shoot an arrow
+   *                (Amazons). Each legal move carries `from`, `to` and `arrow`.
    */
-  type: 'move' | 'place' | 'drop' | 'adaptive';
+  type: 'move' | 'place' | 'drop' | 'adaptive' | 'shoot';
 }
 
 export interface RenderConfig {

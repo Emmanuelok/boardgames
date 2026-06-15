@@ -18,10 +18,12 @@ interface Props {
   status: GameStatus;
   hint: MoveBase | null;
   onCell: (cell: number) => void;
+  /** Amazons: the amazon's chosen destination during the shoot phase (extra highlight). */
+  pendingCell?: number | null;
 }
 
 export default function Board2D(props: Props) {
-  const { def, view, theme, turn, flipped, selected, targets, lastMove, status, hint, onCell } = props;
+  const { def, view, theme, turn, flipped, selected, targets, lastMove, status, hint, onCell, pendingCell } = props;
   const { rows, cols } = view;
   const boardRef = useRef<HTMLDivElement>(null);
   const [cellPx, setCellPx] = useState(56);
@@ -124,6 +126,7 @@ export default function Board2D(props: Props) {
             >
               {isLast && <div className="hl last" />}
               {isSel && <div className="hl sel" />}
+              {pendingCell === cell.index && <div className="hl sel" />}
               {isCheck && <div className="hl check" />}
               {isHint && <div className="hl hint" />}
               {def.render.connections && cell.playable !== false && !cell.piece && cell.count === undefined && (

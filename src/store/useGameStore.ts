@@ -31,6 +31,7 @@ interface State {
   selected: number | null;
   targets: MoveBase[];
   selectedDrop: string | null;
+  pendingTo: number | null; // Amazons: the amazon's chosen destination, awaiting an arrow shot
   lastMove: LastMove | null;
   status: GameStatus;
   thinking: boolean;
@@ -85,6 +86,14 @@ interface State {
   joinOnline: (code: string) => void;
   leaveOnline: () => void;
   sendChat: (text: string) => void;
+}
+
+/** Keep one move per distinct destination cell (for highlighting click targets). */
+function dedupeTo(moves: MoveBase[]): MoveBase[] {
+  const seen = new Set<number>();
+  const out: MoveBase[] = [];
+  for (const m of moves) { if (!seen.has(m.to)) { seen.add(m.to); out.push(m); } }
+  return out;
 }
 
 function ensureNotation(def: GameDefinition, state: any, move: MoveBase): MoveBase {
@@ -145,7 +154,7 @@ export const useGameStore = create<State>((set, get) => {
       state: after,
       log: [...s.log, entry],
       lastMove: { from: (move as any).from, to: move.to, affected: (move as any).affected },
-      selected: null, targets: [], selectedDrop: null, status, promotion: null, hintMove: null, hintText: null,
+      selected: null, targets: [], selectedDrop: null, pendingTo: null, status, promotion: null, hintMove: null, hintText: null,
     }));
 
     if (willAnalyze) {
@@ -241,7 +250,7 @@ export const useGameStore = create<State>((set, get) => {
   return {
     gameId: null, def: null, state: null,
     past: [], future: [], log: [],
-    selected: null, targets: [], selectedDrop: null, lastMove: null,
+    selected: null, targets: [], selectedDrop: null, pendingTo: null, lastMove: null,
     status: { kind: 'playing' }, thinking: false,
     hintMove: null, hintText: null, promotion: null, toast: null,
     liveEval: null, liveEvalLoading: false, liveThreats: [],
@@ -256,7 +265,7 @@ export const useGameStore = create<State>((set, get) => {
       const state = def.createInitialState();
       set({
         gameId, def, state, past: [], future: [], log: [],
-        selected: null, targets: [], selectedDrop: null, lastMove: null, status: def.getStatus(state),
+        selected: null, targets: [], selectedDrop: null, pendingTo: null, lastMove: null, status: def.getStatus(state),
         thinking: false, hintMove: null, hintText: null, promotion: null, toast: null,
         flipped: get().mode === 'online' ? get().onlineColor === 1 : get().mode === 'ai' && get().humanColor === 1,
         liveEval: null,
@@ -323,6 +332,35 @@ export const useGameStore = create<State>((set, get) => {
         return;
       }
 
+      // Move-then-shoot (Amazons): select an amazon → click a destination → click
+      // an arrow target. Self-contained; never reached by the other interactions.
+      if (def.interaction.type === 'shoot') {
+        const all = def.getLegalMoves(state, null);
+        const sel = get().selected, pend = get().pendingTo;
+        const ownAmazon = (c: number) => all.some((m) => m.from === c);
+        if (pend !== null && sel !== null) {
+          // Phase 2: pick the arrow target to complete the move.
+          const m = all.find((mv) => mv.from === sel && mv.to === pend && (mv as any).arrow === cell);
+          if (m) { commit(m, state); setTimeout(drive, 120); return; }
+          if (cell === sel || ownAmazon(cell)) { // restart selection on this amazon
+            const dests = dedupeTo(all.filter((mv) => mv.from === cell));
+            set({ selected: cell, pendingTo: null, targets: dests }); playSound('select'); return;
+          }
+          set({ selected: null, pendingTo: null, targets: [] }); return;
+        }
+        if (sel !== null && all.some((mv) => mv.from === sel && mv.to === cell)) {
+          // Phase 1→2: destination chosen; show arrow targets from there.
+          const arrows = all.filter((mv) => mv.from === sel && mv.to === cell)
+            .map((mv) => ({ ...mv, to: (mv as any).arrow as number })); // synthetic targets at arrow squares
+          set({ pendingTo: cell, targets: dedupeTo(arrows) }); playSound('select'); return;
+        }
+        if (ownAmazon(cell)) { // (re)select an amazon
+          set({ selected: cell, pendingTo: null, targets: dedupeTo(all.filter((mv) => mv.from === cell)) }); playSound('select'); return;
+        }
+        set({ selected: null, pendingTo: null, targets: [] });
+        return;
+      }
+
       // Drop-from-hand (Shogi): a hand piece is armed; try to drop it here.
       const armed = get().selectedDrop;
       if (armed) {
@@ -381,7 +419,7 @@ export const useGameStore = create<State>((set, get) => {
         }
         return {
           past, future, state: snap.state, log: snap.log, lastMove: snap.lastMove,
-          status: s.def.getStatus(snap.state), selected: null, targets: [], selectedDrop: null,
+          status: s.def.getStatus(snap.state), selected: null, targets: [], selectedDrop: null, pendingTo: null,
           promotion: null, hintMove: null, hintText: null, thinking: false,
         };
       });
@@ -398,7 +436,7 @@ export const useGameStore = create<State>((set, get) => {
         const snap = future.shift()!;
         return {
           past, future, state: snap.state, log: snap.log, lastMove: snap.lastMove,
-          status: s.def.getStatus(snap.state), selected: null, targets: [], selectedDrop: null,
+          status: s.def.getStatus(snap.state), selected: null, targets: [], selectedDrop: null, pendingTo: null,
           promotion: null, hintMove: null, hintText: null,
         };
       });
