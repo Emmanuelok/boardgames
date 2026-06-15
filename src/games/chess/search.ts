@@ -81,9 +81,20 @@ function negamax(pos: Pos, depth: number, alpha: number, beta: number, ply: numb
 
   if (depth <= 0) return quiesce(pos, alpha, beta);
 
+  const inCheck = pos.inCheck(pos.turn);
   const moves = pos.legalMoves();
-  if (moves.length === 0) return pos.inCheck(pos.turn) ? -MATE + ply : 0;
+  if (moves.length === 0) return inCheck ? -MATE + ply : 0;
   if (pos.half >= 100) return 0;
+
+  // Null-move pruning: if giving the opponent a free move still fails high, prune.
+  if (depth >= 3 && !inCheck && beta < MATE - 1000 && pos.hasNonPawnMaterial()) {
+    pos.makeNull();
+    const R = depth > 6 ? 3 : 2;
+    const nullScore = -negamax(pos, depth - 1 - R, -beta, -beta + 1, ply + 1);
+    pos.unmakeNull();
+    if (stopped) return alpha;
+    if (nullScore >= beta) return beta;
+  }
 
   const ttMove = tte?.moveId;
   moves.sort((a, b) => scoreMove(b, ply, ttMove) - scoreMove(a, ply, ttMove));
@@ -91,13 +102,20 @@ function negamax(pos: Pos, depth: number, alpha: number, beta: number, ply: numb
   let best = -INF;
   let bestId = moves[0].id;
   let first = true;
+  let moveCount = 0;
   for (const m of moves) {
+    moveCount++;
     pos.make(m);
+    const gives = pos.inCheck(pos.turn); // does this move give check?
     let score: number;
     if (first) {
       score = -negamax(pos, depth - 1, -beta, -alpha, ply + 1);
     } else {
-      score = -negamax(pos, depth - 1, -alpha - 1, -alpha, ply + 1);
+      // Late-move reduction for quiet, non-checking moves searched late.
+      let red = 0;
+      if (depth >= 3 && moveCount > 3 && !m.capture && !m.promo && !gives) red = moveCount > 8 ? 2 : 1;
+      score = -negamax(pos, depth - 1 - red, -alpha - 1, -alpha, ply + 1);
+      if (red > 0 && score > alpha) score = -negamax(pos, depth - 1, -alpha - 1, -alpha, ply + 1);
       if (score > alpha && score < beta) score = -negamax(pos, depth - 1, -beta, -alpha, ply + 1);
     }
     pos.unmake();

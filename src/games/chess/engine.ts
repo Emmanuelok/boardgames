@@ -162,6 +162,7 @@ export class Position {
   full: number;
   hash: bigint = 0n;
   private history: Undo[] = [];
+  private nullStack: { ep: number; hash: bigint }[] = [];
 
   constructor(state: ChessState) {
     this.board = Int8Array.from(state.board);
@@ -519,6 +520,30 @@ export class Position {
     this.half = undo.half;
     this.full = undo.full;
     this.hash = undo.hash;
+  }
+
+  /** Play a "null move" (pass the turn) for null-move pruning in the search. */
+  makeNull() {
+    this.nullStack.push({ ep: this.ep, hash: this.hash });
+    if (this.ep !== -1) this.hash ^= Z.ep[fileOf(this.ep)];
+    this.ep = -1;
+    this.hash ^= Z.side;
+    this.turn = (this.turn ^ 1) as Color;
+  }
+  unmakeNull() {
+    const u = this.nullStack.pop()!;
+    this.turn = (this.turn ^ 1) as Color;
+    this.ep = u.ep;
+    this.hash = u.hash;
+  }
+  /** Does the side to move have a non-pawn, non-king piece? (Guards null-move zugzwang.) */
+  hasNonPawnMaterial(): boolean {
+    const want = this.turn === WHITE ? 1 : -1;
+    for (let sq = 0; sq < 64; sq++) {
+      const p = this.board[sq];
+      if (p !== 0 && Math.sign(p) === want) { const t = typeOf(p); if (t !== PAWN && t !== KING) return true; }
+    }
+    return false;
   }
 
   /** Standard Algebraic Notation for a legal move in this position. */
