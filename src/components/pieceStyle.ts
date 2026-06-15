@@ -17,6 +17,13 @@ export function pieceStyleFor(style: string, player: Player, color: string): CSS
     background: `radial-gradient(circle at 33% 28%, ${lighten(color)}, ${color} 68%, ${darken(color)} 100%)`,
     boxShadow: '0 3px 8px rgba(0,0,0,0.5)',
   };
+  if (style === 'xiangqi') return {
+    // a round wooden tile; the character/ring takes the player's colour
+    background: 'radial-gradient(circle at 38% 30%, #fdf3dd, #ecd6ab 70%, #dcc08c)',
+    color,
+    boxShadow: `inset 0 0 0 2px ${color}, inset 0 -2px 6px rgba(0,0,0,0.28), 0 3px 7px rgba(0,0,0,0.45)`,
+    borderRadius: '50%',
+  };
   return { background: color };
 }
 

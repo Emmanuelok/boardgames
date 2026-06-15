@@ -74,6 +74,8 @@
 .pc.stone { width: 84%; height: 84%; }
 .pc.checker { width: 82%; height: 82%; }
 .pc.disc.preview { opacity: 0.45; }
+.pc.xiangqi { width: 88%; height: 88%; border-radius: 50%; }
+.pc.xiangqi .glyph { font-size: 50cqw; line-height: 1; font-weight: 800; font-family: 'Songti SC', 'STSong', 'SimSun', Georgia, serif; }
 
 .pc .crown {
   position: absolute;

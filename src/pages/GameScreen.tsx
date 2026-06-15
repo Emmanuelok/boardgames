@@ -116,6 +116,7 @@ export default function GameScreen() {
             <button className="btn sm" onClick={store.redo} disabled={store.future.length === 0} title="Redo (Y)">↷ Redo</button>
             <button className="btn sm" onClick={store.requestHint} disabled={over} title="Get a hint (H)">💡 Hint</button>
             <button className="btn sm" onClick={store.toggleFlip} title="Flip board (F)">⇅ Flip</button>
+            {def.canPass && <button className="btn sm" onClick={store.passTurn} disabled={over} title="Pass (Go)">⏭ Pass</button>}
           </div>
 
           <div className="tabs">

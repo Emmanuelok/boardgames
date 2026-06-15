@@ -208,8 +208,8 @@ function Piece({ style, kind, crowned, color, metalness, roughness }: {
     );
   }
 
-  if (style === 'disc' || style === 'token') {
-    return <mesh castShadow position={[0, 0.18, 0]}><cylinderGeometry args={[0.4, 0.4, 0.18, 36]} />{mat}</mesh>;
+  if (style === 'disc' || style === 'token' || style === 'xiangqi') {
+    return <mesh castShadow position={[0, 0.18, 0]}><cylinderGeometry args={[0.42, 0.42, 0.2, 36]} />{mat}</mesh>;
   }
   if (style === 'checker') {
     return (

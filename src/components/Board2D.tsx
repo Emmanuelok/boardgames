@@ -126,7 +126,7 @@ export default function Board2D(props: Props) {
                   transition={{ type: 'spring', stiffness: 700, damping: 42, mass: 0.6 }}
                   style={pieceStyleFor(style, cell.piece.player, pieceColor(cell.piece.player))}
                 >
-                  {(style === 'chess' || style === 'mark') && <span className="glyph">{cell.piece.glyph}</span>}
+                  {(style === 'chess' || style === 'mark' || style === 'xiangqi') && <span className="glyph">{cell.piece.glyph}</span>}
                   {cell.piece.crowned && <span className="crown">♛</span>}
                 </motion.div>
               )}

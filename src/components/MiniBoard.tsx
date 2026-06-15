@@ -72,7 +72,7 @@ export default function MiniBoard({ def, setup, highlight = [], arrows = [], the
               {hi.has(cell.index) && <div className="hl mini-hi" />}
               {cell.piece && (
                 <div className={`pc ${style}`} style={pieceStyleFor(style, cell.piece.player, pieceColor(cell.piece.player))}>
-                  {(style === 'chess' || style === 'mark') && <span className="glyph">{cell.piece.glyph}</span>}
+                  {(style === 'chess' || style === 'mark' || style === 'xiangqi') && <span className="glyph">{cell.piece.glyph}</span>}
                   {cell.piece.crowned && <span className="crown">♛</span>}
                 </div>
               )}

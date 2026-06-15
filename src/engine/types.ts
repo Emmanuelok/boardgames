@@ -122,8 +122,8 @@ export interface InteractionModel {
 }
 
 export interface RenderConfig {
-  /** 2D + 3D piece archetype. */
-  pieceStyle: 'chess' | 'disc' | 'checker' | 'stone' | 'mark' | 'token';
+  /** 2D + 3D piece archetype. `xiangqi` = a round disc bearing a glyph/character. */
+  pieceStyle: 'chess' | 'disc' | 'checker' | 'stone' | 'mark' | 'token' | 'xiangqi';
   showCoordinates: boolean;
   /** Pieces sit on the *intersections* of lines (Go/Gomoku) vs inside squares. */
   intersections?: boolean;
@@ -172,6 +172,8 @@ export interface GameDefinition<S = any, M extends MoveBase = MoveBase> {
   players: [PlayerInfo, PlayerInfo];
   interaction: InteractionModel;
   render: RenderConfig;
+  /** True if a player may voluntarily pass (Go). The pass move has `to === -1`. */
+  canPass?: boolean;
 
   createInitialState(): S;
   cloneState(s: S): S;

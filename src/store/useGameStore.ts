@@ -47,6 +47,7 @@ interface State {
   newGame: (gameId: string) => void;
   restart: () => void;
   onCellClick: (cell: number) => void;
+  passTurn: () => void;
   choosePromotion: (m: MoveBase | null) => void;
   undo: () => void;
   redo: () => void;
@@ -196,6 +197,14 @@ export const useGameStore = create<State>((set, get) => {
       if (matching.length > 1) { set({ promotion: { from: selected, to: cell, options: matching } }); return; }
       commit(matching[0], state);
       setTimeout(drive, 120);
+    },
+
+    passTurn() {
+      const { def, state, status, mode, humanColor, thinking } = get();
+      if (!def || thinking || status.kind === 'win' || status.kind === 'draw') return;
+      if (mode === 'ai' && def.getTurn(state) !== humanColor) return;
+      const pass = def.getLegalMoves(state, null).find((m) => m.to === -1);
+      if (pass) { commit(pass, state); setTimeout(drive, 120); }
     },
 
     choosePromotion(m) {
