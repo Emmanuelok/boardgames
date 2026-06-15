@@ -1,0 +1,69 @@
+.bg-game { display: flex; flex-direction: column; gap: 14px; max-width: 760px; margin: 0 auto; }
+
+.bg-hud { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
+.bg-player { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,0.03); transition: all 0.25s; }
+.bg-player:last-child { justify-content: flex-end; }
+.bg-player.active { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.bg-swatch { width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3); }
+.bg-think { font-size: 12px; color: var(--accent-2); font-weight: 700; }
+.bg-center-hud { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.bg-result { font-weight: 800; font-size: 18px; font-family: var(--font-display); }
+
+.bg-board-wrap { display: flex; gap: 12px; align-items: stretch; }
+.bg-board {
+  flex: 1; display: flex; flex-direction: column;
+  background: linear-gradient(160deg, #2f5a3e, #244a32);
+  border: 16px solid; border-image: linear-gradient(160deg, #6b4423, #432a14) 1;
+  border-radius: 8px; aspect-ratio: 1.12; max-width: 640px; overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.bg-half { flex: 1; display: flex; gap: 0; }
+.bg-point { position: relative; flex: 1; cursor: pointer; }
+.bg-point::before { content: ''; position: absolute; inset: 0; }
+.bg-point.down::before { clip-path: polygon(0 0, 100% 0, 50% 92%); }
+.bg-point.up::before { clip-path: polygon(50% 8%, 0 100%, 100% 100%); }
+.bg-point.a::before { background: linear-gradient(#d8b075, #c49a5c); }
+.bg-point.b::before { background: linear-gradient(#7a4e28, #5e3a1d); }
+.bg-point.src::before { filter: brightness(1.25); }
+.bg-point.src { box-shadow: inset 0 0 0 2px rgba(124,201,255,0.6); }
+.bg-point.dest::before { box-shadow: inset 0 0 0 9999px rgba(52,211,153,0.28); }
+.bg-point.dest { box-shadow: inset 0 0 0 3px rgba(52,211,153,0.9); }
+.bg-point.sel { box-shadow: inset 0 0 0 3px rgba(255,255,255,0.85); }
+
+.bg-bar-col { width: 7%; background: linear-gradient(#4a2f17, #38230f); display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; cursor: default; }
+.bg-bar-col.bottom { flex-direction: column-reverse; }
+.bg-bar-col.src { box-shadow: inset 0 0 0 2px rgba(124,201,255,0.7); cursor: pointer; }
+.bg-bar-col.sel { box-shadow: inset 0 0 0 3px rgba(255,255,255,0.85); }
+
+.bg-checkers { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding-top: 3px; z-index: 2; pointer-events: none; }
+.bg-half.bottom .bg-checkers { flex-direction: column-reverse; padding-top: 0; padding-bottom: 3px; }
+.bg-checker { width: 78%; max-width: 30px; aspect-ratio: 1; border-radius: 50%; flex: none; box-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+.bg-checker.w { background: radial-gradient(circle at 35% 30%, #ffffff, #ddd6c4 70%); border: 1px solid #aaa291; }
+.bg-checker.b { background: radial-gradient(circle at 35% 30%, #5a5a5a, #161616 70%); border: 1px solid #000; }
+.bg-checker.flat { width: 26px; height: 9px; border-radius: 3px; aspect-ratio: auto; }
+.bg-stacknum { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-weight: 800; font-size: 13px; color: #fff; text-shadow: 0 1px 3px #000; }
+
+.bg-off { display: flex; flex-direction: column; gap: 8px; width: 64px; }
+.bg-offtray { flex: 1; border-radius: 8px; background: rgba(0,0,0,0.25); border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; padding: 6px 0; position: relative; }
+.bg-offtray.live { border-color: rgba(52,211,153,0.7); box-shadow: 0 0 16px -4px var(--good); }
+.bg-off-n { position: absolute; bottom: 4px; font-size: 10px; color: var(--ink-faint); font-weight: 700; }
+.bg-bearoff { border-radius: 8px; border: 1px dashed var(--line-strong); background: rgba(255,255,255,0.03); color: var(--ink-dim); font-size: 11px; font-weight: 700; padding: 6px 2px; cursor: not-allowed; }
+.bg-bearoff.live { border-style: solid; border-color: var(--good); color: var(--good); cursor: pointer; }
+
+.bg-dice { display: flex; gap: 8px; min-height: 36px; align-items: center; }
+.bg-dice.empty { min-height: 36px; }
+.die { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; box-shadow: 0 3px 8px rgba(0,0,0,0.45); }
+.die.w { background: linear-gradient(#fff, #e2ddcf); } .die.b { background: linear-gradient(#3a3a3a, #1a1a1a); }
+.die-face { display: grid; width: 24px; height: 24px; gap: 1px; }
+.die.w .die-face i { background: #222; } .die.b .die-face i { background: #eee; }
+.die-face i { width: 5px; height: 5px; border-radius: 50%; align-self: center; justify-self: center; }
+.die-face.f1 { grid-template: 1fr / 1fr; } .die-face.f1 i { grid-area: 1/1; }
+.die-face.f2 { grid-template: repeat(2,1fr)/repeat(2,1fr); } .die-face.f2 i:nth-child(1){grid-area:1/1} .die-face.f2 i:nth-child(2){grid-area:2/2}
+.die-face.f3 { grid-template: repeat(3,1fr)/repeat(3,1fr); } .die-face.f3 i:nth-child(1){grid-area:1/1} .die-face.f3 i:nth-child(2){grid-area:2/2} .die-face.f3 i:nth-child(3){grid-area:3/3}
+.die-face.f4, .die-face.f5, .die-face.f6 { grid-template: repeat(3,1fr)/repeat(2,1fr); }
+.die-face.f4 i:nth-child(1){grid-area:1/1} .die-face.f4 i:nth-child(2){grid-area:1/2} .die-face.f4 i:nth-child(3){grid-area:3/1} .die-face.f4 i:nth-child(4){grid-area:3/2}
+.die-face.f5 i:nth-child(1){grid-area:1/1} .die-face.f5 i:nth-child(2){grid-area:1/2} .die-face.f5 i:nth-child(3){grid-area:2/1; grid-column: 1/3; justify-self:center} .die-face.f5 i:nth-child(4){grid-area:3/1} .die-face.f5 i:nth-child(5){grid-area:3/2}
+.die-face.f6 i:nth-child(odd){justify-self:start; margin-left:3px} .die-face.f6 i:nth-child(even){justify-self:end; margin-right:3px}
+.die-face.f6 i:nth-child(1){grid-area:1/1} .die-face.f6 i:nth-child(2){grid-area:1/2} .die-face.f6 i:nth-child(3){grid-area:2/1} .die-face.f6 i:nth-child(4){grid-area:2/2} .die-face.f6 i:nth-child(5){grid-area:3/1} .die-face.f6 i:nth-child(6){grid-area:3/2}
+
+.bg-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

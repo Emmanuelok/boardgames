@@ -12,6 +12,8 @@ import xiangqi from '../games/xiangqi';
 import hex from '../games/hex';
 import mancala from '../games/mancala';
 import ninemensmorris from '../games/ninemensmorris';
+import shogi from '../games/shogi';
+import backgammon from '../games/backgammon';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -21,9 +23,11 @@ import ninemensmorris from '../games/ninemensmorris';
 export const GAMES: GameDefinition[] = [
   chess,
   xiangqi,
+  shogi,
   checkers,
   draughts,
   ninemensmorris,
+  backgammon,
   reversi,
   connectFour,
   mancala,

@@ -619,13 +619,50 @@ function orderScore(s: ShogiState, m: ShogiMove): number {
   return v;
 }
 
+/** Does the move give check to the opponent? (Used to keep forcing moves in the
+ *  capped search set.) */
+function moveGivesCheck(s: ShogiState, m: ShogiMove): boolean {
+  const opp = (s.turn ^ 1) as Player;
+  const next = m.drop !== undefined ? probeDrop(s.board, m, s.turn) : probeBoard(s.board, m);
+  return inCheckBoard(next, opp);
+}
+
+/**
+ * Move set the SEARCH explores. With full hands, Shogi has 500+ legal moves and
+ * a full-width tree is far too slow — so we cap the candidates: every forcing
+ * move (capture, promotion, or check) is always kept, and the quiet remainder
+ * is trimmed to the best `QUIET_CAP` by ordering score. The UI still sees the
+ * complete legal-move list via `getLegalMoves`; only the engine is capped.
+ */
+const QUIET_CAP = 24;
+
+function searchMoves(s: ShogiState): ShogiMove[] {
+  const all = legalMoves(s);
+  if (all.length <= QUIET_CAP + 8) return all; // small position — search everything
+
+  const forcing: ShogiMove[] = [];
+  const quiet: ShogiMove[] = [];
+  for (const m of all) {
+    if (m.capture || m.promotion) {
+      forcing.push(m);
+    } else if (moveGivesCheck(s, m)) {
+      forcing.push(m);
+    } else {
+      quiet.push(m);
+    }
+  }
+  quiet.sort((a, b) => orderScore(s, b) - orderScore(s, a));
+  return forcing.concat(quiet.slice(0, QUIET_CAP));
+}
+
 function searchAdapter() {
   return {
-    getLegalMoves: (s: ShogiState) => legalMoves(s),
+    getLegalMoves: (s: ShogiState) => searchMoves(s),
     applyMove,
     getTurn: (s: ShogiState) => s.turn,
     // Terminal = the side to move has no legal reply (checkmate or stalemate);
-    // either way that side has lost in Shogi.
+    // either way that side has lost in Shogi. (Uses the full generator, not the
+    // capped set, so terminal detection is always exact.)
     isTerminal: (s: ShogiState) => !hasAnyLegalMove(s),
     evaluate,
     order: orderScore,

@@ -7,6 +7,7 @@ import Board2D from '../components/Board2D';
 import TutorPanel from '../components/TutorPanel';
 import ThemePicker from '../components/ThemePicker';
 import HandStrip from '../components/HandStrip';
+import BackgammonGame from '../components/BackgammonGame';
 import { isMuted, toggleMuted, resumeAudio } from '../audio/sound';
 import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
 import type { Difficulty, MoveBase, Player } from '../engine/types';
@@ -69,6 +70,21 @@ export default function GameScreen() {
   const def = store.def;
   if (!def || !store.state || def.id !== gameId) {
     return <div className="loading">Loading…</div>;
+  }
+
+  // Games with a bespoke renderer (Backgammon: dice, stacks) bypass the board flow.
+  if (def.custom) {
+    const diff = store.difficulty === 'easy' ? 'easy' : store.difficulty === 'hard' || store.difficulty === 'master' ? 'hard' : 'medium';
+    return (
+      <div className="game-screen" style={{ ['--accent' as any]: def.accent }}>
+        <header className="gs-toolbar">
+          <Link to="/" className="btn ghost sm">← Hub</Link>
+          <div className="gs-title"><span className="gs-emoji">{def.emoji}</span><div className="col"><strong>{def.name}</strong><span className="faint" style={{ fontSize: 12 }}>vs AI · {diff}</span></div></div>
+          <Link className="btn sm ghost" to={`/learn/${def.id}`}>📖 Learn</Link>
+        </header>
+        <BackgammonGame aiDifficulty={diff} />
+      </div>
+    );
   }
 
   const theme = getTheme(store.themeId);

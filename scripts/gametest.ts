@@ -13,6 +13,7 @@ let failures = 0;
 const assert = (cond: boolean, msg: string) => { if (!cond) { failures++; console.log('   ✗ FAIL: ' + msg); } };
 
 for (const def of GAMES) {
+  if (def.custom) { console.log(`\n=== ${def.name} (${def.id}) === [custom renderer — skipped here]`); continue; }
   console.log(`\n=== ${def.name} (${def.id}) ===`);
   try {
     const init = def.createInitialState();

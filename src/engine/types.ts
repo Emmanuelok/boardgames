@@ -209,6 +209,9 @@ export interface GameDefinition<S = any, M extends MoveBase = MoveBase> {
   render: RenderConfig;
   /** True if a player may voluntarily pass (Go). The pass move has `to === -1`. */
   canPass?: boolean;
+  /** Games whose play needs a bespoke renderer (dice, stacks…) instead of the
+   *  standard board flow (Backgammon). The game screen renders a custom component. */
+  custom?: boolean;
 
   createInitialState(): S;
   cloneState(s: S): S;
