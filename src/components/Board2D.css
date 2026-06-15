@@ -5,6 +5,18 @@
   perspective: 1400px;
 }
 
+/* Piece following the cursor/finger while dragging to move. */
+.drag-ghost {
+  position: fixed;
+  z-index: 1000;
+  transform: translate(-50%, -50%) scale(1.06);
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.55));
+}
+.drag-ghost .pc { width: 84%; height: 84%; }
+
 .board {
   position: relative;
   display: grid;

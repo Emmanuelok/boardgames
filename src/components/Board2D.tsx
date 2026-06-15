@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import type { BoardView, GameDefinition, GameStatus, MoveBase, Player } from '../engine/types';
+import type { BoardView, CellView, GameDefinition, GameStatus, MoveBase, Player } from '../engine/types';
 import type { BoardTheme } from '../themes/boardThemes';
 import { pieceStyleFor } from './pieceStyle';
 import ChessPiece from './ChessPiece';
@@ -40,6 +41,52 @@ export default function Board2D(props: Props) {
 
   const dRow = (r: number) => (flipped ? rows - 1 - r : r);
   const dCol = (c: number) => (flipped ? cols - 1 - c : c);
+
+  // Drag-to-move: press a piece and drag it onto a destination cell. Works for
+  // pointer + touch; clicking still works exactly as before. Selecting on press
+  // reuses the same logic, so dropping on a legal target plays the move.
+  const dragRef = useRef<{ from: number; x0: number; y0: number; moved: boolean } | null>(null);
+  const onCellRef = useRef(onCell);
+  onCellRef.current = onCell;
+  const [dragCell, setDragCell] = useState<CellView | null>(null);
+  const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 6) d.moved = true;
+      if (d.moved) setGhost({ x: e.clientX, y: e.clientY });
+    };
+    const up = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      dragRef.current = null;
+      setDragCell(null);
+      setGhost(null);
+      if (d.moved) {
+        const el = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('.cell') as HTMLElement | null;
+        const idx = el ? Number(el.getAttribute('data-idx')) : -1;
+        if (idx >= 0 && idx !== d.from) onCellRef.current(idx);
+      }
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, []);
+
+  const startDrag = (e: React.PointerEvent, cell: CellView) => {
+    if (!cell.piece || cell.playable === false || cell.piece.player !== turn) return;
+    dragRef.current = { from: cell.index, x0: e.clientX, y0: e.clientY, moved: false };
+    setDragCell(cell);
+    setGhost({ x: e.clientX, y: e.clientY });
+    onCell(cell.index); // select the piece, exactly as a click would
+  };
 
   const targetSet = new Map<number, MoveBase>();
   for (const m of targets) if (!targetSet.has(m.to)) targetSet.set(m.to, m);
@@ -119,9 +166,11 @@ export default function Board2D(props: Props) {
           return (
             <div
               key={cell.index}
+              data-idx={cell.index}
               className={`cell ${isDark ? 'dark' : 'light'} ${cell.playable === false ? 'void' : ''}`}
-              style={{ gridColumn: c + 1, gridRow: r + 1, background: sqColor }}
+              style={{ gridColumn: c + 1, gridRow: r + 1, background: sqColor, touchAction: 'none' }}
               onClick={() => cell.playable !== false && onCell(cell.index)}
+              onPointerDown={(e) => startDrag(e, cell)}
               onMouseEnter={() => def.interaction.type === 'drop' && setHoverCol(cell.col)}
             >
               {isLast && <div className="hl last" />}
@@ -138,7 +187,7 @@ export default function Board2D(props: Props) {
                   key={cell.piece.id}
                   className={`pc ${style}`}
                   initial={dx || dy ? { x: dx, y: dy } : { scale: 0.2, opacity: 0 }}
-                  animate={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+                  animate={{ x: 0, y: 0, scale: 1, opacity: dragCell?.index === cell.index ? 0.25 : 1 }}
                   transition={{ type: 'spring', stiffness: 700, damping: 42, mass: 0.6 }}
                   style={pieceStyleFor(style, cell.piece.player, pieceColor(cell.piece.player))}
                 >
@@ -171,6 +220,16 @@ export default function Board2D(props: Props) {
           );
         })}
       </div>
+
+      {dragCell?.piece && ghost && createPortal(
+        <div className="drag-ghost" style={{ left: ghost.x, top: ghost.y, width: cellPx, height: cellPx }}>
+          <div className={`pc ${style}`} style={pieceStyleFor(style, dragCell.piece.player, pieceColor(dragCell.piece.player))}>
+            {style === 'chess'
+              ? <ChessPiece kind={dragCell.piece.kind} fill={pieceColor(dragCell.piece.player)} stroke={dragCell.piece.player === 0 ? '#3b3f4a' : '#05070c'} shine={dragCell.piece.player === 1 ? 'rgba(255,255,255,0.13)' : undefined} />
+              : (style === 'mark' || style === 'xiangqi') ? <span className="glyph">{dragCell.piece.glyph}</span> : null}
+            {dragCell.piece.crowned && <span className="crown">♛</span>}
+          </div>
+        </div>, document.body)}
     </div>
   );
 }
