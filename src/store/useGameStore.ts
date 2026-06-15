@@ -74,7 +74,7 @@ interface State {
   toggleFlip: () => void;
   setToast: (t: string | null) => void;
   driveAI: () => void;
-  hostOnline: () => void;
+  hostOnline: (code?: string) => void;
   joinOnline: (code: string) => void;
   leaveOnline: () => void;
 }
@@ -224,7 +224,7 @@ export const useGameStore = create<State>((set, get) => {
       setTimeout(drive, 350);
     },
 
-    hostOnline() {
+    hostOnline(code) {
       const net = new OnlineSession();
       net.onMsg = handleMsg;
       net.onStatus = (st) => {
@@ -235,8 +235,8 @@ export const useGameStore = create<State>((set, get) => {
           if (gid) { get().newGame(gid); net.send({ t: 'init', gameId: gid }); }
         }
       };
-      set({ mode: 'online', net, onlineColor: 0, onlineStatus: 'waiting', onlineCode: '' });
-      net.host().then((code) => set({ onlineCode: code }));
+      set({ mode: 'online', net, onlineColor: 0, onlineStatus: 'waiting', onlineCode: code ?? '' });
+      net.host(code).then((c) => set({ onlineCode: c }));
     },
 
     joinOnline(code) {

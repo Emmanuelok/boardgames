@@ -34,6 +34,7 @@ export default function Home() {
           <span className="brand-name">GrandMaster</span>
         </Link>
         <div className="row gap-sm">
+          <Link className="chip clickable hide-sm" to="/lobby">🌐 Lobby</Link>
           <Link className="chip clickable hide-sm" to="/puzzles">🧩 Puzzles</Link>
           <Link className="chip clickable hide-sm" to="/profile">👤 Profile</Link>
           <button className="btn primary sm" onClick={() => nav('/play/chess')}>Play now</button>

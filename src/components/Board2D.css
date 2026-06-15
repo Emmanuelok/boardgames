@@ -9,7 +9,7 @@
   position: relative;
   display: grid;
   width: 100%;
-  max-width: min(78vh, 620px);
+  max-width: min(86vh, 100%);
   border-style: solid;
   border-width: 12px;
   border-radius: 16px;

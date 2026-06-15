@@ -1,4 +1,4 @@
-.game-screen { max-width: 1240px; margin: 0 auto; padding: 16px 18px 40px; min-height: 100vh; }
+.game-screen { max-width: 1760px; margin: 0 auto; padding: 16px clamp(16px, 2.5vw, 46px) 40px; min-height: 100vh; }
 .loading { display: grid; place-items: center; height: 70vh; color: var(--ink-dim); }
 
 .gs-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -14,8 +14,10 @@
 .seg.full { display: flex; width: 100%; }
 .seg.full button { flex: 1; }
 
-.play-area { display: grid; grid-template-columns: 1fr 384px; gap: 22px; align-items: start; }
-@media (max-width: 940px) { .play-area { grid-template-columns: 1fr; } }
+.play-area { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 28px; align-items: start; }
+@media (max-width: 980px) { .play-area { grid-template-columns: 1fr; } }
+.board-col { max-width: 92vh; margin: 0 auto; width: 100%; }
+@media (max-width: 980px) { .board-col { max-width: 100%; } }
 
 .board-col { display: flex; flex-direction: column; gap: 10px; }
 .board-host { width: 100%; }

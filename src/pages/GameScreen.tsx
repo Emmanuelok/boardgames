@@ -1,5 +1,5 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
 import { getGame } from '../engine/registry';
 import { getTheme } from '../themes/boardThemes';
@@ -39,10 +39,24 @@ export default function GameScreen() {
     return () => clearTimeout(t);
   }, [lastUnlocked, clearLastUnlocked]);
 
+  const [params] = useSearchParams();
+  const joinedRef = useRef(false);
+
   useEffect(() => {
     if (gameId && getGame(gameId)) useGameStore.getState().newGame(gameId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameId]);
+
+  // Auto host/join a room from the URL (?join=GM-XXXXX from an invite link,
+  // or ?host=GM-XXXXX when a lobby challenge sends both players to a shared code).
+  useEffect(() => {
+    if (joinedRef.current) return;
+    const join = params.get('join');
+    const host = params.get('host');
+    if (join) { joinedRef.current = true; setTimeout(() => useGameStore.getState().joinOnline(join), 450); }
+    else if (host) { joinedRef.current = true; setTimeout(() => useGameStore.getState().hostOnline(host), 450); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!store.toast) return;
@@ -291,13 +305,20 @@ function Setup({ store, def }: any) {
                   <input className="tp-search" style={{ flex: 1 }} placeholder="Enter code (GM-XXXXX)" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
                   <button className="btn sm" onClick={() => store.joinOnline(joinCode)} disabled={joinCode.trim().length < 5}>Join</button>
                 </div>
-                <span className="faint" style={{ fontSize: 12 }}>Create a room and share the code, or join a friend’s. Runs peer-to-peer; no account needed.</span>
+                <span className="faint" style={{ fontSize: 12 }}>Create a room and share the code/link, or join a friend’s. Runs peer-to-peer; no account needed.</span>
+                <Link className="chip clickable" to="/lobby" style={{ alignSelf: 'flex-start' }}>🌐 Find players in the Lobby →</Link>
               </>
             ) : (
               <>
                 {store.onlineCode && <div className="online-code">{store.onlineCode}</div>}
+                {store.onlineCode && store.onlineColor === 0 && (
+                  <button className="btn sm primary" onClick={() => {
+                    const link = `${window.location.origin}${window.location.pathname}#/play/${def.id}?join=${store.onlineCode}`;
+                    navigator.clipboard?.writeText(link).then(() => store.setToast('Invite link copied — send it to a friend!'), () => store.setToast(link));
+                  }}>🔗 Copy invite link</button>
+                )}
                 <div className={`online-status ${store.onlineStatus}`}>
-                  {store.onlineStatus === 'waiting' && (store.onlineCode ? 'Share the code — waiting for opponent…' : 'Connecting…')}
+                  {store.onlineStatus === 'waiting' && (store.onlineCode ? 'Share the code or link — waiting for your opponent to join…' : 'Connecting…')}
                   {store.onlineStatus === 'connected' && `Connected! You play ${def.players[store.onlineColor].name}.`}
                   {store.onlineStatus === 'error' && 'Connection failed — check the code and try again.'}
                   {store.onlineStatus === 'closed' && 'Disconnected.'}

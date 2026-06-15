@@ -21,7 +21,7 @@ function check(name: string, fn: () => string) {
 
 console.log('SSR render smoke test:');
 
-for (const route of ['/', '/learn/chess', '/learn/reversi', '/play/chess']) {
+for (const route of ['/', '/learn/chess', '/learn/reversi', '/play/chess', '/play/backgammon', '/puzzles', '/profile', '/lobby']) {
   check(`route ${route}`, () => renderToStaticMarkup(h(StaticRouter as any, { location: route }, h(App))));
 }
 

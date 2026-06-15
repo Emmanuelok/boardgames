@@ -5,6 +5,7 @@ import GameScreen from './pages/GameScreen';
 import Learn from './pages/Learn';
 import Puzzles from './pages/Puzzles';
 import Profile from './pages/Profile';
+import Lobby from './pages/Lobby';
 
 export default function App() {
   const location = useLocation();
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/learn/:gameId" element={<Learn />} />
           <Route path="/puzzles" element={<Puzzles />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/lobby" element={<Lobby />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </motion.div>

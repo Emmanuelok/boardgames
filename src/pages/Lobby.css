@@ -1,0 +1,21 @@
+.lobby { max-width: 860px; margin: 0 auto; padding: 16px 18px 50px; }
+.lobby-top { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.lobby-status { margin-left: auto; font-size: 13px; font-weight: 700; }
+.lobby-status.online { color: var(--good); }
+.lobby-status.connecting { color: var(--warn); }
+.lobby-status.error, .lobby-status.offline { color: var(--ink-faint); }
+
+.lobby-you { display: flex; align-items: center; gap: 14px; padding: 16px 18px; margin-bottom: 22px; flex-wrap: wrap; }
+.pf-avatar.sm { width: 48px; height: 48px; border-radius: 14px; font-size: 22px; }
+.lobby-game-pick { display: flex; align-items: center; }
+.lobby-select { background: rgba(255,255,255,0.06); border: 1px solid var(--line-strong); color: var(--ink); border-radius: 10px; padding: 8px 12px; font-size: 14px; font-weight: 600; font-family: inherit; }
+
+.lobby-h { font-size: 22px; margin: 0 0 14px; }
+.lobby-empty { padding: 22px; text-align: center; color: var(--ink-dim); line-height: 1.55; }
+.lobby-list { display: flex; flex-direction: column; gap: 10px; }
+.lobby-peer { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.lobby-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--good); box-shadow: 0 0 8px var(--good); }
+
+.invite-modal { padding: 26px 30px; text-align: center; max-width: 360px; }
+.invite-emoji { font-size: 42px; }
+.link { color: var(--accent-2); }

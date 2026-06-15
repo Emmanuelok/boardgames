@@ -15,7 +15,7 @@ export type NetMsg =
 export type NetStatus = 'idle' | 'waiting' | 'connected' | 'error' | 'closed';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-function genCode(): string {
+export function genRoomCode(): string {
   let c = '';
   for (let i = 0; i < 5; i++) c += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
   return `GM-${c}`;
@@ -29,10 +29,10 @@ export class OnlineSession {
   onMsg: (m: NetMsg) => void = () => {};
   onStatus: (s: NetStatus) => void = () => {};
 
-  /** Create a room; returns the code to share. */
-  async host(): Promise<string> {
+  /** Create a room; returns the code to share. Pass a code to host a specific room. */
+  async host(code?: string): Promise<string> {
     this.role = 'host';
-    this.code = genCode();
+    this.code = code || genRoomCode();
     this.onStatus('waiting');
     const { default: Peer } = await import('peerjs');
     this.peer = new Peer(this.code);
