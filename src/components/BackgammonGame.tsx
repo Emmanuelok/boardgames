@@ -7,6 +7,7 @@ import {
 import { useProfile } from '../profile/profile';
 import { playSound, resumeAudio, isMuted, toggleMuted } from '../audio/sound';
 import { useBgOnline, type BgOnline } from '../net/useBgOnline';
+import CoachPanel, { type CoachMsg } from './CoachPanel';
 import './BackgammonGame.css';
 
 const WHITE = 0, BLACK = 1;
@@ -35,12 +36,14 @@ export default function BackgammonGame({
   const [muted, setMutedState] = useState(isMuted());
   const [recorded, setRecorded] = useState(false);
   const [showOnline, setShowOnline] = useState(false);
+  const [log, setLog] = useState<CoachMsg[]>([]);
   const recordResult = useProfile((p) => p.recordResult);
   const win = winner(s);
+  const say = (text: string, tone: CoachMsg['tone'] = 'info') => setLog((l) => [...l, { text, tone }]);
 
   const online = useBgOnline({
-    onReset: () => { setS(initialState()); setSel(null); setRecorded(false); },
-    onState: (st) => { setS(st); setSel(null); },
+    onReset: () => { setS(initialState()); setSel(null); setRecorded(false); setLog([]); },
+    onState: (st) => { setS(st); setSel(null); say('Opponent moved.', 'info'); },
   });
   const isOnline = online.engaged;
   const myColor: 0 | 1 = isOnline ? online.color : WHITE;
@@ -80,6 +83,7 @@ export default function BackgammonGame({
       let st = s.dice.length ? s : withRoll(s, rollDice());
       const res = aiPlay(st, aiDifficulty);
       playSound(res.hit ? 'capture' : 'move');
+      say(`Black rolled ${st.dice.slice(0, st.dice.length === 4 ? 1 : 2).join('-')}${st.dice.length === 4 ? ' (doubles)' : ''} and played.${res.hit ? ' Hit — your blot is on the bar!' : ''}`, res.hit ? 'bad' : 'info');
       setS(endTurn(res.state));
       setThinking(false);
     }, 750);
@@ -94,7 +98,10 @@ export default function BackgammonGame({
     if (!myTurn || s.dice.length) return;
     playSound('select');
     let st = withRoll(s, rollDice());
-    if (legalMoves(st).length === 0) st = endTurn(st); // no move possible
+    const dbl = st.dice.length === 4;
+    const stuck = legalMoves(st).length === 0;
+    say(`You rolled ${dbl ? `${st.dice[0]}-${st.dice[0]} (doubles — four moves!)` : st.dice.join('-')}${stuck ? ' — no legal move, turn passes.' : ''}`, 'info');
+    if (stuck) st = endTurn(st); // no move possible
     push(st);
   };
 
@@ -110,6 +117,9 @@ export default function BackgammonGame({
     let st = applyMove(s, m);
     const hit = m.to !== 'off' && isHit(s, m);
     playSound(m.to === 'off' ? 'promote' : hit ? 'capture' : 'move');
+    if (hit) say('You hit a Black blot — it goes to the bar!', 'good');
+    else if (m.to === 'off') say('You bear a checker off — closer to victory.', 'good');
+    else if (m.from === 'bar') say('You re-enter a checker from the bar.', 'info');
     setSel(null);
     if (turnIsOver(st)) st = endTurn(st);
     push(st);
@@ -117,7 +127,7 @@ export default function BackgammonGame({
 
   const newGame = () => {
     if (isOnline) online.restart();
-    setS(initialState()); setSel(null); setRecorded(false);
+    setS(initialState()); setSel(null); setRecorded(false); setLog([]);
   };
 
   const onDest = (p: number) => { const m = selDests.find((x) => x.to === p); if (m) play(m); };
@@ -125,7 +135,8 @@ export default function BackgammonGame({
   const whiteName = isOnline ? (myColor === WHITE ? 'You' : 'Opponent') : 'You';
 
   return (
-    <div className="bg-game">
+    <div className="play-area">
+      <div className="board-col bg-game">
       <div className="bg-hud">
         <PlayerChip name={blackName} color="#1f2937" pips={pip(s, BLACK)} off={s.off[1]} active={s.turn === BLACK}
           tag={isOnline ? 'online' : 'AI'} thinking={!isOnline && thinking} />
@@ -162,8 +173,23 @@ export default function BackgammonGame({
       </div>
 
       {showOnline && <OnlinePanel online={online} myColor={myColor} />}
+      </div>
+
+      <aside className="side-col">
+        <CoachPanel title="AI Coach" subtitle="Backgammon commentary" messages={log} tip={bgTip(s, myColor, win)} />
+      </aside>
     </div>
   );
+}
+
+/** A short strategy tip for the position from the human's perspective. */
+function bgTip(s: BgState, me: 0 | 1, win: number | null): string {
+  if (win !== null) return win === me ? 'You bore everyone off first — game won!' : 'Bear-off lost this time — watch the race next game.';
+  if (s.bar[me] > 0) return 'You have a checker on the bar — you must enter it before any other move.';
+  const myPip = pip(s, me), oppPip = pip(s, (me ^ 1) as 0 | 1);
+  if (myPip < oppPip - 8) return 'You’re ahead in the race — bring your checkers home and avoid leaving blots.';
+  if (myPip > oppPip + 8) return 'You’re behind in the race — hold an anchor in their home and wait for a shot at a blot.';
+  return 'A close race — make points to block the enemy, and try not to leave a lone checker (a blot) exposed.';
 }
 
 function hintLine(s: BgState, myTurn: boolean, sel: Src | null, isOnline: boolean, connected: boolean): string {

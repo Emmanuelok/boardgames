@@ -149,3 +149,37 @@ export function chooseMove(s: DbState, difficulty: 'easy' | 'medium' | 'hard'): 
 export function evaluate(s: DbState): number {
   return s.scores[0] - s.scores[1];
 }
+
+/* ----------------------------- coach commentary ----------------------------- */
+
+/** Any un-owned box currently drawn on three sides (a free box waiting to be taken). */
+export function hasOpenBox(s: DbState): boolean {
+  for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
+    if (s.owner[r * C + c] === null && sidesDrawn(s, r, c) === 3) return true;
+  }
+  return false;
+}
+
+/** One-line commentary on the move that turned `before` into `after`. */
+export function moveComment(before: DbState, _edge: number, after: DbState): { text: string; tone: 'good' | 'bad' | 'info' } {
+  const who = before.turn;
+  const name = who === 0 ? 'You' : 'Red';
+  const gained = after.scores[who] - before.scores[who];
+  if (gained > 0) {
+    return { text: `${name} ${who === 0 ? 'complete' : 'completes'} ${gained} box${gained > 1 ? 'es' : ''} — ${who === 0 ? 'and go again!' : 'Red moves again.'}`, tone: who === 0 ? 'good' : 'bad' };
+  }
+  if (hasOpenBox(after)) {
+    return { text: `${name} ${who === 0 ? 'drew' : 'draws'} a third side — that opens a box for ${who === 0 ? 'Red' : 'you'}.`, tone: who === 0 ? 'bad' : 'good' };
+  }
+  return { text: `${name} ${who === 0 ? 'played' : 'plays'} a safe line.`, tone: 'info' };
+}
+
+/** A strategy tip for the position the side to move faces. */
+export function coachTip(s: DbState): string {
+  if (isOver(s)) return s.scores[0] > s.scores[1] ? 'You took more boxes — well played!' : 'Red edged the box count this time.';
+  if (hasOpenBox(s)) return s.turn === 0 ? 'There’s a free box on offer — take it, then look for a chain.' : 'Red has a free box to grab.';
+  const safe = safeEdges(s).length;
+  if (safe === 0) return 'No safe lines left — you must open a chain. Open the smallest one, and remember the double-cross.';
+  if (safe <= 4) return 'Safe lines are running out. Try to make your opponent be the one forced to open a chain.';
+  return 'Never draw the third side of a box. Play neutral lines and watch how the chains are forming.';
+}

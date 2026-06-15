@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  initialState, applyEdge, chooseMove, legalEdges, winner, isOver,
+  initialState, applyEdge, chooseMove, legalEdges, winner, isOver, moveComment, coachTip,
   R, C, hIdx, vIdx, type DbState,
 } from '../games/dotsandboxes/logic';
 import { useProfile } from '../profile/profile';
 import { playSound, resumeAudio, isMuted, toggleMuted } from '../audio/sound';
+import CoachPanel, { type CoachMsg } from './CoachPanel';
 import './DotsAndBoxesGame.css';
 
 const COLORS = ['#3b82f6', '#ef4444']; // Blue (you), Red (AI)
@@ -14,6 +15,7 @@ const NAMES = ['Blue', 'Red'];
 export default function DotsAndBoxesGame({ aiDifficulty = 'medium' }: { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
   const [s, setS] = useState<DbState>(() => initialState());
   const [last, setLast] = useState<number | null>(null);
+  const [log, setLog] = useState<CoachMsg[]>([]);
   const [muted, setMutedState] = useState(isMuted());
   const [recorded, setRecorded] = useState(false);
   const recordResult = useProfile((p) => p.recordResult);
@@ -37,6 +39,7 @@ export default function DotsAndBoxesGame({ aiDifficulty = 'medium' }: { aiDiffic
       const ns = applyEdge(s, e);
       playSound(ns.scores[1] > before ? 'capture' : 'move');
       setLast(e);
+      setLog((l) => [...l, moveComment(s, e, ns)]);
       setS(ns);
     }, 480);
     return () => clearTimeout(t);
@@ -49,6 +52,7 @@ export default function DotsAndBoxesGame({ aiDifficulty = 'medium' }: { aiDiffic
     const ns = applyEdge(s, edge);
     playSound(ns.scores[0] > before ? 'capture' : 'move');
     setLast(edge);
+    setLog((l) => [...l, moveComment(s, edge, ns)]);
     setS(ns);
   };
 
@@ -80,26 +84,31 @@ export default function DotsAndBoxesGame({ aiDifficulty = 'medium' }: { aiDiffic
   }
 
   return (
-    <div className="db-game">
-      <div className="db-hud">
-        <Score name="You" color={COLORS[0]} score={s.scores[0]} active={s.turn === 0 && !over} />
-        <div className="db-center">
-          {over ? <div className="db-result">{win === 0 ? 'You win! 🏆' : 'Red wins'}</div>
-            : <div className="db-turn">{s.turn === 0 ? 'Your turn — draw a line' : 'Red is thinking…'}</div>}
+    <div className="play-area">
+      <div className="board-col db-game">
+        <div className="db-hud">
+          <Score name="You" color={COLORS[0]} score={s.scores[0]} active={s.turn === 0 && !over} />
+          <div className="db-center">
+            {over ? <div className="db-result">{win === 0 ? 'You win! 🏆' : 'Red wins'}</div>
+              : <div className="db-turn">{s.turn === 0 ? 'Your turn — draw a line' : 'Red is thinking…'}</div>}
+          </div>
+          <Score name="Red" color={COLORS[1]} score={s.scores[1]} active={s.turn === 1 && !over} ai />
         </div>
-        <Score name="Red" color={COLORS[1]} score={s.scores[1]} active={s.turn === 1 && !over} ai />
+
+        <div className="db-board" style={{ ['--gn' as any]: C }}>
+          {boxes}{dots}{hedges}{vedges}
+        </div>
+
+        <div className="db-controls">
+          <button className="btn sm" onClick={() => { setS(initialState()); setLast(null); setLog([]); setRecorded(false); }}>↻ New game</button>
+          <button className="btn icon sm" onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
+          <Link className="btn sm ghost" to="/learn/dots-and-boxes">📖 Rules</Link>
+        </div>
       </div>
 
-      <div className="db-board" style={{ ['--gn' as any]: C }}>
-        {boxes}{dots}{hedges}{vedges}
-      </div>
-
-      <div className="db-controls">
-        <button className="btn sm" onClick={() => { setS(initialState()); setLast(null); setRecorded(false); }}>↻ New game</button>
-        <button className="btn icon sm" onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
-        <Link className="btn sm ghost" to="/learn/dots-and-boxes">📖 Rules</Link>
-        <span className="faint" style={{ fontSize: 13 }}>Complete the 4th side of a box to claim it — and move again.</span>
-      </div>
+      <aside className="side-col">
+        <CoachPanel title="AI Coach" subtitle="Dots & Boxes commentary" messages={log} tip={coachTip(s)} />
+      </aside>
     </div>
   );
 }
