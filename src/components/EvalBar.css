@@ -1,0 +1,37 @@
+.eval-bar {
+  flex: none;
+  width: 22px;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  border-radius: 11px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow), inset 0 0 0 1px rgba(0, 0, 0, 0.3);
+  position: relative;
+  background: #0b1220; /* Black's side */
+}
+.eval-track { position: absolute; inset: 0; }
+.eval-fill {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg, #ffffff, #e8eaf0);
+  transition: height 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.eval-bar.flipped .eval-fill { bottom: auto; top: 0; background: linear-gradient(0deg, #ffffff, #e8eaf0); }
+.eval-mid { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(124, 92, 255, 0.55); box-shadow: 0 0 6px rgba(124, 92, 255, 0.7); }
+.eval-bar.thinking .eval-mid { animation: evalPulse 1s ease-in-out infinite; }
+@keyframes evalPulse { 50% { box-shadow: 0 0 10px 1px rgba(124, 92, 255, 0.95); } }
+
+.eval-label {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: 5px; z-index: 2;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.02em; font-variant-numeric: tabular-nums;
+  padding: 2px 4px; border-radius: 6px; white-space: nowrap;
+}
+.eval-bar.flipped .eval-label { bottom: auto; top: 5px; }
+/* Label sits on whichever colour leads, so contrast it accordingly. */
+.eval-label.w { color: #0b1220; }
+.eval-label.b { color: #e8eaf0; bottom: auto; top: 5px; }
+.eval-bar.flipped .eval-label.b { top: auto; bottom: 5px; }
+
+@media (max-width: 560px) { .eval-bar { width: 16px; } .eval-label { font-size: 9px; } }

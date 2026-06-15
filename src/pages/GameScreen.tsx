@@ -4,6 +4,7 @@ import { useGameStore } from '../store/useGameStore';
 import { getGame } from '../engine/registry';
 import { getTheme } from '../themes/boardThemes';
 import Board2D from '../components/Board2D';
+import EvalBar from '../components/EvalBar';
 import TutorPanel from '../components/TutorPanel';
 import ThemePicker from '../components/ThemePicker';
 import HandStrip from '../components/HandStrip';
@@ -139,22 +140,25 @@ export default function GameScreen() {
         <div className="board-col">
           <PlayerTag def={def} who={top} turn={turn} thinking={store.thinking} store={store} />
           <HandStrip def={def} state={store.state} player={top} armed={store.selectedDrop} active={canDrop(top)} onPick={store.selectHand} />
-          <div className="board-host">
-            {store.view === '3d' ? (
-              <Suspense fallback={<div className="board3d-fallback glass-soft">Loading 3D board…</div>}>
-                <Board3D
+          <div className="board-stage">
+            {def.liveEval && <EvalBar info={store.liveEval} loading={store.liveEvalLoading} status={store.status} flipped={store.flipped} />}
+            <div className="board-host">
+              {store.view === '3d' ? (
+                <Suspense fallback={<div className="board3d-fallback glass-soft">Loading 3D board…</div>}>
+                  <Board3D
+                    def={def} view={view} theme={theme} turn={turn} flipped={store.flipped}
+                    selected={store.selected} targets={store.targets} lastMove={store.lastMove}
+                    status={store.status} hint={store.hintMove} onCell={store.onCellClick}
+                  />
+                </Suspense>
+              ) : (
+                <Board2D
                   def={def} view={view} theme={theme} turn={turn} flipped={store.flipped}
                   selected={store.selected} targets={store.targets} lastMove={store.lastMove}
                   status={store.status} hint={store.hintMove} onCell={store.onCellClick}
                 />
-              </Suspense>
-            ) : (
-              <Board2D
-                def={def} view={view} theme={theme} turn={turn} flipped={store.flipped}
-                selected={store.selected} targets={store.targets} lastMove={store.lastMove}
-                status={store.status} hint={store.hintMove} onCell={store.onCellClick}
-              />
-            )}
+              )}
+            </div>
           </div>
           <HandStrip def={def} state={store.state} player={bottom} armed={store.selectedDrop} active={canDrop(bottom)} onPick={store.selectHand} />
           <PlayerTag def={def} who={bottom} turn={turn} thinking={store.thinking} store={store} you />

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Difficulty, GameDefinition, GameStatus, MoveBase, MoveExplanation, Player } from '../engine/types';
+import type { Difficulty, GameDefinition, GameStatus, LiveEval, MoveBase, MoveExplanation, Player } from '../engine/types';
 import { getGame } from '../engine/registry';
 import { engine } from '../engine/engineClient';
 import { resolveClick } from '../engine/interaction';
@@ -38,6 +38,10 @@ interface State {
   hintText: string | null;
   promotion: { from: number; to: number; options: MoveBase[] } | null;
   toast: string | null;
+
+  // live engine evaluation (the advantage bar); null when the game has no liveEval
+  liveEval: LiveEval | null;
+  liveEvalLoading: boolean;
 
   // online (P2P)
   net: OnlineSession | null;
@@ -150,6 +154,7 @@ export const useGameStore = create<State>((set, get) => {
         .catch(() => set((s) => ({ log: s.log.map((e, i) => (i === idx ? { ...e, analyzing: false } : e)) })));
     }
     afterEffects(move, status);
+    requestEval();
     return after;
   };
 
@@ -187,6 +192,21 @@ export const useGameStore = create<State>((set, get) => {
     }
   };
 
+  /** Recompute the live advantage bar for the current position (off-thread, with
+   *  a token so a stale result from a previous position is never shown). */
+  let evalSeq = 0;
+  const requestEval = () => {
+    const { def, gameId, state } = get();
+    if (!def || !gameId || !def.liveEval) { set({ liveEval: null, liveEvalLoading: false }); return; }
+    const status = def.getStatus(state);
+    if (status.kind === 'win' || status.kind === 'draw') { set({ liveEvalLoading: false }); return; } // bar reads the result
+    const seq = ++evalSeq;
+    set({ liveEvalLoading: true });
+    engine.analyze(gameId, state)
+      .then((info) => { if (seq === evalSeq) set({ liveEval: info, liveEvalLoading: false }); })
+      .catch(() => { if (seq === evalSeq) set({ liveEvalLoading: false }); });
+  };
+
   /** Apply an incoming network message from the peer. */
   const handleMsg = (m: NetMsg) => {
     if (m.t === 'init') {
@@ -210,6 +230,7 @@ export const useGameStore = create<State>((set, get) => {
     selected: null, targets: [], selectedDrop: null, lastMove: null,
     status: { kind: 'playing' }, thinking: false,
     hintMove: null, hintText: null, promotion: null, toast: null,
+    liveEval: null, liveEvalLoading: false,
     net: null, onlineStatus: 'idle', onlineCode: '', onlineColor: 0, chat: [],
     mode: 'ai', humanColor: 0, difficulty: 'medium', view: '2d',
     themeId: DEFAULT_THEME_ID, autoTutor: true, flipped: false,
@@ -224,7 +245,9 @@ export const useGameStore = create<State>((set, get) => {
         selected: null, targets: [], selectedDrop: null, lastMove: null, status: def.getStatus(state),
         thinking: false, hintMove: null, hintText: null, promotion: null, toast: null,
         flipped: get().mode === 'online' ? get().onlineColor === 1 : get().mode === 'ai' && get().humanColor === 1,
+        liveEval: null,
       });
+      requestEval();
       setTimeout(drive, 350);
     },
 
@@ -347,6 +370,7 @@ export const useGameStore = create<State>((set, get) => {
           promotion: null, hintMove: null, hintText: null, thinking: false,
         };
       });
+      requestEval();
     },
 
     redo() {
@@ -362,6 +386,7 @@ export const useGameStore = create<State>((set, get) => {
           promotion: null, hintMove: null, hintText: null,
         };
       });
+      requestEval();
     },
 
     requestHint() {

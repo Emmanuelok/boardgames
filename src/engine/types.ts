@@ -126,6 +126,15 @@ export interface MoveExplanation {
 
 export type Difficulty = 'tutor' | 'easy' | 'medium' | 'hard' | 'master';
 
+/** A fast, search-based position assessment for the live advantage bar.
+ *  `score` is centipawn-like and + favours player 0; `mate`, when present, is a
+ *  signed mate-in-N (positive = player 0 delivers mate). `depth` is informational. */
+export interface LiveEval {
+  score: number;
+  depth: number;
+  mate?: number;
+}
+
 export interface InteractionModel {
   /**
    * - `move`     : select a source cell, then a destination (Chess, Checkers).
@@ -228,6 +237,10 @@ export interface GameDefinition<S = any, M extends MoveBase = MoveBase> {
   chooseMove(s: S, difficulty: Difficulty): M | null;
   /** Static evaluation; positive favours player 0. */
   evaluate(s: S): number;
+  /** Optional fast searched evaluation for the live advantage bar (+ favours
+   *  player 0, mate encoded). Games that implement it get a real-time eval bar;
+   *  those that don't simply have no bar. */
+  liveEval?(s: S): LiveEval;
 
   /** Produce the rich tutor explanation for a move that was just played. */
   explainMove(before: S, move: M, after: S): MoveExplanation;

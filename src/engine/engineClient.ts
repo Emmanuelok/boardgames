@@ -2,7 +2,7 @@
  * Promise-based client for the engine Web Worker. Falls back to running on the
  * main thread if Workers are unavailable (e.g. during SSR or old browsers).
  */
-import type { Difficulty, GameDefinition, MoveBase, MoveExplanation } from './types';
+import type { Difficulty, GameDefinition, LiveEval, MoveBase, MoveExplanation } from './types';
 import { GAME_MAP } from './registry';
 
 interface Pending { resolve: (v: any) => void; reject: (e: any) => void; }
@@ -48,6 +48,7 @@ function mainThread<T>(payload: Record<string, any>): Promise<T> {
       if (payload.type === 'choose') resolve(g.chooseMove(payload.state, payload.difficulty) as T);
       else if (payload.type === 'explain') resolve(g.explainMove(payload.before, payload.move, payload.after) as T);
       else if (payload.type === 'hint') resolve(g.hint(payload.state) as T);
+      else if (payload.type === 'analyze') resolve((g.liveEval ? g.liveEval(payload.state) : { score: g.evaluate(payload.state), depth: 0 }) as T);
     }, 10);
   });
 }
@@ -59,4 +60,6 @@ export const engine = {
     call<MoveExplanation>({ type: 'explain', gameId, before, move, after }),
   hint: (gameId: string, state: unknown) =>
     call<{ move: MoveBase; text: string } | null>({ type: 'hint', gameId, state }),
+  analyze: (gameId: string, state: unknown) =>
+    call<LiveEval>({ type: 'analyze', gameId, state }),
 };

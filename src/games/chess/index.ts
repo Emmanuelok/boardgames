@@ -5,7 +5,7 @@ import {
   PAWN, KNIGHT, BISHOP, KING,
 } from './engine';
 import { evaluatePosition } from './evaluate';
-import { bestMove } from './search';
+import { bestMove, searchBest, MATE } from './search';
 import { explainChessMove, chessHint } from './tutor';
 import tutorial from './tutorial';
 
@@ -85,6 +85,18 @@ const def: GameDefinition<ChessState, ChessMove> = {
   chooseMove: (s, difficulty) => bestMove(s, difficulty),
 
   evaluate: (s) => evaluatePosition(new Position(s)),
+
+  liveEval(s) {
+    // A quick principal-variation search so the bar is tactically aware, not just
+    // material counting. Score comes back side-to-move-relative; flip to White's.
+    const out = searchBest(s, 12, 280);
+    const white = s.turn === 0 ? out.score : -out.score;
+    let mate: number | undefined;
+    if (Math.abs(white) > MATE - 1000) {
+      mate = Math.sign(white) * Math.ceil((MATE - Math.abs(white)) / 2);
+    }
+    return { score: white, depth: out.depth, mate };
+  },
 
   explainMove: (before, move, after) => explainChessMove(before, move, after),
 
