@@ -23,11 +23,11 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .tutor-body {
-  padding: 14px 16px;
+  padding: 16px 18px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
 }
 
 .tutor-thinking { display: flex; align-items: center; gap: 10px; font-size: 14px; }
@@ -45,7 +45,7 @@
   background: linear-gradient(120deg, rgba(52, 211, 153, 0.16), rgba(52, 211, 153, 0.05));
   border: 1px solid rgba(52, 211, 153, 0.4);
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.55;
 }
 .hint-ic { font-size: 18px; }
 
@@ -92,29 +92,30 @@
 }
 .evalbar-label { font-size: 12px; font-weight: 700; color: var(--ink-dim); align-self: flex-end; }
 
-.summary { font-size: 15px; line-height: 1.5; margin: 2px 0; color: var(--ink); }
+.summary { font-size: 15px; line-height: 1.65; margin: 2px 0 4px; color: var(--ink); }
 
-.insights { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.insights { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
 .ins {
-  display: flex; gap: 9px; font-size: 13.5px; line-height: 1.45;
-  padding: 9px 11px; border-radius: 12px; border: 1px solid var(--line);
+  display: flex; gap: 11px; font-size: 14px; line-height: 1.6;
+  padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.03);
 }
-.ins-ic { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border-radius: 50%; font-size: 11px; font-weight: 900; margin-top: 1px; }
+.ins span:last-child { padding-top: 1px; }
+.ins-ic { width: 19px; height: 19px; flex: none; display: grid; place-items: center; border-radius: 50%; font-size: 11px; font-weight: 900; margin-top: 1px; }
 .ins.good { border-color: rgba(52, 211, 153, 0.35); }
 .ins.good .ins-ic { background: rgba(52, 211, 153, 0.2); color: var(--good); }
 .ins.bad { border-color: rgba(248, 113, 113, 0.35); }
 .ins.bad .ins-ic { background: rgba(248, 113, 113, 0.2); color: var(--bad); }
 .ins.info .ins-ic { background: rgba(255, 255, 255, 0.1); color: var(--ink-dim); }
 
-.block { padding: 10px 12px; border-radius: 12px; font-size: 13.5px; line-height: 1.45; }
-.block-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 800; opacity: 0.8; margin-bottom: 4px; }
+.block { padding: 13px 15px; border-radius: 12px; font-size: 14px; line-height: 1.6; }
+.block-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 800; opacity: 0.8; margin-bottom: 8px; }
 .threats { background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); }
-.threat-line { margin-top: 2px; }
+.threat-line { margin-top: 5px; }
 .better { background: rgba(124, 92, 255, 0.12); border: 1px solid rgba(124, 92, 255, 0.34); }
 
-.principles { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip.principle { background: rgba(34, 211, 238, 0.08); border-color: rgba(34, 211, 238, 0.28); color: #a5f3fc; font-weight: 600; }
+.principles { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip.principle { background: rgba(34, 211, 238, 0.08); border-color: rgba(34, 211, 238, 0.28); color: #a5f3fc; font-weight: 600; padding: 9px 13px; line-height: 1.55; white-space: normal; text-align: left; }
 
 .result { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 16px; }
 .result.win { background: linear-gradient(120deg, rgba(52, 211, 153, 0.2), rgba(52, 211, 153, 0.05)); border: 1px solid rgba(52, 211, 153, 0.4); }
