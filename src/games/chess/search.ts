@@ -137,16 +137,38 @@ function negamax(pos: Pos, depth: number, alpha: number, beta: number, ply: numb
 }
 
 export interface Ranked { move: CMove; score: number; }
-export interface SearchOut { best: CMove | null; score: number; ranked: Ranked[]; depth: number; nodes: number; }
+export interface SearchOut { best: CMove | null; score: number; ranked: Ranked[]; depth: number; nodes: number; pv: string[]; }
 
 const rankOf = (ranked: Ranked[], m: CMove) => ranked.find((r) => r.move.id === m.id)?.score ?? 0;
+
+/** Recover the principal variation as SAN: seed with the chosen root move (its
+ *  child positions were searched and stored), then follow the transposition
+ *  table's best-move chain. Bounded and side-effect-free (every make is unmade). */
+function extractPV(state: CState, best: CMove, maxLen: number): string[] {
+  const pos = new Pos(state);
+  const sans = [pos.toSAN(best)];
+  pos.make(best);
+  let made = 1;
+  for (let i = 1; i < maxLen; i++) {
+    const e = tt.get(pos.hash);
+    const legal = pos.legalMoves();
+    if (!e || !e.moveId || legal.length === 0) break;
+    const mv = legal.find((m) => m.id === e.moveId);
+    if (!mv) break;
+    sans.push(pos.toSAN(mv));
+    pos.make(mv);
+    made++;
+  }
+  for (let i = 0; i < made; i++) pos.unmake();
+  return sans;
+}
 
 /** Iterative-deepening full-window search of every root move (comparable scores). */
 export function analyze(state: CState, maxDepth: number, timeMs = 1500): SearchOut {
   const pos = new Pos(state);
   const roots = pos.legalMoves();
   for (const m of roots) m.notation = pos.toSAN(m);
-  if (roots.length === 0) return { best: null, score: evalSTM(pos), ranked: [], depth: 0, nodes: 0 };
+  if (roots.length === 0) return { best: null, score: evalSTM(pos), ranked: [], depth: 0, nodes: 0, pv: [] };
 
   tt = new Map();
   killers = [];
@@ -175,7 +197,8 @@ export function analyze(state: CState, maxDepth: number, timeMs = 1500): SearchO
     }
     if (timedOut || stopped || Date.now() > deadline) break;
   }
-  return { best: ranked[0].move, score: ranked[0].score, ranked, depth: reached, nodes };
+  const pv = extractPV(state, ranked[0].move, 6);
+  return { best: ranked[0].move, score: ranked[0].score, ranked, depth: reached, nodes, pv };
 }
 
 /** Properly alpha-beta-pruned root search (for the AI's actual move) — goes far

@@ -313,6 +313,19 @@ function dedupe(arr: string[]): string[] {
 
 /* ------------------------------- Hint --------------------------------- */
 
+/** Format a SAN line with move numbers, e.g. "12.Nf3 Nc6 13.Bb5". */
+function formatLine(sans: string[], whiteToMove: boolean, startNum: number): string {
+  const parts: string[] = [];
+  let num = startNum;
+  let white = whiteToMove;
+  for (let i = 0; i < sans.length; i++) {
+    if (white) parts.push(`${num}.${sans[i]}`);
+    else { parts.push(i === 0 ? `${num}…${sans[i]}` : sans[i]); num++; }
+    white = !white;
+  }
+  return parts.join(' ');
+}
+
 export function chessHint(state: ChessState): { move: ChessMove; text: string } | null {
   const out = analyze(state, 4, 700);
   if (!out.best) return null;
@@ -334,6 +347,11 @@ export function chessHint(state: ChessState): { move: ChessMove; text: string } 
     else if (m.castle) text = `${m.notation} — castle now to get your king safe.`;
     else if (typeOf(m.piece) === KNIGHT || typeOf(m.piece) === BISHOP) text = `${m.notation} develops a piece and improves your position.`;
     else text = `${m.notation} is the engine's top choice here.`;
+  }
+
+  // Append the engine's principal variation so the learner sees the whole plan.
+  if (out.pv && out.pv.length > 1) {
+    text += `  Engine line: ${formatLine(out.pv, state.turn === 0, state.full)}`;
   }
   return { move: m, text };
 }
