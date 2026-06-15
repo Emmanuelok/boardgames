@@ -772,89 +772,162 @@ const def: GameDefinition<DraughtsState, DraughtsMove> = {
   deserialize: (str) => JSON.parse(str) as DraughtsState,
 
   tutorial: {
-    overview: 'International Draughts — also called Polish draughts — is the world\'s premier draughts game, played on a 10×10 board with twenty pieces a side. It looks like checkers grown large, but three rules give it far greater depth: men capture both forwards and backwards, kings FLY any distance along the diagonals, and you must always make the capture that takes the MOST pieces. The result is a deeply combinational game of long forced sequences, sacrifices and breakthroughs.',
-    objective: 'Capture or trap every one of your opponent\'s pieces. You win the moment your opponent has no legal move — because they have no pieces left, or because every piece they own is blocked.',
+    overview: 'International Draughts — also called Polish draughts — is the world\'s premier draughts game, played on a 10×10 board with twenty pieces a side and contested at the World Championship. It looks like checkers grown large, but three rules give it far greater depth: men capture both forwards and backwards, kings FLY any distance along the diagonals, and you must always make the capture that takes the MOST pieces. The result is a deeply combinational game of long forced sequences, sacrifices and breakthroughs — sequences capturing five or more men in a single move are routine at master level.',
+    objective: 'Capture or trap every one of your opponent\'s pieces. You win the moment your opponent has no legal move — because they have no pieces left, or because every piece they own is blocked. As in checkers, there is no stalemate draw: with no legal move, you lose.',
     chapters: [
       {
-        title: 'The Rules', icon: '📜',
+        title: 'The Board & The Goal', icon: '📜',
         steps: [
           {
             title: 'A bigger board, dark squares only',
-            body: 'Play happens solely on the **dark squares** of the 10×10 board — 50 of them. **White** lines up twenty men on the four rows nearest you and moves **up** the board; **Black** lines up twenty on the four far rows and moves **down**. White moves first, then players alternate.',
+            body: 'Play happens solely on the **50 dark squares** of the 10×10 board. **White** lines up twenty men on the four rows nearest you and moves **up** the board; **Black** lines up twenty on the four far rows and moves **down**. **White moves first**, then players alternate. The extra size over checkers gives combinations far more room to breathe.',
+            highlight: [idx(6, 1), idx(6, 3), idx(6, 5), idx(6, 7), idx(6, 9), idx(3, 0), idx(3, 2), idx(3, 4), idx(3, 6), idx(3, 8)],
           },
           {
-            title: 'Men step diagonally forward',
-            body: 'An ordinary piece — a **man** — slides one square diagonally **forward** onto an empty dark square. For quiet moves, men never go sideways, straight, or backward.',
-            highlight: [idx(6, 3), idx(5, 2), idx(5, 4)],
-          },
-          {
-            title: 'Men capture BOTH ways',
-            body: 'Here is the first big difference from checkers: a **man captures in any diagonal direction — forwards *and* backwards**. Jump over an adjacent enemy onto the empty square just beyond, in whichever of the four diagonals the capture is available, and remove the jumped piece.',
-            highlight: [idx(5, 4), idx(4, 3), idx(3, 2)],
-            arrows: [{ from: idx(5, 4), to: idx(3, 2), tone: 'good' }],
-          },
-          {
-            title: 'Captures are mandatory',
-            body: 'If you can capture, you **must** — a quiet move is illegal whenever any capture exists. Captures continue in a chain: after a jump, if the same piece can capture again it carries on, taking piece after piece, and the whole chain is your single move.',
-            highlight: [idx(5, 4), idx(4, 3), idx(2, 3)],
-          },
-          {
-            title: 'The majority rule',
-            body: 'The second big difference: when several captures are possible you must play one that takes the **maximum number of pieces**. If one line wins three men and another wins two, you are **forced** to take the three. Among lines that capture the same maximum, you may choose freely.',
-            highlight: [idx(4, 3), idx(3, 4), idx(3, 2), idx(1, 4), idx(1, 2)],
-          },
-          {
-            title: 'Captured pieces stay until the end',
-            body: 'During a multi-capture the jumped pieces are **not removed until the whole sequence finishes** — they remain on the board as blockers, and you may **never jump the same piece twice**. This subtlety decides which long chains are actually legal.',
-          },
-          {
-            title: 'Promotion — only if you STOP there',
-            body: 'When a man **stops** on the far row at the end of its move, it is **crowned a King**. Crucially, if a man only **passes over** the far row in the middle of a capture and lands elsewhere, it is **not** promoted — it stays a man. Plan your captures so they end on the crowning row.',
-            highlight: [idx(0, 1), idx(0, 3), idx(0, 5), idx(0, 7), idx(0, 9)],
-          },
-          {
-            title: 'Flying Kings rule the diagonals',
-            body: 'The third big difference: a **King flies**. It glides **any number of empty squares** along a diagonal in any of the four directions. To capture, it sails over empty squares to a single enemy and lands on **any** empty square beyond — striking from clear across the board.',
-            highlight: [idx(7, 2), idx(5, 4), idx(3, 6), idx(2, 7)],
-            arrows: [{ from: idx(7, 2), to: idx(2, 7), tone: 'good' }],
+            title: 'The starting position',
+            body: 'Each side fields **twenty men** filling the dark squares of its four home rows, leaving the two middle rows empty. With forty pieces on the board the opening is a slow, manoeuvring fight for space — but one careless move can unleash a capturing chain that decides everything.',
+            highlight: [idx(0, 1), idx(0, 3), idx(0, 5), idx(0, 7), idx(0, 9), idx(9, 0), idx(9, 2), idx(9, 4), idx(9, 6), idx(9, 8)],
           },
           {
             title: 'How you win',
-            body: 'You win when your opponent has **no legal move** — every piece captured, or every remaining piece blocked. Because the board is large and kings are powerful, even a modest material edge usually decides the game.',
+            body: 'The goal is to leave your opponent with **no legal move** — usually by **capturing all their pieces**, but also by **blocking** every piece they have. Because the board is large and flying kings are so powerful, even a modest material edge — a single extra man — is usually enough to force the win.',
           },
         ],
       },
       {
-        title: 'Winning Strategy', icon: '🧠',
+        title: 'How the Pieces Move', icon: '⛀',
+        steps: [
+          {
+            title: 'Men step diagonally forward',
+            body: 'An ordinary piece — a **man** — slides one square diagonally **forward** onto an empty dark square. For *quiet* (non-capturing) moves, men never go sideways, straight, or backward — just like in checkers.',
+            highlight: [idx(6, 3)],
+            arrows: [{ from: idx(6, 3), to: idx(5, 2), tone: 'info' }, { from: idx(6, 3), to: idx(5, 4), tone: 'info' }],
+          },
+          {
+            title: 'Men capture BOTH ways',
+            body: 'Here is the first big difference from checkers: a **man captures in any diagonal direction — forwards *and* backwards**. Jump an adjacent enemy onto the empty square just beyond it, in whichever diagonal the capture is available. Here the White man on **e5** captures *backwards* over f4 to land on g3.',
+            setup: '{"turn":0,"squares":[null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":0,"king":false},null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":0,"king":false},null,null,null,null,null,null,null,null,null]}',
+            highlight: [idx(5, 4), idx(6, 5), idx(7, 6)],
+            arrows: [{ from: idx(5, 4), to: idx(7, 6), tone: 'good' }],
+          },
+          {
+            title: 'Captures are mandatory & chain',
+            body: 'If you can capture, you **must** — a quiet move is illegal whenever any capture exists. And captures **chain**: after a jump, if the same piece can capture again it carries on, taking piece after piece, with the whole chain counting as your single move. Long forced chains are the soul of the game.',
+            highlight: [idx(5, 4), idx(4, 3), idx(2, 3)],
+          },
+          {
+            title: 'The majority rule',
+            body: 'The second big difference: when several captures are possible you must play one that takes the **maximum number of pieces**. If one line wins three men and another wins two, you are **forced** to take the three — even if it is worse for you! Among lines that capture the same maximum, you may choose freely.',
+            highlight: [idx(4, 3), idx(3, 4), idx(3, 2), idx(1, 4), idx(1, 2)],
+          },
+          {
+            title: 'Captured pieces stay until the end',
+            body: 'A subtle but vital rule: during a multi-capture the jumped pieces are **not removed until the whole sequence finishes**. They stay on the board as **blockers**, and you may **never jump the same piece twice**. This decides which long chains are actually legal — a man you "captured" can still block your own landing square mid-jump.',
+          },
+          {
+            title: 'Promotion — only if you STOP there',
+            body: 'When a man **stops** on the far row at the end of its move, it is **crowned a King**. Crucially, if a man only **passes over** the far row in the middle of a capture and lands elsewhere, it is **not** promoted — it stays a man and the chain continues. Plan your captures so they *end* on the crowning row.',
+            highlight: [idx(0, 1), idx(0, 3), idx(0, 5), idx(0, 7), idx(0, 9)],
+          },
+          {
+            title: 'Flying Kings rule the diagonals',
+            body: 'The third big difference: a **King flies**. It glides **any number of empty squares** along a diagonal in any of the four directions. To capture, it sails over empty squares to a single enemy and lands on **any** empty square beyond it — striking from clear across the board. A flying King is worth roughly **three men**.',
+            setup: '{"turn":0,"squares":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":0,"king":true},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]}',
+            highlight: [idx(7, 2), idx(5, 4), idx(3, 6), idx(2, 7)],
+            arrows: [{ from: idx(7, 2), to: idx(2, 7), tone: 'good' }],
+          },
+        ],
+      },
+      {
+        title: 'Opening & Middle Game', icon: '🚀',
         steps: [
           {
             title: 'Fight for the centre',
-            body: 'Men in the **centre** support one another and influence the most squares, while edge men are passive and easily cut off. Build a solid central formation in the opening and avoid drifting your men to the rim without reason.',
+            body: 'Men in the **centre** support one another and influence the most squares, while edge men are passive and easily cut off. Build a solid, connected central formation in the opening and avoid drifting men to the rim without a reason — the side columns are the weakest squares on the board.',
             highlight: [idx(5, 4), idx(5, 6), idx(4, 3), idx(4, 5)],
           },
           {
             title: 'Count before you capture',
-            body: 'Because the **majority rule** forces the longest capture, calculation is everything. Before you offer or accept a piece, trace every branch of the resulting chain — for both sides. The line that *looks* winning may force *you* into giving back even more.',
+            body: 'Because the **majority rule** forces the longest capture, calculation is everything. Before you offer or accept a piece, trace **every branch** of the resulting chain — for both sides. The line that *looks* winning may force *you* into a longer reply that gives back even more. Read to the end of the forcing sequence.',
             highlight: [idx(4, 5), idx(3, 4), idx(2, 3)],
           },
           {
-            title: 'The long diagonal',
-            body: 'The great corner-to-corner **long diagonal** (a1–j10) is the highway of the flying king. Controlling it lets your king reach almost anywhere and threaten both wings at once. Fighting for the long diagonal is a recurring strategic theme of the master game.',
-            highlight: [idx(9, 0), idx(7, 2), idx(5, 4), idx(3, 6), idx(0, 9)],
+            title: 'Hold your back row',
+            body: 'Keep your **home-row men** in place as long as you sensibly can: they guard the squares where an enemy man would otherwise promote. Surrendering the back row early invites a runner straight through to crown a king. Give ground there only as part of a calculated plan.',
+            highlight: [idx(9, 0), idx(9, 2), idx(9, 4), idx(9, 6), idx(9, 8)],
           },
           {
-            title: 'Engineer a breakthrough',
-            body: 'A **breakthrough** sacrifices one or two men to shove a runner through a gap in the enemy line and crown it. Because promotion needs only that you *stop* on the last row, a well-timed sacrifice that clears the path can turn a man into a board-dominating king.',
+            title: 'Don\'t leave loose men',
+            body: 'A man that can be captured with no recapture is simply lost — and on this big board a single hanging piece often starts a chain that costs several. Keep your men **defended in pairs and chains**, and probe for enemy men that have wandered out of support.',
+            highlight: [idx(4, 5), idx(5, 4), idx(5, 6)],
+          },
+        ],
+      },
+      {
+        title: 'Tactics & Endgame', icon: '🧠',
+        steps: [
+          {
+            title: 'The breakthrough sacrifice',
+            body: 'A **breakthrough** gives up one or two men to shove a runner through a gap in the enemy line and crown it. Because promotion needs only that you *stop* on the last row, a well-timed sacrifice that clears the path turns a humble man into a board-dominating King. This is the most important attacking idea in the game.',
             highlight: [idx(2, 3), idx(1, 2), idx(1, 4), idx(0, 3)],
           },
           {
+            title: 'Use the majority rule as a weapon',
+            body: 'Forced captures cut both ways: you can **bait** the opponent. Offer a man so that their forced maximum capture marches their pieces onto squares where your reply sweeps a longer chain. The best players engineer positions where the rules *compel* the enemy into a losing capture.',
+            highlight: [idx(4, 3), idx(3, 4), idx(2, 5), idx(1, 6)],
+          },
+          {
+            title: 'The long diagonal',
+            body: 'The great corner-to-corner **long diagonal** is the highway of the flying King. Controlling it lets your King reach almost anywhere and threaten both wings at once. Fighting for the long diagonal — and denying it to the enemy King — is a recurring strategic theme of the master endgame.',
+            highlight: [idx(9, 0), idx(7, 2), idx(5, 4), idx(3, 6), idx(0, 9)],
+          },
+          {
             title: 'The power of Kings',
-            body: 'A **flying King** is worth roughly **three men**: it rakes entire diagonals, captures from a distance, and shepherds your own men. Getting the first king is often decisive — race to promote, then use the king\'s reach to harvest loose enemy pieces and steer the endgame.',
+            body: 'A **flying King** rakes entire diagonals, captures from a distance, and shepherds your own men. Getting the **first King** is often decisive — race to promote, then use the King\'s reach to pick off loose enemy pieces and dominate the board. One King against bare men is usually a straightforward win.',
             highlight: [idx(0, 3)],
           },
           {
-            title: 'Trade with the lead, hold when behind',
-            body: 'When you are **up material**, exchange pieces at every fair chance — each swap shrinks the board and magnifies your edge toward a won endgame. When you are **behind**, do the opposite: keep pieces on, complicate, and seek a saving combination before the simplification finishes you off.',
+            title: 'Trade ahead, complicate behind — and how the tutor helps',
+            body: 'When **up material**, exchange pieces at every fair chance — each swap magnifies your edge toward a won endgame. When **behind**, keep pieces on, complicate, and hunt for a saving shot. In a live game our tutor grades **every** move — celebrating big chains and crownings, flagging hung pieces and missed maximum captures — so the combinational eye of draughts becomes yours.',
+          },
+        ],
+      },
+      {
+        title: 'Trainer', icon: '🎯',
+        steps: [
+          {
+            title: 'Capture backwards',
+            body: 'Unlike checkers, a draughts man captures in **any** direction. **Click a piece, then click its destination.** Your White man on **e5** can jump *backwards* over the Black man on f4. Captures are mandatory — find the only legal move.',
+            setup: '{"turn":0,"squares":[null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":0,"king":false},null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":0,"king":false},null,null,null,null,null,null,null,null,null]}',
+            challenge: {
+              prompt: 'White to play — capture the Black man.',
+              solution: ['W e5×g3'],
+              success: 'W e5×g3 — the man jumps backwards, something a checkers man could never do. In draughts, every man threatens all four diagonals when it comes to captures.',
+            },
+          },
+          {
+            title: 'Obey the majority rule',
+            body: 'Two captures are available to White here, but the rules force you to take the **maximum** number of pieces. One man can grab a single enemy; another can chain through **two**. You must play the longer capture.',
+            setup: '{"turn":0,"squares":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":0,"king":false},null,null,null,{"player":0,"king":false},null,null,null,null,{"player":1,"king":false},null,null,null,{"player":1,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]}',
+            challenge: {
+              prompt: 'White to play — take the maximum (the two-piece chain).',
+              solution: ['W e7×a3'],
+              success: 'W e7×a3 — the single-piece capture is illegal because a longer one exists: the majority rule forces you to take the most pieces. Always count every branch before you commit.',
+            },
+          },
+          {
+            title: 'Strike with a flying King',
+            body: 'Your White **King** on **c3** commands the whole diagonal. A lone Black man sits on **g7** along it, with only one empty square beyond. Sail the King over the man and land beyond it.',
+            setup: '{"turn":0,"squares":[null,{"player":1,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":0,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":0,"king":true},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]}',
+            challenge: {
+              prompt: 'White to play — capture with the flying King.',
+              solution: ['W c3×h8'],
+              success: 'W c3×h8 — the King glides the length of the diagonal, removes the distant man, and lands free beyond it. This long-range capture is what makes the flying King worth roughly three men.',
+            },
+          },
+          {
+            title: 'Keep training',
+            body: 'In a real game the AI tutor grades **every** move you make — celebrating long chains, flying-King strikes and crownings, and warning you when you hang a piece or miss the maximum capture. Play at rising difficulty, read each explanation, and the combinational logic of draughts will become second nature.',
           },
         ],
       },

@@ -866,75 +866,148 @@ const def: GameDefinition<NmmState, NmmMove> = {
   deserialize: (str) => JSON.parse(str) as NmmState,
 
   tutorial: {
-    overview: "Nine Men's Morris is an ancient strategy game for two players, played on a board of three nested squares joined by cross-lines — twenty-four points in all. Despite its simple look it hides real depth: the whole struggle revolves around the \"mill\", a line of three of your own men. Form one and you remove an enemy man; chain mills together and you can dismantle your opponent piece by piece.",
-    objective: "Reduce your opponent to just two men, or leave them with no legal move. You whittle the enemy down by forming mills — three of your men in a straight line — each of which lets you take one of their men off the board.",
+    overview: "Nine Men's Morris is an ancient strategy game for two players, played on a board of three nested squares joined by cross-lines — twenty-four points in all. Despite its simple look it hides real depth: the whole struggle revolves around the **mill**, a line of three of your own men. Form one and you pluck an enemy man off the board; chain mills together — especially a swinging \"running mill\" that re-forms every move — and you can dismantle your opponent piece by piece. The game flows through three distinct phases, and good play feels different in each.",
+    objective: "Reduce your opponent to just **two men** — too few to ever build a mill — or leave them with **no legal move** at all. You whittle the enemy down through mills: each time three of your men line up on a straight line, you remove one of theirs from the board.",
     chapters: [
       {
-        title: 'The Rules', icon: '📜',
+        title: 'The Board & Mills', icon: '📜',
         steps: [
           {
-            title: 'The board and the men',
-            body: "The board has **24 points** where the lines of three nested squares meet and cross. Each player has **nine men**. **White** moves first; players then alternate. A man sits on a point, and only one man may occupy a point at a time.",
+            title: 'Twenty-four points',
+            body: "The board is three **nested squares** joined by four spokes through the mid-points of their sides, meeting at **24 points**. Pieces sit *on* the points, not in the squares, and only one man may occupy a point. Each side has **nine men**; **White** moves first, then players alternate.",
             highlight: POINTS.slice(),
           },
           {
-            title: 'Phase 1 — placing your men',
-            body: "The game opens with the **placing phase**: on your turn you drop one of your men onto any **empty point**. You keep placing, turn by turn, until both players have put down all **nine** of their men.",
-            highlight: [0, 6, 42, 48],
+            title: 'What counts as a mill',
+            body: "A **mill** is **three of your men** in a straight line along the board's marked segments. There are **sixteen** such lines in all: the three-point edges of each square, plus the four spoke-lines that join the rings. Note a square's *corner* points are **not** joined to each other directly — only along an edge through the mid-point.",
+            highlight: [0, 3, 6, 42, 45, 48],
           },
           {
             title: 'Make a mill, remove a man',
-            body: "Line up **three of your men** along one straight line and you have a **mill**. The moment a placement or a move completes a mill, you immediately **remove one enemy man** from the board. You must take a man that is **not** itself in a mill — unless **all** of the opponent's men are in mills, in which case any may be taken.",
+            body: "The instant a placement or a slide completes a mill, you immediately **remove one enemy man**. You must take a man that is **not** itself inside a mill — unless **all** the opponent's men are in mills, in which case any may be taken. The mill is the engine of the entire game.",
             highlight: [0, 3, 6],
             arrows: [{ from: 3, to: 6, tone: 'good' }],
           },
           {
-            title: 'Phase 2 — moving along the lines',
-            body: "Once all eighteen men are placed, the **moving phase** begins. On your turn you slide **one man** along a line to an **adjacent empty point**. You may only move to a point directly connected to the one you leave — and forming a mill still removes an enemy man.",
+            title: 'Phase 1 — placing',
+            body: "The game opens with the **placing phase**: on your turn you drop one of your men onto any **empty point**. You keep placing, turn by turn, until both players have set down all **nine** men (eighteen on the board). Where you place now shapes every battle to come — fight for the strong points.",
+            highlight: [3, 10, 17],
+          },
+          {
+            title: 'Phase 2 — moving',
+            body: "Once all eighteen men are down, the **moving phase** begins. On your turn you slide **one man** along a segment to an **adjacent empty point** — you can only reach points directly connected to the one you leave. Forming a mill by sliding still removes an enemy man, just like in placing.",
             highlight: [3, 10],
             arrows: [{ from: 3, to: 10, tone: 'info' }],
           },
           {
-            title: 'Phase 3 — flying at three men',
-            body: "When you are worn down to exactly **three men**, you gain the power to **fly**: instead of sliding to a neighbour, you may move a man to **any empty point** on the board. It is a last lifeline that lets a cornered player keep fighting.",
+            title: 'Phase 3 — flying',
+            body: "When a player is ground down to exactly **three men**, that side gains the power to **fly**: instead of sliding to a neighbour, they may move a man to **any** empty point on the board. It is a desperate last freedom — enough to keep fighting, rarely enough to win against accurate play.",
             highlight: [16, 23, 30],
           },
           {
             title: 'How the game ends',
-            body: "You **win** when your opponent is reduced to **two men** — too few to ever form a mill — or when it is their turn and they have **no legal move** at all. Mills are the engine that drives the game toward that finish.",
+            body: "You **win** the moment your opponent drops to **two men**, or when it is their turn and they have **no legal move** at all (every man hemmed in). Everything you do — every mill, every capture, every block — is aimed at reaching one of those two finishes.",
           },
         ],
       },
       {
-        title: 'Strategy', icon: '🧠',
+        title: 'Strong Points & Threats', icon: '🧭',
         steps: [
           {
             title: 'Seize the cross-points',
-            body: "Four points lie where lines cross and belong to **two mills at once** — the mid-points of each side (such as **d2, b4, f4, d6**). A man there threatens twice as many mills and is far more useful than a man in a corner. Grab these points early.",
+            body: "Four points sit where a square's edge meets a spoke, belonging to **two mill lines at once** — the mid-points such as **d6, b4, f4, d2**. A man there works on twice as many mills and is far stronger than one stranded in a corner (which touches only two lines). Grab these cross-points early in the placing phase.",
             highlight: [10, 22, 26, 38],
           },
           {
-            title: 'Build two threats at once',
-            body: "Aim to create a position where you threaten to close **two different mills** on your next move. Your opponent can only block one — so the other goes through, and you capture. Two simultaneous threats are how mills are forced.",
-            highlight: [21, 22, 23, 26],
-          },
-          {
-            title: 'The double (running) mill',
-            body: "The strongest weapon in the game is a **running mill**: a man positioned so that sliding it one way breaks a mill, and sliding it back **re-forms** one. Each swing closes a mill again and removes another enemy man — turn after turn, your opponent crumbles.",
-            highlight: [3, 10, 17, 16, 18],
+            title: 'Read a two-in-a-line',
+            body: "A line holding **two of your men with the third point empty** is a live threat — one move from a mill. Counting these for *both* sides on every turn is the core skill. Here White has two men on the top edge and threatens to close the mill on the open third point.",
+            setup: '{"board":[0,null,null,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"placed":[2,1],"removing":false}',
+            highlight: [0, 3, 6],
+            arrows: [{ from: 3, to: 6, tone: 'good' }],
           },
           {
             title: 'Block before you build',
-            body: "Always check the opponent's **two-in-a-lines** first. If they are one move from a mill, occupy the open third point to **deny** it — a mill conceded is a man lost. Defense and offense often share the same key point.",
+            body: "Always check the **opponent's** two-in-a-lines first. If they are one move from a mill, occupy the open third point to **deny** it — a mill conceded is a man lost for nothing. Defense and offense often share the very same key point, so blocking can build your own threat at the same time.",
             highlight: [42, 45, 48],
           },
           {
+            title: 'Build a double threat',
+            body: "The way to *force* a mill is to threaten **two** at once. Arrange your men so that on your next move you could close either of two different lines — your opponent can block only one, and the other goes through. Cross-points, sitting on two lines each, are the natural hubs for these double threats.",
+            highlight: [21, 22, 23, 26],
+          },
+          {
+            title: 'Don\'t over-commit to one mill',
+            body: "A single mill formed early, with all your other men clustered around it, is easy to neutralise. Spread your placements so several lines stay *alive*; a flexible position that threatens many mills beats one finished mill with no follow-up.",
+          },
+        ],
+      },
+      {
+        title: 'Mills, Mobility & Flying', icon: '⚙️',
+        steps: [
+          {
+            title: 'The running (double) mill',
+            body: "The deadliest weapon in the game is a **running mill**: a man placed where sliding it one way **breaks** a mill, and sliding it back **re-forms** one. Every swing closes a mill again and removes another enemy man — turn after turn, your opponent simply melts away. Setting one up usually wins.",
+            setup: '{"board":[0,null,null,0,null,null,null,null,null,null,0,null,null,null,null,null,0,null,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"placed":[9,9],"removing":false}',
+            highlight: [3, 10, 17, 16, 18],
+            arrows: [{ from: 10, to: 17, tone: 'good' }],
+          },
+          {
+            title: 'Open and shut',
+            body: "Even a single mill is reusable. Slide one man **out** of a completed mill this turn, then **back in** next turn, and you re-close it for another capture. Keep the point you vacate safe (don\'t let the enemy occupy it) and one mill can keep on taking men.",
+            highlight: [0, 3, 6],
+            arrows: [{ from: 3, to: 10, tone: 'info' }],
+          },
+          {
             title: 'Mobility and the squeeze',
-            body: "In the moving phase, a man with no empty neighbour is **dead weight**, and a player with no move **loses outright**. Keep your own men breathing while you cramp the enemy — pinning their men against the edge can win without a single capture.",
+            body: "In the moving phase a man with **no empty neighbour** is dead weight, and a player with **no legal move loses outright** — even with men to spare. So keep your own men breathing while you **cramp** the enemy. Pinning their pieces against the edge can win the game without a single extra capture.",
+          },
+          {
+            title: 'The flying endgame',
+            body: "When the loser hits **three men** they begin to **fly**, dropping onto any empty point — so they can always block a single threat from anywhere. To beat a flyer you must build a **double** mill threat they cannot cover, or trap them while you still have a swinging mill of your own. Don\'t let the game drag once you have the edge.",
+            highlight: [16, 23, 30],
           },
           {
             title: 'Choose your captures well',
-            body: "When a mill lets you remove a man, take the one that **hurts most**: an enemy man on a cross-point, or one about to complete a mill of its own. Steering the opponent toward three men (and the desperation of flying) — then toward two — is the path to victory.",
+            body: "When a mill lets you remove a man, take the one that **hurts most**: a man on a cross-point, one about to complete a mill of its own, or one your opponent needs for mobility. Steer them toward three men and the desperation of flying — then toward two — and the game is yours.",
+          },
+        ],
+      },
+      {
+        title: 'Mill Trainer', icon: '🎯',
+        steps: [
+          {
+            title: 'Close the top edge',
+            body: "Time to play. This board uses **adaptive** control — just **click an empty point** to place your man. White already holds two points of the top outer edge; complete the mill.",
+            setup: '{"board":[0,null,null,0,null,null,null,null,null,null,null,null,null,null,null,null,1,1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"placed":[2,2],"removing":false}',
+            challenge: {
+              prompt: 'White to place — complete a mill on the top edge.',
+              solution: ['White places g7'],
+              success: "White places g7 — three white men line up a7–d7–g7, a mill. You now get to remove one of Black's men. Closing the third point of a two-in-a-line is the bread and butter of the placing phase.",
+            },
+          },
+          {
+            title: 'Close a column',
+            body: "Mills run vertically too. White owns two points of the left-hand outer column. Find the empty point that completes it.",
+            setup: '{"board":[null,null,null,null,null,null,null,null,1,null,1,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null],"turn":0,"placed":[2,2],"removing":false}',
+            challenge: {
+              prompt: 'White to place — complete the left-hand mill.',
+              solution: ['White places a7'],
+              success: "White places a7 — the column a1–a4–a7 is now a mill, and an enemy man comes off. Always scan columns and spokes, not just the rows you can see at a glance.",
+            },
+          },
+          {
+            title: 'Close a spoke',
+            body: "The trickiest mills run along the **spokes** that join the three rings. White holds the two ends of the central top spoke; drop your man on the middle point to close it.",
+            setup: '{"board":[1,null,null,0,null,null,1,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"placed":[2,2],"removing":false}',
+            challenge: {
+              prompt: 'White to place — complete the spoke mill.',
+              solution: ['White places d6'],
+              success: "White places d6 on the cross-point, closing the spoke mill d5–d6–d7 — and d6 belongs to a *second* line too, so it is doubly valuable. Spoke mills are easy to overlook; train your eye to see all sixteen lines.",
+            },
+          },
+          {
+            title: 'Keep training',
+            body: "In a full game our AI tutor reads the board for you on every move — flagging your mills and running mills, the captures that hurt most, the cross-points worth grabbing, and the enemy mills you must block. Play it at rising difficulty and these patterns will start to leap off the board.",
           },
         ],
       },

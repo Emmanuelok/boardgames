@@ -73,6 +73,33 @@ function forkTargets(pos: Position, from: number, mover: Color): number[] {
   return targets;
 }
 
+const ROOK_D = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const BISHOP_D = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+
+/** Does the slider that just moved to `fromSq` pin or skewer an enemy piece
+ *  against a more valuable one (or the king) behind it? */
+function pinBy(pos: Position, fromSq: number, mover: Color): { pinned: number; behind: number; absolute: boolean } | null {
+  const p = pos.board[fromSq];
+  const t = typeOf(p);
+  const dirs = t === ROOK ? ROOK_D : t === BISHOP ? BISHOP_D : t === QUEEN ? [...ROOK_D, ...BISHOP_D] : null;
+  if (!dirs) return null;
+  const opp = (mover ^ 1) as Color;
+  for (const [dr, dc] of dirs) {
+    let r = rankOf(fromSq) + dr, c = fileOf(fromSq) + dc;
+    let first = -1;
+    while (r >= 0 && r < 8 && c >= 0 && c < 8) { const sq = r * 8 + c; if (pos.board[sq] !== 0) { first = sq; break; } r += dr; c += dc; }
+    if (first < 0 || colorOf(pos.board[first]) === mover) continue;
+    r += dr; c += dc;
+    let second = -1;
+    while (r >= 0 && r < 8 && c >= 0 && c < 8) { const sq = r * 8 + c; if (pos.board[sq] !== 0) { second = sq; break; } r += dr; c += dc; }
+    if (second < 0 || colorOf(pos.board[second]) !== opp) continue;
+    if (typeOf(pos.board[second]) === KING || VAL(pos.board[second]) > VAL(pos.board[first])) {
+      return { pinned: first, behind: second, absolute: typeOf(pos.board[second]) === KING };
+    }
+  }
+  return null;
+}
+
 const isCenter = (sq: number) => [27, 28, 35, 36].includes(sq); // d5 e5 d4 e4
 const isBigCenter = (sq: number) => {
   const f = fileOf(sq), r = rankOf(sq);
@@ -146,11 +173,32 @@ export function explainChessMove(before: ChessState, move: ChessMove, after: Che
     threats.push(`Threatens to win the ${pos2name(posAfter, targets[0])}.`);
   }
 
+  // --- Pin / skewer created by the piece that just moved ---
+  const pin = pinBy(posAfter, move.to, mover);
+  if (pin && !move.castle) {
+    const pinnedName = pos2name(posAfter, pin.pinned);
+    if (pin.absolute) {
+      insights.push({ tag: 'Pin', detail: `Pins the ${pinnedName} against the king — it is now frozen and cannot legally move.`, tone: 'good' });
+      principles.push('A pin freezes a piece shielding a more valuable one; pile up on what is pinned.');
+    } else {
+      insights.push({ tag: 'Pin / skewer', detail: `Lines the ${pinnedName} up in front of the ${pos2name(posAfter, pin.behind)} — win one or the other along the line.`, tone: 'good' });
+      principles.push('Pins and skewers win material by attacking two pieces on one line.');
+    }
+  }
+
   // --- Checks / mate / stalemate ---
   if (isMate) {
     insights.unshift({ tag: 'Checkmate', detail: 'The enemy king is attacked and has no escape — the game is won.', tone: 'good' });
   } else if (oppInCheck) {
-    insights.push({ tag: 'Check', detail: 'Attacks the enemy king, forcing an immediate response.', tone: 'good' });
+    const oppKing = posAfter.kingSquare(opp);
+    const givers = posAfter.attackersOf(oppKing, mover);
+    const discovered = givers.length > 0 && givers.every((s) => s !== move.to);
+    if (discovered) {
+      insights.push({ tag: 'Discovered check', detail: 'Moving this piece unveils a check from the piece behind it — you attack with tempo while the opponent is forced to answer the check.', tone: 'good' });
+      principles.push('Discovered attacks unleash a second piece — devastating when they come with check.');
+    } else {
+      insights.push({ tag: 'Check', detail: 'Attacks the enemy king, forcing an immediate response.', tone: 'good' });
+    }
   }
   if (isStalemate) {
     insights.push({ tag: 'Stalemate', detail: 'The opponent has no legal move but is not in check — the game is an immediate draw.', tone: 'bad' });

@@ -889,103 +889,193 @@ const def: GameDefinition<XiangqiState, XiangqiMove> = {
 
   tutorial: {
     overview:
-      'Xiangqi — Chinese Chess — is played on the lines of a 9×10 grid, with the pieces resting on the intersections. A horizontal "river" divides the two armies, and each commander is confined with two advisors to a 3×3 "palace". It shares chess\'s goal — trap the enemy king — but its cannons, river and palace give it a flavour all its own, and it is among the most widely played games in the world.',
+      'Xiangqi — Chinese Chess — is played on the lines of a 9×10 grid, with the pieces resting on the intersections. A horizontal "river" divides the two armies, and each commander is confined with two advisors to a 3×3 "palace". It shares chess\'s goal — trap the enemy king — but its cannons, hobbled horses, river and palace give it a character all its own. With roughly half a billion players it is among the most-played games on Earth, and behind its elegant rules lies a lifetime of depth.',
     objective:
-      'Checkmate the enemy General: attack it so that it cannot escape capture. You also win if your opponent has no legal move at all. There is no draw by stalemate — a side with no move simply loses.',
+      'Checkmate the enemy General: attack it so that it cannot escape capture, the check cannot be blocked, and the attacker cannot be taken. You also win if your opponent has no legal move at all. Crucially there is **no draw by stalemate** — a side left with no legal move simply loses, which makes every endgame a fight to the death.',
     chapters: [
       {
-        title: 'The Pieces & Rules', icon: '🀄',
+        title: 'The Board & The Goal', icon: '🀄',
         steps: [
           {
-            title: 'The board, the river and the palace',
-            body: 'Pieces sit on the **points** of a 9×10 grid. A central **river** runs between the two halves; some pieces may not cross it. In the middle of each back edge a 3×3 **palace** (the crossed square) cages the **General** and its **Advisors** — they may never step outside it. **Red** moves first.',
+            title: 'Lines, points and the river',
+            body: 'Xiangqi is played on a grid of **9 files** by **10 ranks**, and pieces sit on the **90 points** where the lines cross — not inside the squares. A blank horizontal band across the middle is the **river**: it separates the two armies and limits how Elephants and Soldiers may travel. **Red** sits along the bottom and **moves first**; **Black** sits along the top.',
+            highlight: [idx(4, 0), idx(4, 1), idx(4, 2), idx(4, 3), idx(4, 4), idx(4, 5), idx(4, 6), idx(4, 7), idx(4, 8), idx(5, 0), idx(5, 1), idx(5, 2), idx(5, 3), idx(5, 4), idx(5, 5), idx(5, 6), idx(5, 7), idx(5, 8)],
+          },
+          {
+            title: 'The palace',
+            body: 'At the middle of each back edge sits a 3×3 box marked with a cross — the **palace**. The **General** and its two **Advisors** may never step outside it, so the heart of the position is always these nine points. Everything in attack and defence revolves around prising open, or walling up, the enemy palace.',
             highlight: [idx(0, 3), idx(0, 4), idx(0, 5), idx(1, 3), idx(1, 4), idx(1, 5), idx(2, 3), idx(2, 4), idx(2, 5)],
           },
           {
+            title: 'The starting army',
+            body: 'Each side fields **16 pieces**: one **General**, two **Advisors**, two **Elephants**, two **Horses**, two **Chariots**, two **Cannons**, and five **Soldiers**. The chariots stand in the corners, the cannons a little in front of the horses, and the five soldiers along the third rank. The setup is perfectly symmetric — only the right to move first separates the sides.',
+            highlight: [idx(9, 0), idx(9, 8), idx(7, 1), idx(7, 7)],
+          },
+          {
+            title: 'How to win',
+            body: 'You win by **checkmating** the enemy General. When the General is attacked it is in **check** and must be saved at once — by capturing the attacker, blocking the line, or moving the General. If none of those is possible, it is **checkmate** and the game ends. Remember: there is no stalemate draw, so even reducing the enemy to no legal move is a win.',
+            highlight: [idx(0, 4), idx(9, 4)],
+          },
+        ],
+      },
+      {
+        title: 'How the Pieces Move', icon: '♟️',
+        steps: [
+          {
             title: 'The General',
-            body: 'The **General** (帥/將) moves **one point** orthogonally — never diagonally — and can never leave its palace. Lose it and you lose the game, so it is also worth, in effect, everything.',
+            body: 'The **General** (帥 Red / 將 Black) moves and captures **one point orthogonally** — never diagonally — and can never leave the palace. It is the piece you must protect at all costs; lose it and the game is over, so it is worth, in effect, everything.',
             highlight: [idx(9, 4), idx(8, 4), idx(9, 3), idx(9, 5)],
+            arrows: [{ from: idx(9, 4), to: idx(8, 4), tone: 'info' }, { from: idx(9, 4), to: idx(9, 3), tone: 'info' }, { from: idx(9, 4), to: idx(9, 5), tone: 'info' }],
           },
           {
             title: 'The flying general',
-            body: 'The two Generals may **never face each other** along a file with no piece between them. Consequently a General "attacks" straight down any open file, and any move that would leave the two Generals staring at each other is **illegal**. This can even deliver mate — clear the last piece off their shared file and the game ends.',
+            body: 'A unique rule binds the two Generals: they may **never face each other down a file with no piece between them**. In effect each General attacks straight ahead along any open file, and any move that would leave them eye-to-eye is **illegal**. This even delivers mate — clear the last screen off their shared file and the General is "shot" down the board.',
             highlight: [idx(0, 4), idx(9, 4)],
             arrows: [{ from: idx(9, 4), to: idx(0, 4), tone: 'bad' }],
           },
           {
             title: 'The Advisor',
-            body: 'The **Advisor** (仕/士) moves exactly **one point diagonally** and, like the General, stays inside the palace. The two advisors are the General\'s personal bodyguards.',
+            body: 'The **Advisor** (仕/士) moves exactly **one point diagonally** and, like the General, never leaves the palace. From the centre point it guards all four corners of the palace. The two advisors are the General\'s bodyguards — a General stripped of them is desperately weak against chariots and cannons.',
             highlight: [idx(9, 3), idx(8, 4), idx(9, 5)],
+            arrows: [{ from: idx(8, 4), to: idx(9, 3), tone: 'info' }, { from: idx(8, 4), to: idx(9, 5), tone: 'info' }],
           },
           {
             title: 'The Elephant',
-            body: 'The **Elephant** (相/象) moves exactly **two points diagonally**. It is blocked if the **midpoint** — the "elephant\'s eye" — is occupied, and it may **never cross the river**, so it stays home as a heavy defender.',
+            body: 'The **Elephant** (相/象) moves exactly **two points diagonally** in a fixed "field" pattern. It is blocked if the **midpoint** — the "elephant\'s eye" — is occupied, so a single piece in the eye stops it dead. It may **never cross the river**, which limits each elephant to just seven points; it is purely a **defender**.',
             highlight: [idx(9, 2), idx(7, 0), idx(7, 4), idx(8, 3)],
             arrows: [{ from: idx(9, 2), to: idx(7, 4), tone: 'info' }, { from: idx(9, 2), to: idx(7, 0), tone: 'info' }],
           },
           {
             title: 'The Horse',
-            body: 'The **Horse** (傌/馬) moves like a knight: **one point orthogonally, then one point diagonally outward**. Crucially it is **"hobbled"** — blocked — if the orthogonal point it steps through is occupied. Keep your horses\' legs clear, and block the enemy\'s.',
+            body: 'The **Horse** (傌/馬) moves like a knight: **one point orthogonally, then one point diagonally outward** — but unlike a chess knight it does **not jump**. If the orthogonal point it steps through is occupied, that leg is **"hobbled"** and the move is forbidden. Keep your own horses\' legs clear, and look to block the enemy\'s.',
             highlight: [idx(9, 1), idx(7, 0), idx(7, 2), idx(8, 1)],
             arrows: [{ from: idx(9, 1), to: idx(7, 0), tone: 'info' }, { from: idx(9, 1), to: idx(7, 2), tone: 'info' }],
           },
           {
             title: 'The Chariot',
-            body: 'The **Chariot** (俥/車) is the rook of Xiangqi: it moves and captures **any distance orthogonally** along clear lines. It is the strongest piece on the board — get it onto open files early.',
+            body: 'The **Chariot** (俥/車) is the rook of Xiangqi: it moves and captures **any distance orthogonally** along clear lines, the only piece unhampered by the river or palace. It is by far the **strongest piece** — roughly twice the value of a horse or cannon. Activate your chariots on open files early and they will dominate.',
             highlight: [idx(9, 0)],
             arrows: [{ from: idx(9, 0), to: idx(5, 0), tone: 'good' }, { from: idx(9, 0), to: idx(9, 2), tone: 'good' }],
           },
           {
             title: 'The Cannon',
-            body: 'The **Cannon** (炮/砲) **moves** like a chariot along empty lines — but to **capture** it must **leap exactly one piece** (the "screen", of either colour) and land on an enemy beyond it. This unique jump-capture is the signature weapon of Xiangqi.',
+            body: 'The **Cannon** (炮/砲) **moves** like a chariot along empty lines — but to **capture** it must **leap exactly one piece** (the "screen", of either colour) and land on an enemy beyond it. No screen, no capture; two screens, no capture. This jump-capture is the signature weapon of Xiangqi and the source of its sharpest tactics.',
             highlight: [idx(7, 1), idx(7, 4), idx(0, 1)],
             arrows: [{ from: idx(7, 1), to: idx(0, 1), tone: 'good' }],
           },
           {
             title: 'The Soldier',
-            body: 'The **Soldier** (兵/卒) steps **one point forward** and never back. Once it has **crossed the river** it also gains the ability to step **one point sideways** — a soldier deep in the enemy camp is a real threat.',
+            body: 'The **Soldier** (兵/卒) steps **one point forward** and never back. Once it has **crossed the river** it also gains a **sideways** step — and is then worth far more. Soldiers never promote, but a pair pressing the enemy palace, supported by a chariot or cannon, frequently delivers the killing blow.',
             highlight: [idx(6, 4), idx(5, 4), idx(4, 4)],
             arrows: [{ from: idx(6, 4), to: idx(5, 4), tone: 'info' }],
           },
           {
-            title: 'Check and checkmate',
-            body: 'When the General is attacked it is in **check** and must be saved. If there is no legal way to save it, that is **checkmate** and the game is lost. Unlike Western chess there is **no stalemate draw**: a side with no legal move loses outright.',
+            title: 'What each piece is worth',
+            body: 'A rough scale: **Chariot ≈ 9**, **Cannon ≈ 4.5**, **Horse ≈ 4**, **Advisor / Elephant ≈ 2**, **Soldier = 1** (about 2 once across the river). The General is priceless. These guide your trades — but values shift with the position: a cannon is strong while the board is crowded with screens, a horse grows as the board opens.',
           },
         ],
       },
       {
-        title: 'Strategy', icon: '🧠',
+        title: 'Opening Principles', icon: '🚀',
         steps: [
           {
-            title: 'Develop chariots and cannons',
-            body: 'Your **chariots** are by far your most powerful pieces — bring them to **open files** quickly. **Cannons** are strongest early, when the crowded board gives them plenty of screens to jump; the classic opening places a cannon on the **central file** to bear down on the enemy palace.',
-            highlight: [idx(9, 0), idx(9, 8), idx(7, 4)],
+            title: 'The central cannon',
+            body: 'The single most popular first move is to swing a cannon to the **central file** (the "Central Cannon"), aiming it straight down the board at the enemy palace. It develops with a threat and fights for the centre at once. Black\'s most respected reply is the **Screen Horses** defence, developing both horses to shield the palace.',
+            highlight: [idx(7, 4), idx(0, 4)],
+            arrows: [{ from: idx(7, 1), to: idx(7, 4), tone: 'good' }],
           },
           {
-            title: 'Keep your horses free',
-            body: 'A horse is only as good as its legs. Place horses where their stepping-points stay **clear**, and look to **hobble** the enemy\'s horses by occupying the point they need to step through. A well-placed central horse is worth as much as a cannon.',
-            highlight: [idx(9, 1), idx(9, 7)],
+            title: 'Develop the chariots',
+            body: 'Because chariots are so powerful, **getting them into play quickly** is a guiding principle. A chariot doing nothing in the corner is a wasted army; lift it to an open or half-open file where it rakes the board. Many opening battles are simply a race to activate chariots first.',
+            highlight: [idx(9, 0), idx(9, 8)],
+            arrows: [{ from: idx(9, 0), to: idx(8, 0), tone: 'good' }],
           },
           {
-            title: 'Mind the central file',
-            body: 'The file in front of your General is a highway for enemy chariots and cannons — and the line of the **flying general**. Guard it, and use your own General\'s "x-ray" down an open file as a hidden weapon to pin or to threaten mate.',
-            highlight: [idx(0, 4), idx(9, 4)],
+            title: 'Horses before commitment',
+            body: 'Develop your **horses to active, un-hobbled points** — typically the points in front of the cannons — where they defend the palace and eye the centre. Avoid shoving soldiers carelessly: a soldier that opens a file or unblocks a horse\'s leg can hand the enemy a tempo.',
+            highlight: [idx(9, 1), idx(9, 7), idx(7, 2), idx(7, 6)],
+          },
+          {
+            title: 'Keep the palace sound',
+            body: 'Do not strip your **advisors and elephants** away for nothing — they are your General\'s shield. A common cause of a quick loss is an exposed General on a half-open central file, where an enemy chariot or cannon (and the flying-general threat) crashes through. Balance attack with a solid palace.',
+            highlight: [idx(9, 3), idx(9, 5), idx(9, 2), idx(9, 6)],
+          },
+        ],
+      },
+      {
+        title: 'Tactics & Strategy', icon: '⚡',
+        steps: [
+          {
+            title: 'The cannon behind a screen',
+            body: 'The defining tactic: line up **cannon, screen, target** on one file or rank. The cannon then leaps the screen to capture — or to check. A cannon parked behind a screen aiming at the enemy palace is a standing threat; if the defender ever removes or adds a screen, the cannon\'s power flips on or off.',
+            highlight: [idx(7, 1), idx(4, 1), idx(0, 1)],
+            arrows: [{ from: idx(7, 1), to: idx(0, 1), tone: 'good' }],
+          },
+          {
+            title: 'Hobble the enemy horse',
+            body: 'Since a horse cannot jump, a single piece on its **leg-point** freezes that direction. Dropping a soldier or advancing a pawn to block an enemy horse is a quiet but powerful manoeuvre — you neutralise a 4-point piece for free. Equally, watch that your own horses always have an open leg.',
+            highlight: [idx(2, 1), idx(3, 1)],
+            arrows: [{ from: idx(3, 1), to: idx(2, 1), tone: 'bad' }],
+          },
+          {
+            title: 'Exploit the flying general',
+            body: 'The flying-general rule is a **hidden attacker**. A piece on the Generals\' shared file is effectively **pinned** — moving it loses on the spot. You can use your own General\'s x-ray to pin an enemy defender, or threaten to clear the file for a flying-general mate. Always check whether a capture exposes this line.',
+            highlight: [idx(0, 4), idx(5, 4), idx(9, 4)],
             arrows: [{ from: idx(9, 4), to: idx(0, 4), tone: 'bad' }],
           },
           {
-            title: 'Defend with advisors and elephants',
-            body: 'Your **advisors** and **elephants** cannot attack far, but they are essential **defenders** — a General stripped of its guards is fatally exposed to chariots and cannons. Keep at least one advisor and the elephant pair intact around the palace.',
-            highlight: [idx(9, 3), idx(9, 5), idx(9, 2), idx(9, 6)],
+            title: 'March the soldiers across',
+            body: 'A soldier doubles in strength once it **crosses the river** and gains a sideways step. Advance soldiers to cramp the enemy and to serve as **screens** for your cannons or as the final attacker against the palace. In the endgame an extra crossed soldier is often the margin of victory.',
+            highlight: [idx(6, 2), idx(5, 2), idx(4, 2)],
+            arrows: [{ from: idx(5, 2), to: idx(4, 2), tone: 'good' }],
           },
           {
-            title: 'March the soldiers',
-            body: 'Advance soldiers to **cross the river**, where they gain sideways movement and start to cramp the enemy. A pair of soldiers working with a chariot or cannon near the enemy palace often decides the game.',
-            highlight: [idx(6, 4), idx(6, 2), idx(6, 6)],
-          },
-          {
-            title: 'Attack the palace',
-            body: 'Wins come from massing force against the enemy **palace**: a chariot on the back rank, a cannon checking over a screen, a soldier or horse delivering the final blow — and always the threat of the flying general lurking down the central file. Coordinate two or three attackers and the General will have nowhere to run.',
+            title: 'Mass force on the palace',
+            body: 'Wins come from **coordinating two or three attackers** against the enemy palace: a chariot on the back file, a cannon checking over a screen, a horse or crossed soldier delivering the final blow — all while the flying general lurks. A lone attacker is usually beaten back; combined, they leave the General with nowhere to run.',
             highlight: [idx(0, 3), idx(0, 4), idx(0, 5)],
+          },
+          {
+            title: 'The endgame & how the tutor helps',
+            body: 'Because there is no stalemate escape, **endgames are decisive**: a chariot, or even a cannon-and-soldier, usually mates a bare General. Learn the standard mating nets and the rule that a lone cannon needs a screen to give mate. In a live game our tutor grades **every** move — flagging hung pieces, screen captures, hobbled horses and flying-general threats — so these patterns become second nature.',
+          },
+        ],
+      },
+      {
+        title: 'Trainer', icon: '🎯',
+        steps: [
+          {
+            title: 'Cannon screen capture',
+            body: 'Time to play. **Click a piece, then click its destination.** Your **Cannon** on **b3** sits below your own Horse on **b5** (the screen) with the enemy **Chariot** on **b8** beyond it. Leap the screen and blast the chariot.',
+            setup: '{"turn":0,"board":[null,null,null,{"type":"G","player":1},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"type":"R","player":1},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"type":"H","player":0},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"type":"C","player":0},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"type":"G","player":0},null,null,null]}',
+            challenge: {
+              prompt: 'Red to play — win the Chariot with a cannon leap.',
+              solution: ['C b3×b8'],
+              success: 'C b3×b8 — the cannon vaults its own horse (the screen) and smashes the enemy chariot, winning the most valuable piece on the board. No screen means no capture; line up screen and target and the cannon does the rest.',
+            },
+          },
+          {
+            title: 'Check with the cannon',
+            body: 'The enemy **General** sits on **d10**, screened by its own Advisors on **c10** and **e10**, with a Soldier on **d6**. Swing your **Cannon from a3** so that it bears down on the General over a screen and gives **check**.',
+            setup: '{"turn":0,"board":[null,null,{"type":"A","player":1},{"type":"G","player":1},{"type":"A","player":1},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"type":"S","player":1},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"type":"C","player":0},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"type":"G","player":0},null,null,null]}',
+            challenge: {
+              prompt: 'Red to play — give check with the cannon over a screen.',
+              solution: ['C a3–d3', 'C a3-d3', 'C a3×d3', 'C a3–a10', 'C a3-a10', 'C a3×a10'],
+              success: 'The cannon lines up on the General over a screen and delivers check — the enemy must respond at once. From a3 you could swing to d3 (checking up the d-file over the d6 soldier) or to a10 (checking across the back rank over the c10 advisor). Either way, the cannon strikes through a screen.',
+            },
+          },
+          {
+            title: 'Horse checkmate',
+            body: 'The enemy **General** on **e10** is boxed in: its own Advisors fill **d10** and **f10**, and a piece blocks **e9**. Your **Horse on e6** can leap to a point that checks the General — and a knight-check can never be blocked. Find the mate.',
+            setup: '{"turn":0,"board":[null,null,null,{"type":"A","player":1},{"type":"G","player":1},{"type":"A","player":1},null,null,null,null,null,null,null,{"type":"E","player":1},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"type":"H","player":0},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"type":"G","player":0},null,null,null,null,null]}',
+            challenge: {
+              prompt: 'Red to play — checkmate in one with the Horse.',
+              solution: ['H e6–d8', 'H e6-d8', 'H e6×d8', 'H e6–f8', 'H e6-f8', 'H e6×f8'],
+              success: 'H e6–d8 (or H e6–f8) checks the General, and there is no escape: a horse-check cannot be interposed, the General\'s flights are all blocked by its own pieces, and the horse is safe. That is checkmate — the General is hunted down in its own palace.',
+            },
+          },
+          {
+            title: 'Keep training',
+            body: 'In a real game the AI tutor grades **every** move you make — spotting screen captures, hobbled horses, flying-general threats and hanging pieces, and showing the stronger idea when you miss one. Play at rising difficulty, read each explanation, and the patterns of Xiangqi will start to leap off the board.',
           },
         ],
       },

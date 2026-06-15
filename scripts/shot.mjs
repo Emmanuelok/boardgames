@@ -1,6 +1,8 @@
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
+if (process.env.GFX) chromium.setGraphicsMode = true;
+
 const url = process.argv[2] || 'http://localhost:4173/';
 const out = process.argv[3] || '/tmp/shot.png';
 const w = Number(process.argv[4] || 1440);

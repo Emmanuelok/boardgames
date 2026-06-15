@@ -679,82 +679,157 @@ const def: GameDefinition<CheckersState, CheckersMove> = {
   deserialize: (str) => JSON.parse(str) as CheckersState,
 
   tutorial: {
-    overview: 'Checkers — known as draughts across much of the world — is the classic diagonal battle fought entirely on the dark squares of an 8×8 board. Behind its friendly look hides a razor-sharp tactical game: because every capture is compulsory, a clever player can steer the opponent into forced jumps, set up devastating multi-captures, and crown Kings that rule the board.',
-    objective: 'Capture or trap every one of your opponent\'s pieces. You win the moment your opponent cannot make a legal move — because they have no pieces left, or because every piece they own is blocked.',
+    overview: 'Checkers — known as English draughts — is the classic diagonal battle fought entirely on the dark squares of an 8×8 board. Behind its friendly look hides a razor-sharp tactical game: because every capture is compulsory, a clever player can steer the opponent into forced jumps, set up devastating multi-captures, and crown Kings that rule the board. Easy to learn in two minutes, it rewards a lifetime of study — it was even solved by computer in 2007, proving perfect play a draw.',
+    objective: 'Capture or trap every one of your opponent\'s pieces. You win the moment your opponent cannot make a legal move — because they have no pieces left, or because every piece they own is blocked. There is no draw by stalemate here: a player with no move loses.',
     chapters: [
       {
-        title: 'The Rules', icon: '📜',
+        title: 'The Board & The Goal', icon: '📜',
         steps: [
           {
             title: 'The dark squares only',
-            body: 'Play happens solely on the **dark squares** of the 8×8 board. **Red** starts on the three rows nearest you and moves **up** the board; **Black** starts on the three far rows and moves **down**. Red moves first, then players alternate.',
+            body: 'Checkers is played on the 64 squares of a chequered board, but only the **32 dark squares** are ever used — every piece always sits on a dark square and moves along diagonals. **Red** starts on the three rows nearest you and moves **up** the board; **Black** starts on the three far rows and moves **down**. **Red moves first**, then players alternate.',
+            highlight: [idx(5, 0), idx(5, 2), idx(5, 4), idx(5, 6), idx(2, 1), idx(2, 3), idx(2, 5), idx(2, 7)],
           },
           {
-            title: 'Men move diagonally forward',
-            body: 'An ordinary piece — a **man** — slides one square diagonally **forward** onto an empty dark square. Men never move straight, sideways, or backward.',
-            highlight: [idx(5, 2), idx(4, 1), idx(4, 3)],
-          },
-          {
-            title: 'Capturing by jumping',
-            body: 'To capture, **jump** diagonally forward over an enemy piece on an adjacent square, landing on the empty square just beyond. The jumped piece is removed from the board. A man may only jump forward.',
-            highlight: [idx(5, 2), idx(4, 3), idx(3, 4)],
-          },
-          {
-            title: 'Captures are mandatory',
-            body: 'If you can capture, you **must** — quiet moves are illegal whenever a jump exists. If several different jumps are available, you may choose which one to make, but a jump it must be.',
-          },
-          {
-            title: 'Multi-jumps: keep going',
-            body: 'After a jump, if the **same piece** can immediately jump again, it **must** continue, capturing piece after piece in one turn. A double or triple jump can swing the game in a single move — and the whole chain counts as your one move.',
-            highlight: [idx(5, 0), idx(4, 1), idx(3, 2), idx(2, 3), idx(1, 4)],
-          },
-          {
-            title: 'Crowning a King',
-            body: 'When a man reaches the **far rank** — Red on the top row, Black on the bottom row — it is **crowned a King** (a second piece is stacked on it). The move ends there; a man does not keep jumping after it is crowned.',
-            highlight: [idx(0, 1), idx(0, 3), idx(0, 5), idx(0, 7)],
-          },
-          {
-            title: 'Kings move both ways',
-            body: 'A **King** is far more powerful: it slides and jumps one square diagonally in **all four** directions — forward *and* backward. A pair of roaming Kings can hunt down lone men with ease.',
-            highlight: [idx(4, 3), idx(3, 2), idx(3, 4), idx(5, 2), idx(5, 4)],
+            title: 'The starting position',
+            body: 'Each side begins with **12 men** filling the dark squares of its three home rows. The two centre rows are empty — that no-man\'s-land in the middle is where the first skirmishes happen. Notice the symmetry: the only difference between the sides is who moves first.',
+            highlight: [idx(0, 1), idx(0, 3), idx(0, 5), idx(0, 7), idx(7, 0), idx(7, 2), idx(7, 4), idx(7, 6)],
           },
           {
             title: 'How you win',
-            body: 'You win when your opponent has **no legal move** — either every piece is captured, or all remaining pieces are completely blocked. With careful trading, even a one-piece edge is usually enough.',
+            body: 'The goal is simple: leave your opponent with **no legal move**. Usually that means **capturing all their pieces**, but you also win if every piece they own is **blocked** and cannot move. With careful trading, even a single extra piece is often enough to force the win.',
           },
         ],
       },
       {
-        title: 'Winning Strategy', icon: '🧠',
+        title: 'How the Pieces Move', icon: '⛂',
+        steps: [
+          {
+            title: 'Men step diagonally forward',
+            body: 'An ordinary piece — a **man** — slides one square diagonally **forward** onto an empty dark square. Men never move straight, sideways, or backward. From the centre a man has two choices; against the side wall, only one.',
+            highlight: [idx(5, 2)],
+            arrows: [{ from: idx(5, 2), to: idx(4, 1), tone: 'info' }, { from: idx(5, 2), to: idx(4, 3), tone: 'info' }],
+          },
+          {
+            title: 'Capturing by jumping',
+            body: 'To capture, **jump** diagonally forward over an enemy man on an adjacent square, landing on the **empty square just beyond**. The jumped piece is removed. A man may only jump **forward**. Here the Red man on c3 leaps the Black man on d4 to land on e5.',
+            setup: '{"turn":0,"squares":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,{"player":0,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]}',
+            highlight: [idx(5, 2), idx(4, 3), idx(3, 4)],
+            arrows: [{ from: idx(5, 2), to: idx(3, 4), tone: 'good' }],
+          },
+          {
+            title: 'Captures are mandatory',
+            body: 'This is the rule that gives checkers its bite: **if you can capture, you must**. A quiet move is illegal whenever any jump exists for your side. If several different jumps are available you may **choose which one** to make — but a jump it has to be. Forgetting this loses games.',
+          },
+          {
+            title: 'Multi-jumps: keep going',
+            body: 'After a jump, if the **same piece** can immediately jump again, it **must** continue — capturing piece after piece in a single turn. Here Red on a3 jumps to c5 and is then forced to carry on, jumping again to e7: a double capture, all counted as one move.',
+            setup: '{"turn":0,"squares":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,{"player":0,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":0,"king":false},null]}',
+            highlight: [idx(5, 0), idx(4, 1), idx(3, 2), idx(2, 3), idx(1, 4)],
+            arrows: [{ from: idx(5, 0), to: idx(1, 4), tone: 'good' }],
+          },
+          {
+            title: 'Crowning a King',
+            body: 'When a man reaches the **far rank** — Red on the top row, Black on the bottom row — it is **crowned a King** (a second disc is stacked on it). In this variant, crowning **ends the move**: a man that lands on the far row to be crowned does not keep jumping that turn, even if another jump exists.',
+            highlight: [idx(0, 1), idx(0, 3), idx(0, 5), idx(0, 7)],
+          },
+          {
+            title: 'Kings move both ways',
+            body: 'A **King** is far stronger: it slides and jumps one square diagonally in **all four** directions — forward *and* backward. Like a man it still jumps only one square at a time, but its freedom to reverse makes it worth nearly two men. A pair of roaming Kings can hunt a lone man across the board.',
+            setup: '{"turn":0,"squares":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":0,"king":true},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]}',
+            highlight: [idx(3, 2)],
+            arrows: [{ from: idx(3, 2), to: idx(2, 1), tone: 'good' }, { from: idx(3, 2), to: idx(2, 3), tone: 'good' }, { from: idx(3, 2), to: idx(4, 1), tone: 'good' }, { from: idx(3, 2), to: idx(4, 3), tone: 'good' }],
+          },
+        ],
+      },
+      {
+        title: 'Opening & Middle Game', icon: '🚀',
         steps: [
           {
             title: 'Control the center',
-            body: 'Pieces in the **center** influence more squares and are far harder to trap than pieces stranded on the edge. Steer your men toward the middle in the opening and keep them supported.',
+            body: 'Pieces in the **center** influence more squares and are far harder to trap than men stranded on the edge. Steer your men toward the middle in the opening, push them in **mutually supporting** pairs so a capture can be recaptured, and avoid lone advances that can be picked off.',
             highlight: [idx(4, 3), idx(4, 5), idx(3, 2), idx(3, 4)],
           },
           {
             title: 'Hold your back row',
-            body: 'Resist pushing your **back-rank** men too soon. As long as they guard your home squares, the opponent cannot slip a man through to be crowned. Break the back row late, and only with a plan.',
+            body: 'Resist pushing your **back-rank** men too soon. As long as they guard your home squares, the opponent cannot slip a man through to be crowned. The back rank is your last line of defence against an enemy King factory — break it late, and only with a clear plan.',
             highlight: [idx(7, 0), idx(7, 2), idx(7, 4), idx(7, 6)],
           },
           {
-            title: 'Use the edges defensively',
-            body: 'A piece on the **side files** can never be jumped from outside the board, so the edge is a safe haven. It costs some mobility, so use it to shelter pieces and to anchor a defence — not as your whole plan.',
+            title: 'Use the edges with care',
+            body: 'A man on the **side file** can never be jumped from outside the board, so the edge is a safe square — but a piece there attacks only **one** diagonal and is easy to immobilise. Use the edge to shelter a piece or anchor a defence, not as your whole plan.',
             highlight: [idx(3, 0), idx(4, 7)],
           },
           {
+            title: 'Count the exchange',
+            body: 'Before you make or allow a capture, **trace the recapture**. A jump that wins a man but lets the opponent jump two of yours in reply is a disaster. Because captures are forced, you can read these short sequences exactly — always look one capture deeper than feels comfortable.',
+            highlight: [idx(4, 3), idx(3, 4), idx(2, 5)],
+          },
+        ],
+      },
+      {
+        title: 'Tactics & Endgame', icon: '🧠',
+        steps: [
+          {
+            title: 'Force the captures you want',
+            body: 'Because jumps are **compulsory**, you can set traps: offer a man so that the **only** legal reply lands the opponent on a square where your next move jumps **two or more** of theirs. Giving up one to take several — the "shot" — is the heart of strong checkers.',
+            highlight: [idx(4, 3), idx(3, 4), idx(2, 5)],
+          },
+          {
+            title: 'The 2-for-1 shot',
+            body: 'The most common winning motif: a one-piece **sacrifice** that forces a recapture, setting up a double jump that nets you two pieces. You end a man **up**. Train your eye to spot positions where the enemy is forced to step into a multi-jump, and steer the game toward them.',
+          },
+          {
             title: 'Trade when you are ahead',
-            body: 'If you are **up material**, exchange pieces at every fair chance. Each swap shrinks the board and magnifies your lead — a one-piece edge with few pieces left is far easier to convert than the same edge in a crowd. When **behind**, do the opposite: avoid trades and keep pieces on to muddy the position.',
+            body: 'If you are **up material**, exchange pieces at every fair chance. Each swap shrinks the board and magnifies your lead — a one-man edge with few pieces left is far easier to convert than the same edge in a crowd. When **behind**, do the opposite: keep pieces on and complicate.',
           },
           {
             title: 'The power of Kings',
-            body: 'A **King**, free to move both ways, is worth nearly two men. Race a man to the last rank to crown one, then use its reach to attack the enemy from behind, defend your own men, and dominate the endgame.',
+            body: 'A **King**, free to move both ways, dominates the endgame. Race a man to the last rank to crown one, then use its reach to attack from behind and defend your own men. **First King often wins** — getting promoted before your opponent is a major endgame goal.',
             highlight: [idx(0, 3)],
           },
           {
-            title: 'Force the captures you want',
-            body: 'Because jumps are **compulsory**, you can set traps: offer a piece so that the only legal recapture lands the opponent where your next move jumps **two** of theirs. Reading these forced sequences — giving up one to take many — is the heart of strong checkers.',
-            highlight: [idx(4, 3), idx(3, 4), idx(2, 5)],
+            title: 'The endgame & how the tutor helps',
+            body: 'Endings turn on **opposition and tempo**: with Kings, driving the enemy toward the edge and the double-corner is the standard winning method. In a live game our tutor grades **every** move — celebrating multi-jumps and crownings, and flagging when you hang a piece or break your back row too early — so these patterns become instinctive.',
+          },
+        ],
+      },
+      {
+        title: 'Trainer', icon: '🎯',
+        steps: [
+          {
+            title: 'Your first capture',
+            body: 'Time to play. **Click a piece, then click its destination.** Captures are mandatory, so there is exactly one legal move here — jump the Black man and land beyond it.',
+            setup: '{"turn":0,"squares":[null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,{"player":0,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":0,"king":false},null,null,null,null,null,null,null]}',
+            challenge: {
+              prompt: 'Red to play — make the capture.',
+              solution: ['R c3×e5'],
+              success: 'R c3×e5 — the man jumps the enemy diagonally forward and lands on the empty square beyond. Remember: whenever a jump exists you are forced to take it.',
+            },
+          },
+          {
+            title: 'The double jump',
+            body: 'After a jump, the **same piece** must keep jumping if it can. Your man on **a3** can start a chain that sweeps **two** Black men off the board in a single move. Find it.',
+            setup: '{"turn":0,"squares":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,{"player":0,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":0,"king":false},null]}',
+            challenge: {
+              prompt: 'Red to play — win two pieces with a multi-jump.',
+              solution: ['R a3×e7'],
+              success: 'R a3×e7 — the man jumps to c5, is forced to continue, and jumps again to e7: a double capture in one move. Chained jumps are the great material-winning weapon of checkers.',
+            },
+          },
+          {
+            title: 'Jump and crown',
+            body: 'Your man on **b6** is one rank from promotion. There is a capture available that lands it right on the far row — taking a piece **and** crowning a King at the same time.',
+            setup: '{"turn":0,"squares":[null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},null,null,null,null,null,null,{"player":0,"king":false},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,{"player":1,"king":false},{"player":0,"king":false},null,null,null,null,null,null,null]}',
+            challenge: {
+              prompt: 'Red to play — capture and crown a King.',
+              solution: ['R b6×d8'],
+              success: 'R b6×d8 — the man jumps onto the far rank, winning a piece and being crowned in the same move. A new King, free to roam both ways, is worth nearly two men.',
+            },
+          },
+          {
+            title: 'Keep training',
+            body: 'In a real game the AI tutor grades **every** move you make — celebrating multi-jumps and crownings, and warning you when a move hangs a piece or loosens your back row. Play at rising difficulty, read each explanation, and the tactics of checkers will start to leap off the board.',
           },
         ],
       },
