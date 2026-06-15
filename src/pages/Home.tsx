@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
-import { GAMES, getGame } from '../engine/registry';
+import { CATALOGUE, getGame } from '../engine/registry';
 import { BOARD_THEMES, getTheme } from '../themes/boardThemes';
 import MiniBoard from '../components/MiniBoard';
 import './Home.css';
@@ -50,8 +50,8 @@ export default function Home() {
             Master every board game with an AI that <span className="gradient-text">teaches you</span>.
           </motion.h1>
           <motion.p className="hero-sub" variants={fadeUp} initial="hidden" animate="show" custom={2}>
-            Chess, Go, Xiangqi and {GAMES.length - 3}+ more — played against an engine that explains the meaning
-            behind every move, in stunning 2D and 3D, with full post-game review.
+            Chess, Go, Backgammon, Amazons and {CATALOGUE.length - 4} more distinct games — played against an engine
+            that explains the meaning behind every move, in stunning 2D and 3D, with full post-game review.
           </motion.p>
           <motion.div className="row gap-sm wrap" variants={fadeUp} initial="hidden" animate="show" custom={3}>
             <button className="btn primary lg glow" onClick={() => nav('/play/chess')}>♟ Start playing</button>
@@ -59,7 +59,7 @@ export default function Home() {
             <button className="btn lg" onClick={() => nav('/learn/chess')}>📖 Learn</button>
           </motion.div>
           <motion.div className="hero-stats" variants={fadeUp} initial="hidden" animate="show" custom={4}>
-            <Stat n={GAMES.length} l="games" />
+            <Stat n={CATALOGUE.length} l="unique games" />
             <Stat n={BOARD_THEMES.length} suffix="+" l="themes" />
             <Stat n={37} l="lessons" />
             <Stat n={2} suffix="D · 3D" l="every board" raw />
@@ -83,27 +83,36 @@ export default function Home() {
 
       <Section id="games" title="Choose your game" sub="Each ships with a deep course and a move-by-move AI tutor.">
         <div className="game-grid">
-          {GAMES.map((g, i) => (
-            <motion.div
-              className="game-card glass" key={g.id} style={{ ['--accent' as any]: g.accent }}
-              variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-8%' }} custom={(i % 4) * 0.5}
-              whileHover={{ y: -8 }}
-            >
-              <div className="gc-art">
-                <span className="gc-emoji">{g.emoji}</span>
-                <span className="chip gc-cat">{g.category}</span>
-              </div>
-              <div className="gc-body">
-                <h3 className="gc-name">{g.name}</h3>
-                <p className="gc-tag">{g.tagline}</p>
-                <div className="gc-meta"><Depth depth={g.depth} /><span className="faint">{g.players[0].name} v {g.players[1].name}</span></div>
-                <div className="gc-actions">
-                  <Link className="btn primary sm" to={`/play/${g.id}`}>Play</Link>
-                  <Link className="btn sm" to={`/learn/${g.id}`}>Learn</Link>
+          {CATALOGUE.map((entry, i) => {
+            const fam = entry.type === 'family' ? entry.family : null;
+            const g = entry.type === 'family' ? entry.primary : entry.def;
+            const name = fam ? fam.name : g.name;
+            const emoji = fam ? fam.emoji : g.emoji;
+            const category = fam ? fam.category : g.category;
+            const tagline = fam ? fam.tagline : g.tagline;
+            return (
+              <motion.div
+                className="game-card glass" key={fam ? `fam-${fam.id}` : g.id} style={{ ['--accent' as any]: g.accent }}
+                variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-8%' }} custom={(i % 4) * 0.5}
+                whileHover={{ y: -8 }}
+              >
+                <div className="gc-art">
+                  <span className="gc-emoji">{emoji}</span>
+                  <span className="chip gc-cat">{category}</span>
+                  {fam && <span className="chip gc-variants">{fam.variants.length} variants</span>}
                 </div>
-              </div>
-            </motion.div>
-          ))}
+                <div className="gc-body">
+                  <h3 className="gc-name">{name}</h3>
+                  <p className="gc-tag">{tagline}</p>
+                  <div className="gc-meta"><Depth depth={g.depth} /><span className="faint">{fam ? fam.variants.map((v) => v.label.split(' · ')[0]).join(' · ') : `${g.players[0].name} v ${g.players[1].name}`}</span></div>
+                  <div className="gc-actions">
+                    <Link className="btn primary sm" to={`/play/${g.id}`}>Play</Link>
+                    <Link className="btn sm" to={`/learn/${g.id}`}>Learn</Link>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </Section>
 

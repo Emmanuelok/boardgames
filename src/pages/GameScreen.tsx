@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useGameStore } from '../store/useGameStore';
-import { getGame } from '../engine/registry';
+import { getGame, familyOf } from '../engine/registry';
 import { getTheme } from '../themes/boardThemes';
 import Board2D from '../components/Board2D';
 import EvalBar from '../components/EvalBar';
@@ -137,6 +137,8 @@ export default function GameScreen() {
         </div>
       </header>
 
+      <VariantBar gameId={def.id} />
+
       <div className="play-area">
         <div className="board-col">
           <PlayerTag def={def} who={top} turn={turn} thinking={store.thinking} store={store} />
@@ -207,6 +209,23 @@ export default function GameScreen() {
       {store.promotion && <Promotion store={store} />}
       {store.toast && <div className="toast glass">{store.toast}</div>}
       {lastUnlocked && <AchievementToast id={lastUnlocked} />}
+    </div>
+  );
+}
+
+function VariantBar({ gameId }: { gameId: string }) {
+  const fam = familyOf(gameId);
+  if (!fam || fam.variants.length < 2) return null;
+  return (
+    <div className="variant-bar">
+      <span className="vb-label">{fam.emoji} {fam.name}</span>
+      <div className="seg variant-seg">
+        {fam.variants.map((v) => (
+          v.id === gameId
+            ? <button key={v.id} className="on" disabled>{v.label}</button>
+            : <Link key={v.id} to={`/play/${v.id}`}>{v.label}</Link>
+        ))}
+      </div>
     </div>
   );
 }
