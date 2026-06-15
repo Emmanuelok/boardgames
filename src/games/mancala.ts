@@ -561,63 +561,112 @@ const def: GameDefinition<MancalaState, MancalaMove> = {
   deserialize: (str) => JSON.parse(str),
 
   tutorial: {
-    overview: 'Mancala is among the most ancient games still played, with boards found carved into temple steps and scooped into desert sand across Africa and the Middle East for thousands of years. This is the **Kalah** version: a row of six pits each, a large store at your right hand, and a fistful of stones to sow. The rules fit in a sentence, yet good play is a constant little arithmetic — counting where your last stone will land to bank a seed, steal a turn, or spring a raid.',
-    objective: 'Gather more stones in your store than your opponent. The game ends the moment one player\'s six pits are all empty; the other player then banks every stone still on their side, and whoever holds more stones wins.',
+    overview: 'Mancala is among the most ancient games still played, its boards carved into temple steps and scooped into desert sand across Africa and the Middle East for thousands of years. This is the **Kalah** version: a row of six pits each, a large **store** at your right hand, and forty-eight stones to sow. The rules fit in a sentence, yet strong play is a constant, quiet arithmetic — counting *exactly* where your last stone will land to bank a seed, steal an extra turn, or spring a raid on your opponent\'s pits.',
+    objective: 'Gather more stones in your store than your opponent. The game ends the instant one player\'s six pits are all empty; the other player then sweeps every stone still on their own side into their store, and whoever holds more stones wins. With 48 stones in play, **25 or more guarantees victory** — that is the number to count toward.',
     chapters: [
       {
-        title: 'The Rules', icon: '📜',
+        title: 'The Board & Sowing', icon: '📜',
         steps: [
           {
-            title: 'The board',
-            body: 'Each player owns the **six pits** on their side and the large **store** to their right. **South** owns the bottom row and the right-hand store; **North** owns the top row and the left-hand store. Every pit starts with **four stones** — forty-eight in all. South moves first.',
+            title: 'Your pits and your store',
+            body: 'Each player owns the **six pits** on their side and the large **store** to their right. **South** (you, going first) owns the bottom row and the right-hand store; **North** owns the top row and the left-hand store. Every pit starts with **four stones** — forty-eight in all.',
+            setup: '{"pits":[4,4,4,4,4,4,0,4,4,4,4,4,4,0],"turn":0}',
             highlight: [gridIndexOfPit(SOUTH_STORE), gridIndexOfPit(NORTH_STORE)],
           },
           {
-            title: 'Sowing stones',
-            body: 'On your turn, pick one of **your own** non-empty pits, scoop up *all* its stones, and "sow" them one at a time into the following pits, moving counterclockwise. You drop a stone in each pit you pass — including **your own store**, but **never** your opponent\'s store, which you skip.',
+            title: 'How sowing works',
+            body: 'On your turn, pick one of **your own** non-empty pits, scoop up *all* its stones, and "sow" them one at a time into the pits ahead, moving **counterclockwise** (to the right along your row, then up the far end). You drop exactly one stone in each pit you pass.',
+            setup: '{"pits":[4,4,4,4,4,4,0,4,4,4,4,4,4,0],"turn":0}',
+            highlight: [gridIndexOfPit(SOUTH_STORE)],
           },
           {
-            title: 'Your store, not theirs',
-            body: 'As you sow past your own store you add a stone to it; stones banked in the store are **safe** and count toward your score for the rest of the game. When your sowing reaches the opponent\'s store, you **hop over it** and carry on into their pits.',
+            title: 'Your store, never theirs',
+            body: 'As your sowing passes your **own** store you drop a stone in it — and stones banked there are **safe** for the rest of the game, counting toward your score. But when your sowing reaches your **opponent\'s** store you **skip over it** and carry straight on into their pits. You can never add to the enemy\'s score.',
+            highlight: [gridIndexOfPit(SOUTH_STORE), gridIndexOfPit(NORTH_STORE)],
           },
           {
             title: 'The extra-turn rule',
-            body: 'If the **last** stone you sow lands exactly in **your own store**, you take **another turn** immediately. With careful counting you can chain several free turns in a row — one of the most powerful ideas in the game.',
+            body: 'If the **last** stone you sow lands exactly in **your own store**, you immediately take **another turn**. This is huge: a pit holding just the right number of stones is a free move. With careful counting you can string several of these together before ever passing the turn back.',
             highlight: [gridIndexOfPit(SOUTH_STORE)],
           },
           {
             title: 'The capture rule',
-            body: 'If your last stone lands in an **empty pit on your own side**, and the pit **directly opposite** (across the board) holds stones, you **capture** them all — plus your landing stone — straight into your store. An empty pit of yours facing a loaded enemy pit is a loaded trap.',
+            body: 'If your **last** stone lands in an **empty pit on your own side**, and the pit **directly opposite** it (across the board) holds stones, you **capture** the lot — those stones *plus* your landing stone — straight into your store. An empty pit on your side facing a loaded enemy pit is a trap waiting to spring.',
           },
           {
             title: 'Ending the game',
-            body: 'The game ends the instant **either** player has no stones left in any of their six pits. The other player then **sweeps** all the stones remaining on their side into their own store. Count the stores: more stones **wins**; an equal split is a **draw**.',
+            body: 'The game ends the instant **either** player has no stones left in any of their six pits. The other player then **sweeps** every stone remaining on their own side into their store. Count the stores: more stones **wins**; a 24–24 split is a **draw**.',
           },
         ],
       },
       {
-        title: 'Winning Strategy', icon: '🧠',
+        title: 'Tempo & Captures', icon: '🧠',
         steps: [
           {
-            title: 'Chain your extra turns',
-            body: 'A move that ends in your store is almost free — you keep the turn. Look for pits whose stone count lands the **last** stone in the store, and try to set up several such moves so you can play **two, three, or more** times before passing the turn back.',
+            title: 'Count to the store',
+            body: 'The extra-turn rule rewards arithmetic. A pit lands its last stone in your store when it holds **exactly the right count**: the pit nearest the store needs **1** stone, the next needs **2**, and so on up to **6** for the pit farthest away. Spot these instantly and you will never miss a free move.',
+            setup: '{"pits":[1,0,0,1,0,1,5,4,4,4,4,4,4,0],"turn":0}',
+            highlight: [gridIndexOfPit(0), gridIndexOfPit(3), gridIndexOfPit(5)],
+          },
+          {
+            title: 'Chain your free turns',
+            body: 'Because each extra turn lets you move again, try to line up **several** store-ending pits at once. Play them in the right order — usually emptying the far pits first so the near ones still land in the store — and you can take three, four, even more moves in a single turn, burying stones safely as you go.',
             highlight: [gridIndexOfPit(SOUTH_STORE)],
           },
           {
-            title: 'Set up captures',
-            body: 'Captures win games. Keep an **empty pit** on your side facing an enemy pit that is filling up, then drop a single stone into your empty pit to **spring the raid** and sweep the lot. Counting which sow lands your last stone in just the right empty pit is the heart of skilled play.',
+            title: 'Build and spring captures',
+            body: 'Captures decide games. Keep an **empty pit** on your side facing a *loaded* enemy pit, then drop a single stone into that empty pit — your last stone landing there raids the pit opposite and sweeps everything into your store. Engineering the right empty pit, then filling it on cue, is the heart of skilled Mancala.',
           },
           {
-            title: 'Watch the opponent\'s threats',
-            body: 'Every empty pit on **their** side, facing a loaded pit on **yours**, is a capture they are threatening. Before you commit, check whether your move leaves one of your pits ripe for the taking — and when you can, **empty or reload** a threatened pit to deny them.',
+            title: 'Watch the opponent\'s raids',
+            body: 'The capture rule cuts both ways. Every **empty pit on their side** facing a **loaded pit on yours** is a raid they are threatening. Before you commit, check whether your sow leaves one of your pits ripe to be taken — and when danger looms, **empty or pile onto** the threatened pit so their raid finds nothing or overshoots.',
           },
           {
-            title: 'Bank early on the right',
-            body: 'Stones in your store can never be lost. Steadily **feed your store** rather than letting stones pile up in vulnerable pits, and favour moves that keep material flowing toward the safe side of the board.',
+            title: 'Hoard versus empty',
+            body: 'Two opposing plans tug at every game. **Hoarding** — letting stones build in one pit — can set up a single huge sow that banks many stones or laps the board, but a fat pit is also a juicy capture target. **Emptying** keeps your side nimble and safe but banks slowly. Good players switch between the two as the board demands.',
           },
           {
-            title: 'Mind the endgame sweep',
-            body: 'Because emptying a side ends the game and the **other** player banks everything left, the final stones can swing the score hard. Plan the last few moves: sometimes you want to **hoard** stones for the sweep, sometimes to **starve** your own side so the opponent is the one left holding little.',
+            title: 'The endgame sweep',
+            body: 'When one side empties, the game ends and the **other** player banks all their leftover stones. That sweep can swing the score wildly, so plan the final moves: sometimes **hoard** stones on your side to scoop them up, sometimes deliberately **starve** your own pits so the *opponent* is the one left holding little when the board clears.',
+          },
+        ],
+      },
+      {
+        title: 'Mancala Trainer', icon: '🎯',
+        steps: [
+          {
+            title: 'Earn an extra turn',
+            body: 'Time to count, not just read. **Click one of your pits** (the bottom row) to sow it. One pit holds exactly the number of stones that drops your last seed in your store — find it and grab the free move.',
+            setup: '{"pits":[4,4,4,4,4,1,0,4,4,4,4,4,4,0],"turn":0}',
+            challenge: {
+              prompt: 'South to play — find the sow that earns an extra turn.',
+              solution: ['South sows pit 6'],
+              success: 'South sows pit 6 — the pit nearest the store holds a single stone, which lands exactly in the store. You go again. Always scan the pit closest to your store first; a "1" there is a free turn.',
+            },
+          },
+          {
+            title: 'Count a little farther',
+            body: 'Same idea, a longer reach. This time the store-ending pit is not the nearest one — count how many steps each pit is from your store and match it to the stones inside.',
+            setup: '{"pits":[4,4,4,3,0,0,0,4,4,4,4,4,4,0],"turn":0}',
+            challenge: {
+              prompt: 'South to play — land your last stone in the store.',
+              solution: ['South sows pit 4'],
+              success: 'South sows pit 4 — three stones, and that pit sits exactly three steps from the store (pit 5, pit 6, then the store). The last stone lands home and you move again.',
+            },
+          },
+          {
+            title: 'Spring a capture',
+            body: 'Now the big prize. One of your pits is empty, and the enemy pit straight across from it is stacked. Sow the pit whose last stone drops into that empty pit to raid the loaded one opposite.',
+            setup: '{"pits":[2,1,0,1,1,1,0,4,4,4,5,4,4,0],"turn":0}',
+            challenge: {
+              prompt: 'South to play — set off a capture.',
+              solution: ['South sows pit 1'],
+              success: 'South sows pit 1: its two stones reach pit 2 and then the empty pit 3, and that landing raids the five stones opposite — six stones swept into your store in one move. Lining up an empty pit across from a fat enemy pit is how raids are made.',
+            },
+          },
+          {
+            title: 'Keep training',
+            body: 'In a real game our AI tutor watches every sow — flagging the extra turns you bank, the raids you set up, and the pits you leave exposed. Play at rising difficulty and let the running commentary sharpen your counting; soon you will see the landing square before you lift a stone.',
           },
         ],
       },

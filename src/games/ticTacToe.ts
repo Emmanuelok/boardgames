@@ -218,26 +218,76 @@ const def: GameDefinition<TttState, TttMove> = {
   deserialize: (str) => JSON.parse(str),
 
   tutorial: {
-    overview: 'Tic-Tac-Toe (Noughts and Crosses) is the friendliest strategy game in the world — and a perfect way to learn the language of threats, forks and tempo that runs through every board game in this center.',
-    objective: 'Be the first to place three of your marks in a horizontal, vertical, or diagonal row. If the board fills with no winner, the game is a draw.',
+    overview: 'Tic-Tac-Toe (Noughts and Crosses) is the friendliest strategy game in the world — and the perfect first lesson in the language of *threats*, *forks* and *tempo* that runs through every game in this center. It is small enough to hold entirely in your head, yet it already contains the single most important tactical idea in all of board gaming: the double threat. Master it here and you will spot it everywhere else.',
+    objective: 'Be the first to place three of your marks in a straight line — horizontal, vertical, or diagonal. There are exactly eight such lines. If the board fills with neither side completing one, the game is a draw. With best play by both players the result is always a draw, so the real goals are: never lose, and pounce the instant your opponent errs.',
     chapters: [
       {
         title: 'The Rules', icon: '📜',
         steps: [
-          { title: 'The board', body: 'Play happens on a 3×3 grid of nine squares. One player is **X**, the other is **O**. X always moves first.' },
-          { title: 'Taking turns', body: 'Players alternate, each turn placing one mark in any empty square. A square, once filled, stays filled.' },
-          { title: 'How to win', body: 'Get three of your own marks in a straight line — across, down, or diagonally — and you win instantly. There are **eight** possible winning lines.', highlight: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
-          { title: 'The draw', body: 'If all nine squares fill up and nobody has three in a row, the game is a **draw** (often called a "cat\'s game").' },
+          { title: 'The board', body: 'Play happens on a **3×3 grid** of nine squares — three corners-and-an-edge to a side, with one cell in the middle. One player is **X**, the other is **O**. **X always moves first**, which is a small but real advantage.' },
+          { title: 'Taking turns', body: 'Players alternate, each turn placing one mark in any **empty** square. A square, once filled, stays filled — there is no moving or removing marks. The game lasts at most nine moves: five for X, four for O.' },
+          { title: 'How to win', body: 'Get **three of your own marks in a straight line** — across, down, or diagonally — and you win the instant the third lands. There are **eight** possible winning lines: three rows, three columns, and the two diagonals.', highlight: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+          { title: 'Reading a threat', body: 'A **threat** is a line where you already hold two squares and the third is empty — you are one move from winning. Learning to *see every threat for both sides on every turn* is essentially the whole skill of the game. Here X threatens the top row at the top-right square.', setup: '{"board":[0,0,null,null,1,null,null,null,null],"turn":0}', highlight: [0, 1, 2] },
+          { title: 'The draw — "cat\'s game"', body: 'If all nine squares fill and nobody has three in a row, the game is a **draw**, traditionally called a "cat\'s game". Because two careful players always reach this, a draw is the *normal* result — winning means your opponent slipped.' },
         ],
       },
       {
-        title: 'Winning Ideas', icon: '🧠',
+        title: 'The Cells & Blocking', icon: '🧭',
         steps: [
-          { title: 'Own the center', body: 'The center square sits on **four** of the eight winning lines — more than any other square. If you move first, take it.', highlight: [4] },
-          { title: 'Corners beat edges', body: 'Each corner belongs to three winning lines; each edge to only two. After the center, corners are the most valuable squares.', highlight: [0, 2, 6, 8] },
-          { title: 'Always block', body: 'If your opponent has two in a row with the third square empty, you must place there immediately — or you lose next turn.' },
-          { title: 'The fork', body: 'The winning weapon is the **fork**: a move that creates *two* threats at once. Your opponent can only block one, so you complete the other and win. Setting up forks is the whole game.' },
-          { title: 'Why perfect play draws', body: 'With best play by both sides, Tic-Tac-Toe is always a draw. That is why our AI on **Master** can never be beaten — aim to never lose, and to punish any mistake.' },
+          { title: 'Own the center', body: 'The **center** square sits on **four** of the eight winning lines — both diagonals, the middle row and the middle column. No other square touches more. If you move first, almost always take the center: it does the most work on offense *and* defense.', setup: '{"board":[null,null,null,null,0,null,null,null,null],"turn":1}', highlight: [4] },
+          { title: 'Corners beat edges', body: 'Each **corner** belongs to **three** lines (a row, a column, and a diagonal); each **edge** to only **two** (a row and a column). So after the center, corners are the most valuable squares, and edges the least. Opening replies and second moves should favour corners.', highlight: [0, 2, 6, 8] },
+          { title: 'Why corners matter on defense too', body: 'Two corners on the same diagonal share the center between them, and any two corners share an edge line — so corners give you the flexible "two-in-a-line with a gap" shapes that turn into forks. The four edges (top, left, right, bottom) are the weakest cells and rarely your first choice.', highlight: [1, 3, 5, 7] },
+          { title: 'Always block — or lose', body: 'If your opponent has two marks in a line with the third square empty, you **must** place in that square immediately. Ignore it and they simply complete the line next turn. Here O threatens the top row; X is forced to plug the top-right square.', setup: '{"board":[1,1,null,null,0,null,null,null,null],"turn":0}', highlight: [2], arrows: [] },
+          { title: 'Threat beats no-threat', body: 'When you are not forced to block, make a move that *creates* a threat of your own. A move that both blocks the opponent **and** makes a new threat is ideal — it forces them to defend instead of attack, and you keep the initiative (the "tempo").' },
+        ],
+      },
+      {
+        title: 'The Fork & The Draw', icon: '🍴',
+        steps: [
+          { title: 'The fork: two threats at once', body: 'The winning weapon is the **fork** — a single move that creates **two** separate threats. Your opponent can block only one of them, so on your next turn you complete the other and win. Every Tic-Tac-Toe win ultimately comes from a fork (or an opponent failing to block).' },
+          { title: 'How a fork is built', body: 'Forks grow from cells that share *two* of your lines. Here X holds the center and a corner; playing the opposite corner would line up **two** two-in-a-rows crossing through X\'s pieces — a double threat O cannot meet.', setup: '{"board":[0,null,null,null,0,null,null,null,null],"turn":0}', highlight: [0, 4, 8], arrows: [{ from: 4, to: 8, tone: 'good' }] },
+          { title: 'The corner trap', body: 'A classic trap: X takes a corner, O wrongly answers on an edge instead of the center. X then takes the opposite corner, and with the center still free X is heading for a fork. Punishing edge replies is the most common way to actually beat a human.' },
+          { title: 'Avoid being forked', body: 'Defense is the mirror image: deny your opponent the cells that would give *them* two crossing lines. Taking the center early kills most enemy forks before they start, since so many forks run through the middle.', highlight: [4] },
+          { title: 'Why perfect play draws', body: 'With best play by **both** sides, Tic-Tac-Toe is a forced **draw** — the game is "solved". That is why our AI on **Master** can never be beaten: it always takes the center or a correct corner, always blocks, and never allows a fork. Against it, aim to *never lose*; against anyone else, set forks and wait for a slip.' },
+        ],
+      },
+      {
+        title: 'Tactics Trainer', icon: '🎯',
+        steps: [
+          {
+            title: 'Win in one',
+            body: 'Time to play, not just read. **Click an empty square** to place your X. You already hold two of the top row — finish it.',
+            setup: '{"board":[0,0,null,1,1,null,null,null,null],"turn":0}',
+            challenge: {
+              prompt: 'X to play — complete three in a row.',
+              solution: ['X → top-right'],
+              success: 'X → top-right completes the top row for the win. The first thing to check every single turn is "can I win right now?" — if yes, just take it.',
+            },
+          },
+          {
+            title: 'Block the loss',
+            body: 'Now you are under fire. O holds the top-right and the right square, threatening the right-hand column. If you do not stop it, O wins next move. Find the only saving square.',
+            setup: '{"board":[0,null,1,null,0,1,null,null,null],"turn":0}',
+            challenge: {
+              prompt: 'X to play — block O\'s winning threat.',
+              solution: ['X → bottom-right'],
+              success: 'X → bottom-right plugs the right column just in time. The second question every turn — right after "can I win?" — is "can my opponent win?" If yes, you must block it.',
+            },
+          },
+          {
+            title: 'Create a fork',
+            body: 'The real art. You hold the top-right and bottom-left corners; O sits on the center and bottom-right. Find the corner that makes **two** threats at once — O can only stop one.',
+            setup: '{"board":[null,null,0,null,1,null,0,null,1],"turn":0}',
+            challenge: {
+              prompt: 'X to play — make a fork (two threats at once).',
+              solution: ['X → top-left'],
+              success: 'X → top-left forks: it threatens the top row (top-left + top-right) **and** the left column (top-left + bottom-left). O can block only one, so you win on the move after. This double threat is the most important tactic in all of board games.',
+            },
+          },
+          {
+            title: 'Keep training',
+            body: 'In a real game our AI tutor grades **every** move you make — spotting your forks, your missed blocks, and the stronger square when you misfire. Play it at rising difficulty: on Master it is unbeatable, so a draw is a triumph and any win means you caught a real mistake.',
+          },
         ],
       },
     ],

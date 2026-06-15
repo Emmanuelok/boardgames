@@ -881,91 +881,174 @@ const def: GameDefinition<GoState, GoMove> = {
   deserialize: (str) => JSON.parse(str),
 
   tutorial: {
-    overview: 'Go — Weiqi in China, Baduk in Korea — is the oldest strategy game still played in its original form, and widely held to be the deepest. The rules are almost nothing: place a stone, surround to capture, surround empty points to make territory. From that seed grows a game so vast that mastering it is the work of a lifetime. This 9×9 board is the universal classroom: a full game takes minutes, yet every fundamental idea — liberties, capture, eyes and life, ko, and territory versus influence — appears on it.',
+    overview: 'Go — Weiqi in China, Baduk in Korea — is the oldest strategy game still played in its original form, and widely held to be the deepest. The rules are almost nothing: place a stone, surround to capture, surround empty points to make territory. From that seed grows a game so vast that mastering it is the work of a lifetime. This 9×9 board is the universal classroom: a full game takes minutes, yet every fundamental idea — liberties, capture, eyes and life, ko, good shape, and territory versus influence — appears on it. This course walks you from the four small rules all the way to corner play, the endgame, and three interactive capturing puzzles you solve on a live board.',
     objective: 'Control more of the board than your opponent. Your score is the area you hold — your stones on the board plus the empty points only your stones surround (your territory). White adds a 6.5-point komi for moving second, so there are no ties: the higher score wins.',
     chapters: [
       {
-        title: 'The Rules', icon: '📜',
+        title: 'Board, Stones & Liberties', icon: '📜',
         steps: [
           {
-            title: 'Stones and the board',
-            body: 'Play on the **intersections** of the 9×9 grid — 81 points. **Black** plays first, then players alternate, placing one stone per turn on any empty point. Stones never move once placed; they are only removed by capture.',
-          },
-          {
-            title: 'Liberties',
-            body: 'The empty points **orthogonally adjacent** to a stone are its **liberties** — its breathing space. A lone stone in the centre has four liberties; on a side, three; in a corner, just two. Stones of the same colour that touch along the lines form a single **group** and share all of their liberties.',
+            title: 'Stones live on the lines',
+            body: 'Unlike chess, Go is played on the **intersections** of the 9×9 grid — all 81 of them, edges and corners included. **Black** plays first, then players alternate, placing one stone per turn on any empty point. A placed stone never moves again; the only way it leaves the board is by capture. Columns are lettered **A–J** (the letter **I** is skipped, by tradition); rows are numbered **1–9** from the bottom. The point marked here is the centre, **E5**, called tengen.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
             highlight: [idx(4, 4)],
           },
           {
-            title: 'Capture',
-            body: 'When a group\'s **last liberty is filled** by the opponent, the whole group is **captured** — every stone is lifted off the board. You capture by completely surrounding, not by lining up. Captured points become empty again and may be played on later.',
+            title: 'Liberties: a stone\'s breath',
+            body: 'The empty points **orthogonally adjacent** to a stone (up, down, left, right — never diagonally) are its **liberties**, its breathing space. Count them here: the centre stone **E5** has **four** liberties, the edge stone **E9** has **three**, and the corner stone **A9** has only **two**. This is the first hint that corners and edges are special — stones there are easier to surround, but also need less help to wall off territory.',
+            setup: '{"board":[0,null,null,null,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+            highlight: [idx(0, 0), idx(0, 4), idx(4, 4)],
           },
           {
-            title: 'Capture resolves first',
-            body: 'Your opponent\'s capture is checked **before** your own group\'s liberties. So you may play your group\'s last liberty *if that very move* captures an enemy group — removing their stones gives your stone fresh liberties. Surrounding beats being surrounded, in that order.',
+            title: 'Groups share their breath',
+            body: 'Stones of the same colour that **touch along the lines** are connected into a single **group**, and the group shares *all* of its liberties as one pool. These three black stones, D5–E5–F5, are one group with **eight** liberties between them — far harder to capture than three lone stones. Staying connected is the bedrock of strong play: a connected group breathes through every empty point on its whole perimeter.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,0,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+            highlight: [idx(4, 3), idx(4, 4), idx(4, 5)],
+          },
+        ],
+      },
+      {
+        title: 'Capturing Stones', icon: '⚔️',
+        steps: [
+          {
+            title: 'Fill the last liberty',
+            body: 'You capture not by lining stones up but by **completely surrounding** them. When a group\'s **final liberty is filled**, every stone in it is lifted off the board at once. Here the white stone on **E5** is in **atari** — reduced to a single liberty at **E4** (below it). It is Black\'s turn: playing **E4** fills that last breath and captures the stone.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,0,1,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+            highlight: [idx(4, 4)],
+            arrows: [{ from: idx(5, 4), to: idx(4, 4), tone: 'good' }],
           },
           {
-            title: 'No suicide',
-            body: 'You may **not** play a stone that would leave your own group with no liberties — unless it captures an opponent group first. A move that only kills your own stones is illegal and simply not allowed.',
+            title: 'Atari — the threat to capture',
+            body: 'A group with exactly **one liberty** is in **atari**: one move from death. Atari is the most basic threat in the game and usually forces a reply — the threatened side must either **extend** (add a stone to gain new liberties), **connect** to a friendly group, or **run**. Learning to spot atari, both your opponent\'s and your own, is the single most important habit for a new player.',
+          },
+          {
+            title: 'Captures resolve first — and the suicide rule',
+            body: 'Two rules work together. **No suicide:** you may not play a stone that leaves your *own* group with zero liberties. **But the opponent\'s capture is checked first** — so you *may* fill your own last liberty if that very move captures an enemy group, because removing their stones immediately gives yours fresh breath. Surrounding beats being surrounded, in exactly that order. A move that only kills your own stones is simply illegal.',
           },
           {
             title: 'The ko rule',
-            body: 'After a single-stone capture, your opponent may **not** immediately recapture to recreate the exact previous position — that would loop forever. This is **ko**. They must play somewhere else (often a *ko threat*) first; only then may they take back. Ko fights are among the most exciting moments in Go.',
-          },
-          {
-            title: 'Passing and the end',
-            body: 'On your turn you may **pass** instead of playing. When **both players pass in succession**, the game is over. The board is then scored — so you only pass once nothing on the board is worth more than nothing.',
-          },
-          {
-            title: 'Area scoring',
-            body: 'We use **area (Chinese) scoring**: your score is your **stones on the board** plus the **empty points only you surround** (your territory). Neutral points touching both colours count for neither. **White adds 6.5 komi**. The higher total wins — and the half-point means there are never draws.',
+            body: 'After a **single-stone capture**, your opponent may **not** instantly recapture in a way that recreates the exact board position — otherwise a lone stone could be taken back and forth forever. This is **ko** (Japanese for "eternity"). The recapturing side must first play a **ko threat** somewhere else, big enough that the opponent answers it; only then may they take the ko back. Ko fights, where threats are traded across the whole board, are among the most thrilling moments in Go.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,1,null,null,null,null,null,null,0,null,1,1,null,null,null,null,null,null,0,1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+            highlight: [idx(4, 4)],
           },
         ],
       },
       {
-        title: 'Life & Death', icon: '🫁',
+        title: 'Life & Death — The Two Eyes', icon: '🫁',
         steps: [
           {
-            title: 'An eye',
-            body: 'An **eye** is an empty point completely surrounded by one colour\'s stones. The opponent cannot play inside it without committing suicide (it would have no liberty), so they can never fill it from the outside alone.',
+            title: 'What an eye is',
+            body: 'An **eye** is an empty point completely surrounded by one colour\'s own stones. The opponent cannot play inside it: a stone there would have no liberty of its own, so it would be suicide (unless it captured the whole surrounding group at once). An eye is therefore a liberty the enemy can never fill from outside.',
           },
           {
-            title: 'Two eyes mean life',
-            body: 'A group with **two separate eyes** is **alive forever**. The opponent would have to fill both eyes to capture it, but filling the second-to-last liberty is illegal suicide — so they can never fill even one. Making two eyes (or sharing enough space to make them) is how groups live.',
+            title: 'Two eyes mean unconditional life',
+            body: 'This is the deepest single idea in Go. A group with **two separate eyes** is **alive forever** and can never be captured. To take it the opponent would have to fill both eyes, but filling the *first* eye is illegal suicide (it leaves their own stone with no liberty), and they may never fill the *last two* liberties of any group. The two black eyes here, at **A1** and **C1**, make this corner group permanently alive — nothing White ever plays can kill it.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,0,0,0,null,null,null,null,null,null,0,null,0,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+            highlight: [idx(8, 0), idx(8, 2)],
           },
           {
-            title: 'One eye is not enough',
-            body: 'A group with only **one** eye, or none, can be killed: the opponent fills the outside liberties and finally the single eye, capturing everything. When two weak groups fight, the one that makes **two eyes first** lives and the other usually dies.',
+            title: 'One big eye is not enough',
+            body: 'A group enclosing only **one** eye — even a large hollow space, if the opponent can reduce it to a single eye — can be killed. The opponent fills the outside liberties, then plays the vital point to collapse the space into one eye, and finally captures everything. This black group has just **one** eye at A1 and is surrounded by White: it is **dead** as it stands. When two weak groups race, the one that makes **two eyes first** lives, and the loser usually dies whole.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,1,null,null,null,null,null,null,null,0,0,1,null,null,null,null,null,null,null,0,1,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+            highlight: [idx(8, 0)],
           },
           {
             title: 'Never fill your own eyes',
-            body: 'Because eyes give life, **filling your own eye is almost always a blunder** — you may turn a living group into a dead one. At the end of the game you leave your eyes empty; they are not territory you need to fill.',
+            body: 'Because eyes are what give life, **filling one of your own eyes is almost always a blunder** — you can turn a living group into a dead one in a single move. At the end of the game you leave your eyes empty: they are not territory you need to plug, and the scoring counts them as yours regardless. The board\'s tutor will flag it instantly if you ever start to fill an eye in a real game.',
           },
         ],
       },
       {
-        title: 'Strategy', icon: '🧠',
+        title: 'Shape, Territory & Influence', icon: '🧠',
         steps: [
           {
             title: 'Corners, then sides, then centre',
-            body: 'Territory in the **corner** needs the fewest stones to enclose — two edges do half the work. The **side** is next most efficient, and the **centre** the hardest. So good openings stake out corners first, extend along sides, and only then fight over the middle.',
+            body: 'Enclosing territory in a **corner** is the most efficient thing you can do — two edges of the board do half the walling for you. The **sides** are next most efficient, and the open **centre** the most expensive of all. So sound openings stake out the corners first (the 3-3 and star points marked here), extend along the sides, and only then contest the middle. Memorise this order; it shapes every Go opening ever played.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
             highlight: STAR_POINTS,
           },
           {
-            title: 'Build frameworks (moyo)',
-            body: 'Rather than walling off small, sure territory at once, strong players sketch a large **framework** — a loose moyo — and invite the opponent to invade, profiting by attacking the invasion. Balance sure profit against big, influence-based potential.',
+            title: 'Good shape vs the empty triangle',
+            body: 'Stones can be connected efficiently or clumsily. The three stones here form an **empty triangle** — the textbook example of *bad* shape: the stones are bunched, they share too few liberties for their number, and they make territory slowly. Strong players prefer light, efficient shapes (the one-space jump, the diagonal, the table) that cover more ground with the same stones. As a rule of thumb: if your stones make a solid triangle with an empty point in the crook, look for a better move.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,0,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+            highlight: [idx(4, 4), idx(4, 5), idx(5, 4)],
           },
           {
-            title: 'Atari and ladders',
-            body: 'An **atari** reduces a group to one liberty, threatening capture. Chase a stone with repeated ataris and you may drive it in a **ladder** — a zig-zag to the edge where it dies. But beware: if a friendly stone (a *ladder breaker*) waits along the path, the ladder fails and the hunter is left with weak stones.',
+            title: 'Territory vs influence',
+            body: 'There are two ways to use a stone. Played **low** (on the 3rd line or the 3-3 point, like Black in the corner here) it takes **secure territory** at once. Played **high** (4th line and centre, like White) it builds **influence** — outward-facing power that does not enclose points yet but dominates fights and can convert a whole region later. Neither is "better"; great play is balancing sure profit against grand potential, and using your influence to attack rather than to count.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+            highlight: [idx(6, 2), idx(4, 4), idx(2, 6)],
           },
           {
-            title: 'Strong groups, then attack',
-            body: 'Keep your own groups **connected and alive**; weak groups are a liability the opponent attacks for profit. Once your stones are strong, lean on the opponent\'s weak groups — attacking is the surest way to make territory while you chase.',
+            title: 'Corner play: approaches and joseki',
+            body: 'When one player occupies a corner, the other often **approaches** it rather than letting it grow. The settled sequences of give-and-take that follow — each side taking a fair share of corner and outside — are called **joseki**, and thousands have been catalogued. You do not need to memorise them as a beginner: just remember the spirit. Answer an approach, do not let a single stone be surrounded, and aim to come out of each corner with either solid points or strong outside thickness.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+            highlight: [idx(6, 2), idx(4, 2)],
           },
           {
-            title: 'Knowing when to pass',
-            body: 'In the endgame, every point matters: play out the boundaries and the last reductions. **Pass only when no move gains you anything** — filling a neutral point in area scoring is fine, but a wasted move can hand the initiative away. When both sides agree it is over, both pass and the result is counted.',
+            title: 'Make strong groups, then attack',
+            body: 'A **weak group** — one without two eyes and short of liberties — is a liability your opponent will chase for profit, making territory while they attack. So the rhythm of strong Go is: first make your own groups **safe and connected**, then lean on the opponent\'s weak stones. You rarely capture a big group outright; instead you *threaten* it, and harvest territory and influence as it scrambles to live. Attack to profit, not merely to kill.',
+          },
+        ],
+      },
+      {
+        title: 'Endgame & Scoring', icon: '🏁',
+        steps: [
+          {
+            title: 'Reading the boundaries',
+            body: 'Once the frameworks are drawn, the **endgame** (yose) is about settling the borders between the two sides. Each boundary move is worth a definite number of points; strong players play the **biggest** ones first — the moves that swing the most territory or are *sente* (forcing, keeping the initiative) — and save the small *gote* (ending-in-your-turn) plays for last. Careful endgame routinely swings a game by ten points.',
+          },
+          {
+            title: 'Area scoring, step by step',
+            body: 'We use **area (Chinese) scoring**. Your score is your **stones on the board** plus the **empty points only your stones surround** (your territory). Any empty point that touches *both* colours is **neutral** (dame) and counts for no one. In the rough position shown, Black walls the left and White the right; the single empty column between them is neutral. Count each side\'s stones-plus-territory, then add White\'s komi.',
+            setup: '{"board":[null,null,null,0,null,1,null,null,null,null,null,null,0,null,1,null,null,null,null,null,null,0,null,1,null,null,null,null,null,null,0,null,1,null,null,null,null,null,null,0,null,1,null,null,null,null,null,null,0,null,1,null,null,null,null,null,null,0,null,1,null,null,null,null,null,null,0,null,1,null,null,null,null,null,null,0,null,1,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+          },
+          {
+            title: 'Komi and no draws',
+            body: 'Because Black\'s first move is an advantage, **White is given a 6.5-point komi** added to its area at the end. The half-point is deliberate: it makes a tie arithmetically impossible, so every game has a clear winner. Six and a half points is small — most 9×9 games are decided by a few points — which is exactly why the endgame, and not just the fighting, decides who wins.',
+          },
+          {
+            title: 'Passing and ending the game',
+            body: 'On your turn you may **pass** instead of placing a stone. When **both players pass in succession**, the game ends and the board is scored. The lesson: **pass only when no move on the board gains you anything**. In area scoring even filling a neutral point is harmless, but a genuinely wasted move can hand your opponent the last big point — so play out every boundary first, and pass only when you truly agree it is over.',
+          },
+        ],
+      },
+      {
+        title: 'Capture Trainer', icon: '🎯',
+        steps: [
+          {
+            title: 'How the trainer works',
+            body: 'Reading about capture is one thing; *seeing* the move is another. On each of the next puzzles you play on a **live board** — click the empty point you want to play. You are **Black**, and in every case there is a white group in **atari** (one liberty). Find the point that fills that last liberty and lifts the stones off the board.',
+          },
+          {
+            title: 'Puzzle 1 — capture the lone stone',
+            body: 'The white stone on **E5** is surrounded on three sides and has just one liberty left. Play the point that takes it.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,0,1,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+            challenge: {
+              prompt: 'Black to play — capture the white stone in atari.',
+              solution: ['Black E4 (captures 1)'],
+              success: 'E4 fills the white stone\'s last liberty and lifts it off the board — your first capture. Notice the captured point is empty again and counts toward your area. Spotting and taking stones in atari is the most basic winning skill in Go.',
+            },
+          },
+          {
+            title: 'Puzzle 2 — capture the two-stone group',
+            body: 'Connected stones share liberties, so a *group* can be in atari too. The white pair on **E5–F5** has been surrounded down to a single breathing point. Find it and capture both stones at once.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,0,null,null,null,null,null,null,0,1,1,null,null,null,null,null,null,null,0,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+            challenge: {
+              prompt: 'Black to play — capture the two-stone white group.',
+              solution: ['Black G5 (captures 2)'],
+              success: 'G5 was the group\'s only liberty, so both white stones come off together. Always count a group\'s liberties as one shared pool — two connected stones in atari fall just as fast as one.',
+            },
+          },
+          {
+            title: 'Puzzle 3 — read which group is in atari',
+            body: 'There are **two** white groups on the board, but only one of them is actually in atari. The pair in the lower-left has plenty of liberties and is safe; the lone stone up near the top has been reduced to one. Read the liberties, ignore the bait, and capture the stone that is truly catchable.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,null,0,1,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0,"passes":0,"ko":-1,"captures":[0,0]}',
+            challenge: {
+              prompt: 'Black to play — capture the white group that is in atari.',
+              solution: ['Black F6 (captures 1)'],
+              success: 'F6 takes the lone white stone, which had a single liberty — while the lower-left pair was never capturable. Reading liberties before you play, and not chasing safe groups, is how you turn raw capturing into real strength. In a live game the tutor grades every move and points out the tactics you miss; play on at rising difficulty and these shapes will leap off the board.',
+            },
           },
         ],
       },

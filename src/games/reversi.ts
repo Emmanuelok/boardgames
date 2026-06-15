@@ -536,59 +536,136 @@ const def: GameDefinition<ReversiState, ReversiMove> = {
   deserialize: (str) => JSON.parse(str),
 
   tutorial: {
-    overview: 'Reversi — sold the world over as Othello — is the great game of the flipping disc. Every piece is black on one side and white on the other, and a single move can sweep an entire row from one colour to the other. Its one rule takes a minute to learn, yet the play is a deep, surprising battle of position where grabbing too much too soon is the classic beginner\'s trap.',
+    overview: 'Reversi — sold the world over as Othello — is the great game of the flipping disc. Every piece is black on one side and white on the other, and a single move can sweep an entire row from one colour to the other. Its one rule takes a minute to learn, yet the play is a deep, surprising battle of position where grabbing too much too soon is the classic beginner\'s trap. This course covers the flanking rule, then the real strategy that separates strong players from beginners — why corners decide games, the X- and C-square traps, the counter-intuitive law of mobility, edge stability, and endgame parity — and finishes with three interactive puzzles you solve on a live board.',
     objective: 'Own more discs than your opponent when the board fills up (or when neither side can move). You capture discs by flanking them — bracketing a line of the opponent\'s discs between two of your own.',
     chapters: [
       {
         title: 'The Rules', icon: '📜',
         steps: [
           {
-            title: 'The board and start',
-            body: 'Play on an **8×8** board. It begins with four discs in the centre, set diagonally: two **White** on one diagonal, two **Black** on the other. **Black** always moves first.',
+            title: 'The board and the start',
+            body: 'Play on an **8×8** board. It begins with four discs in the centre, set diagonally: two **White** on one diagonal (d5 and e4) and two **Black** on the other (e5 and d4). **Black** always moves first. Files are lettered **a–h** left to right; ranks run **1–8** with rank 1 at the bottom.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,0,null,null,null,null,null,null,0,1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0}',
             highlight: [idx(3, 3), idx(3, 4), idx(4, 3), idx(4, 4)],
           },
           {
             title: 'Flanking and flipping',
-            body: 'On your turn, place a disc on an empty square so that it **brackets** one or more of the opponent\'s discs in a straight line — horizontal, vertical, or diagonal — with another of *your* discs at the far end. Every bracketed disc **flips** to your colour. You may flip discs in several directions at once.',
+            body: 'On your turn, place a disc on an empty square so that it **brackets** an unbroken line of the opponent\'s discs — horizontal, vertical, or diagonal — between the new disc and another of *your* discs at the far end. Every bracketed disc **flips** to your colour. Here Black\'s own disc sits on the left, two White discs lie between, and the empty square on the right completes the bracket: playing it flips both whites to black. A single move can flank in several directions at once.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,1,1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0}',
+            highlight: [idx(4, 2)],
+            arrows: [{ from: idx(4, 2), to: idx(4, 5), tone: 'good' }],
           },
           {
             title: 'You must capture',
-            body: 'A move is only legal if it flips **at least one** disc. You cannot place a disc that captures nothing. If — and only if — you have no capturing move anywhere, you **pass** and your opponent moves again.',
+            body: 'A move is only legal if it flips **at least one** disc — you can never place a disc that brackets nothing. If, and only if, you have **no** capturing move anywhere on the board, you are forced to **pass** and your opponent moves again. Passing is not optional and not a choice: it happens only when you are truly stuck.',
           },
           {
             title: 'The game ends',
-            body: 'Play continues until **neither** side can make a capturing move — usually when all 64 squares are full, but sometimes sooner. At that point the game is over.',
+            body: 'Play continues until **neither** side can make a capturing move. Usually that means all 64 squares are full, but a game can also end early when both players are stuck. The moment both sides would have to pass, the game is over and you count up.',
           },
           {
             title: 'Most discs wins',
-            body: 'Count the discs. Whoever shows **more of their colour** wins; an equal split is a draw. Because the final move can flip a whole edge, the lead can swing wildly right to the end — never resign early.',
+            body: 'Count the discs: whoever shows **more of their colour** wins, and an exactly equal split is a draw. Because a single late move can flip an entire edge or diagonal, the lead can swing wildly right up to the final placement — a player losing 40–20 can still win on the last few moves. **Never resign early in Reversi.**',
           },
         ],
       },
       {
-        title: 'Winning Strategy', icon: '🧠',
+        title: 'Corners & the Traps Around Them', icon: '👑',
         steps: [
           {
             title: 'Corners are king',
-            body: 'A disc in a **corner** can never be flanked, so it can **never be flipped** — it is yours for the whole game, and it anchors stable discs all along both edges. Winning the corners is the single most important goal in Othello.',
+            body: 'A disc in a **corner** has no square beyond it on any line, so it can **never be bracketed and never be flipped**. It is yours for the entire game. More than that: a corner anchors **stable** discs running out along both of its edges, which also become unflippable. Winning the corners is the single most important strategic goal in Othello — almost every won game is built on them.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,0,null,null,null,null,null,null,0,1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0}',
             highlight: CORNERS,
           },
           {
             title: 'Beware the X-squares',
-            body: 'The squares **diagonally next to a corner** (the "X-squares") are the most dangerous on the board while that corner is empty. Playing one almost always lets your opponent drop into the corner you just opened up. Stay off them until the neighbouring corner is settled.',
+            body: 'The four squares sitting **diagonally next to a corner** — the **X-squares** — are the most dangerous on the board while that corner is empty. Putting a disc on an X-square almost always gives your opponent a disc that brackets straight into the corner you just exposed, and handing over a corner is the worst trade in the game. Stay off the X-squares until the neighbouring corner is already settled.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,0,null,null,null,null,null,null,0,1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0}',
             highlight: [idx(1, 1), idx(1, 6), idx(6, 1), idx(6, 6)],
           },
           {
-            title: 'Mobility over greed',
-            body: 'The deepest idea in Reversi: **do not grab discs greedily early**. The player with *more* discs in the opening usually has *fewer* moves and is being slowly squeezed. Aim instead to keep your own choices open while starving your opponent of safe moves — force *them* onto the X-squares and edges.',
+            title: 'C-squares: the subtler trap',
+            body: 'The **C-squares** are the two squares **orthogonally adjacent** to each corner, along the edges. They are less lethal than the X-squares but still risky while the corner is empty: a careless C-square move can give the opponent the disc they need to swing the corner. Treat both X- and C-squares around an empty corner as territory to avoid — let your *opponent* be the one forced to play there.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,0,null,null,null,null,null,null,0,1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0}',
+            highlight: [idx(0, 1), idx(1, 0), idx(0, 6), idx(1, 7), idx(6, 0), idx(7, 1), idx(6, 7), idx(7, 6)],
+          },
+        ],
+      },
+      {
+        title: 'Mobility, Edges & Stability', icon: '🧠',
+        steps: [
+          {
+            title: 'Mobility over greed — the deepest idea',
+            body: 'The great counter-intuitive truth of Reversi: **do not grab discs greedily in the opening**. Flipping lots of discs early feels powerful but usually *backfires* — the player with more discs tends to have **fewer legal moves** and is being slowly squeezed. Your real aim in the midgame is **mobility**: keep your own options plentiful while starving your opponent of safe moves, until *they* are the one forced onto an X-square, a C-square, or an edge that hands you a corner.',
           },
           {
-            title: 'Edges and stability',
-            body: 'Beyond corners, **stable discs** — ones that can never be flipped because they are backed by your own pieces all the way to an edge or corner — are what truly count. Build solid edges anchored to corners you control, and avoid loose discs the opponent can flank.',
+            title: 'Quiet moves keep you flexible',
+            body: 'Following from mobility: in the opening and early midgame, **small, quiet moves** that flip just one or two discs are usually better than sweeping captures. They keep your pieces clustered near the centre, leave the edges to the opponent for now, and preserve the maximum number of future moves. Think of your discs as commitments — the fewer you flip early, the more freedom you keep.',
           },
           {
-            title: 'Count in the endgame',
-            body: 'When only a handful of squares remain, the game turns concrete: **count the discs**, watch the **parity** of empty regions (who is forced to play last where), and play the move that leaves *you* the final, board-flipping placement. Many games are won or lost on the very last disc.',
+            title: 'Edges and stable discs',
+            body: 'Beyond the corners themselves, what truly counts are **stable discs** — discs that can never be flipped because they are backed by your own pieces in every direction all the way to an edge or corner. A full edge anchored to a corner you own is rock-solid. Loose discs in open space, by contrast, can be flanked again and again. Build edges **out from corners you already control**, and be wary of placing lone discs on an edge whose corner is still up for grabs.',
+          },
+          {
+            title: 'Forcing the opponent to pass',
+            body: 'The flip side of mobility is the most powerful tempo weapon in the game: if you can reduce your opponent to **no legal move at all**, they must **pass** and you move again — two moves in a row. Squeezing the board until the opponent runs out of safe squares, then taking a corner or a key edge for free, is exactly how strong players convert a mobility lead into a winning position.',
+          },
+        ],
+      },
+      {
+        title: 'The Endgame', icon: '🏁',
+        steps: [
+          {
+            title: 'When counting begins',
+            body: 'Once only a dozen or so squares remain, the game turns concrete and the abstractions of mobility give way to **arithmetic**. Now you genuinely **count discs**, identify which discs are stable (locked in) and which can still flip, and read each remaining move to the end. The disc count, which you ignored in the opening, becomes the thing you are playing for.',
+          },
+          {
+            title: 'Parity — who plays last',
+            body: 'A subtle endgame idea is **parity**: in each separate empty region of the board, work out **who will be forced to place the last disc there**. The player who makes the *final* move in a region often flips a large run with nothing left for the opponent to answer. Steering the parity so that *you* get the last move in the biggest empty pockets can be worth many discs — and frequently decides close games.',
+          },
+          {
+            title: 'The last move can flip everything',
+            body: 'Because a single placement can flip an entire line or diagonal, the **final move of the game is often the largest swing of all**. A position that looks lost can flip on the very last disc. So play the endgame all the way out, calculate the closing sequence carefully, and aim to keep the last, board-flipping placement for yourself. In Reversi, it truly is not over until the board is full.',
+          },
+        ],
+      },
+      {
+        title: 'Strategy Trainer', icon: '🎯',
+        steps: [
+          {
+            title: 'How the trainer works',
+            body: 'Time to apply it on a **live board**. You play **Black** — click an empty square to drop your disc. Each puzzle has a single clear best move drawn straight from the principles you just learned: seize a corner, or capture the most discs. The board shows you exactly which discs each move would flip.',
+          },
+          {
+            title: 'Puzzle 1 — take the corner',
+            body: 'Corners are permanent and can never be flipped, so you grab them whenever you safely can. A line of white discs runs from the **a8** corner along the top edge, capped by your own black disc. Drop into the corner and claim it.',
+            setup: '{"board":[null,1,1,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,0,null,null,null,null,null,null,0,1,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0}',
+            challenge: {
+              prompt: 'Black to play — seize the corner.',
+              solution: ['Black a8 (flips 2)'],
+              success: 'a8 captures the corner — a disc that can never be flipped for the rest of the game, anchoring stable discs along the top edge. Whenever a corner is safely available, take it: it is the most valuable square on the board.',
+            },
+          },
+          {
+            title: 'Puzzle 2 — flip the most discs',
+            body: 'Late in the game, when counting matters, you want the move that captures the most. Two captures are on offer here: one flips a single disc, the other sweeps a whole row. Find the big one.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,1,1,1,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,0,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"turn":0}',
+            challenge: {
+              prompt: 'Black to play — capture as many discs as possible.',
+              solution: ['Black b5 (flips 4)'],
+              success: 'b5 brackets the whole white row and flips four discs at once, far more than the single-disc alternative. When the board is filling and stability is settled, the move that flips the most is usually the one that wins the disc count.',
+            },
+          },
+          {
+            title: 'Puzzle 3 — take the other corner',
+            body: 'One more corner, this time down a vertical line. A column of white discs leads to the **h1** corner, capped by your black disc above them. Claim the second corner.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,0,null,null,null,null,null,null,0,1,null,null,0,null,null,null,null,null,null,null,1,null,null,null,null,null,null,null,1,null,null,null,null,null,null,null,null],"turn":0}',
+            challenge: {
+              prompt: 'Black to play — seize the corner.',
+              solution: ['Black h1 (flips 2)'],
+              success: 'h1 takes the corner by flanking straight down the h-file. With two corners on opposite sides you can build stable edges from both — exactly the kind of permanent foundation that wins games. In a real game the tutor grades every move and flags the corners, traps and mobility swings for you; play on at rising difficulty and these ideas will become second nature.',
+            },
           },
         ],
       },

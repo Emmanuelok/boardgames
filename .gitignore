@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# agent scratch / scratch verification files
+scratch*.ts
+scripts/explore.ts

@@ -351,7 +351,7 @@ const def: GameDefinition<C4State, C4Move> = {
   deserialize: (str) => JSON.parse(str),
 
   tutorial: {
-    overview: 'Connect Four is the vertical duel everyone knows — discs clatter down a standing grid and pile up under gravity. It is simple to learn and quietly deep: behind the falling discs lies a single decisive idea — the double threat — that turns a friendly game into a battle of foresight.',
+    overview: 'Connect Four is the vertical duel everyone knows — discs clatter down a standing grid and pile up under gravity. It is simple to learn and quietly deep: behind the falling discs lies a single decisive idea — the double threat — that turns a friendly game into a battle of foresight. This course takes you from the gravity rule to centre control, open threes, the unstoppable fork and the subtle parity of odd and even threats, then drops you into a live Threat Trainer to find the winning move yourself.',
     objective: 'Be the first to line up four of your own discs in a straight line — horizontally, vertically, or on either diagonal. If all 42 slots fill with no four-in-a-row, the game is a draw.',
     chapters: [
       {
@@ -359,31 +359,61 @@ const def: GameDefinition<C4State, C4Move> = {
         steps: [
           {
             title: 'The standing grid',
-            body: 'The board stands upright: **7 columns** wide and **6 rows** tall, 42 slots in all. **Red** moves first, then players alternate.',
+            body: 'The board stands upright: **7 columns** wide and **6 rows** tall, 42 slots in all. **Red** moves first, then players alternate, one disc per turn. Because gravity decides where each disc lands, you are really choosing among only seven moves at a time — yet that narrowness hides surprising depth.',
           },
           {
             title: 'Gravity does the placing',
-            body: 'You do not choose a square — you choose a **column**. Your disc falls and lands on the lowest empty slot in that column, stacking on top of whatever is already there.',
+            body: 'You do not choose a square — you choose a **column**. Your disc falls and lands on the lowest empty slot in that column, stacking on top of whatever is already there. You can never place a disc in mid-air, which means the order discs arrive in a column is everything.',
             highlight: [idx(5, 3)],
           },
           {
             title: 'Stacking up',
-            body: 'Each new disc in a column sits one row higher than the last. A column is closed once all six of its slots are full; then you must drop elsewhere.',
+            body: 'Each new disc in a column sits one row higher than the last. A column is closed once all six of its slots are full; then you must drop elsewhere. Filling a column can be a weapon — it changes *which* square in a neighbouring line becomes reachable next.',
             highlight: [idx(5, 3), idx(4, 3), idx(3, 3)],
           },
           {
             title: 'Four in a row wins',
-            body: 'Connect **four** of your discs in an unbroken line — across, straight up, or along a diagonal — and you win instantly.',
+            body: 'Connect **four** of your discs in an unbroken line — across, straight up, or along a diagonal — and you win instantly, even mid-turn. There is no need to fill the board; the game ends the moment a four appears.',
             highlight: [idx(5, 1), idx(5, 2), idx(5, 3), idx(5, 4)],
           },
           {
+            title: 'Vertical fours',
+            body: 'The simplest four to make — and to miss defending — is **straight up** a single column. Four of one colour stacked in one column wins. Beginners stack happily toward this without noticing the opponent will simply cap the column on top.',
+            highlight: [idx(5, 6), idx(4, 6), idx(3, 6), idx(2, 6)],
+          },
+          {
             title: 'Diagonals count too',
-            body: 'It is easy to watch the rows and columns and miss a **diagonal** four sneaking up the board. Always scan both diagonal directions.',
+            body: 'It is easy to watch the rows and columns and miss a **diagonal** four sneaking up the board. Both diagonal directions — up-right and up-left — count. Train your eye to scan all four directions before every drop.',
             highlight: [idx(5, 1), idx(4, 2), idx(3, 3), idx(2, 4)],
           },
           {
             title: 'The draw',
-            body: 'If every one of the 42 slots fills and no one has four in a row, the game is a **draw** — rare, but possible against careful play.',
+            body: 'If every one of the 42 slots fills and no one has four in a row, the game is a **draw** — rare, but possible against careful play. (With *perfect* play from both sides, Red actually wins by moving first in the centre — a fact proven by computer in 1988.)',
+          },
+        ],
+      },
+      {
+        title: 'Reading the Board', icon: '🔍',
+        steps: [
+          {
+            title: 'What a "threat" really is',
+            body: 'A **threat** is a single empty square that would complete a four for you. Spotting threats — yours and your opponent\'s — is the whole skill of Connect Four. Here Red owns three on the bottom row with an open square on each side: two threats at once.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,0,0,null,null],"turn":0}',
+            highlight: [idx(5, 1), idx(5, 5)],
+          },
+          {
+            title: 'Playable now vs buried',
+            body: 'A threat only matters if its square is **reachable**. A winning square floating high in a column does nothing until the slots beneath it are filled. The art is making *your* threats land on squares that will soon be playable, and your opponent\'s on squares that stay out of reach.',
+            highlight: [idx(5, 1), idx(2, 4)],
+          },
+          {
+            title: 'The square above a threat is poison',
+            body: 'Watch the slot sitting directly **on top of** a winning square. If you fill the square below an opponent\'s threat, your disc props their winning square up to playable height — and they take it. Never hand the opponent the step beneath their four.',
+            highlight: [idx(5, 4), idx(4, 4)],
+          },
+          {
+            title: 'Count the tempo',
+            body: 'Every forcing move (a threat the opponent *must* answer) buys you a free tempo to build elsewhere. Strong players string threats together so the opponent is always responding, never attacking. Reading the board means reading **who is forced** on each move.',
           },
         ],
       },
@@ -392,33 +422,88 @@ const def: GameDefinition<C4State, C4Move> = {
         steps: [
           {
             title: 'Control the center column',
-            body: 'The **middle column** (column 4) is the most valuable real estate on the board: its discs take part in more winning lines than any other column. Claim it early and contest it hard.',
+            body: 'The **middle column** (column 4) is the most valuable real estate on the board: its discs take part in more winning lines than any other column. Claim it early and contest it hard — Red\'s strongest first move is dropping dead centre.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,null,null,null,null,null,null,1,null,null,null,null,null,null,0,null,null,null],"turn":0}',
             highlight: [idx(5, 3), idx(4, 3), idx(3, 3), idx(2, 3), idx(1, 3), idx(0, 3)],
           },
           {
             title: 'The open-ended three',
-            body: 'Three of your discs in a row with a **playable empty square** on the end is a live threat: unless your opponent plugs it, you complete four next turn. Make these constantly — each one forces a response and steals the initiative.',
-            highlight: [idx(5, 2), idx(5, 3), idx(5, 4), idx(5, 5)],
+            body: 'Three of your discs in a row with a **playable empty square** on the end is a live threat: unless your opponent plugs it, you complete four next turn. An open three with *both* ends free is even stronger — it is already a double threat. Make these constantly; each one forces a response and steals the initiative.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,0,0,null,null],"turn":1}',
+            highlight: [idx(5, 1), idx(5, 2), idx(5, 3), idx(5, 4), idx(5, 5)],
           },
           {
             title: 'Block your opponent\'s three',
-            body: 'The flip side: when your opponent has an open three, you **must** drop into the winning square right away. Ignore it and you simply lose. Most beginner games are decided by one missed block.',
+            body: 'The flip side: when your opponent has an open three, you **must** drop into the winning square right away. Ignore it and you simply lose. Most beginner games are decided by one missed block — before every move, ask "could they win next turn?"',
             highlight: [idx(5, 1), idx(5, 2), idx(5, 3), idx(5, 4)],
           },
           {
-            title: 'Build a double threat',
-            body: 'This is the heart of the game. Engineer a position where **one move makes two separate fours possible at once** — two open ends, or a threat in two columns. Your opponent can only block one. You play the other and win. Setting up a double threat is how every strong game is won.',
+            title: 'Build a double threat (the fork)',
+            body: 'This is the heart of the game. Engineer a position where **one move makes two separate fours possible at once** — two open ends of a row, or threats in two different lines. Your opponent can only block one; you play the other and win. Here Red\'s three on the bottom row threatens both column 2 and column 6 — an unstoppable fork.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,0,0,null,null],"turn":0}',
+            highlight: [idx(5, 1), idx(5, 5)],
+            arrows: [{ from: idx(5, 1), to: idx(5, 1), tone: 'good' }, { from: idx(5, 5), to: idx(5, 5), tone: 'good' }],
+          },
+          {
+            title: 'Stack a threat to make a fork',
+            body: 'Forks are not only horizontal. A classic trap stacks a second threat *on top of* the first: a flat three plus a diagonal climbing through the same column produces two winning squares at different heights. When the opponent blocks the low one, the high one becomes playable.',
             highlight: [idx(5, 2), idx(5, 3), idx(5, 4), idx(4, 3)],
           },
           {
             title: 'Don\'t feed the stack above a threat',
-            body: 'Watch which square sits **on top of** your opponent\'s winning slot. If you drop a disc just below it, your next move would hand them the win — they take the square you just exposed. Avoid setting up the slot beneath their four.',
+            body: 'The mirror of the fork: avoid being forked. If you drop a disc just below your opponent\'s winning slot, your next move hands them the win. Sometimes the right move is to play *away* from a column entirely and refuse to raise their threat to playable height.',
             highlight: [idx(4, 3), idx(5, 3)],
           },
           {
-            title: 'Odd and even threats',
-            body: 'A subtle endgame idea: with Red moving first, threats on **odd rows** (counting from the bottom) tend to favour Red, while **even-row** threats favour Yellow, because of who is forced to fill the column first. Strong players steer threats onto the rows that parity gives them — a win waiting in the stack.',
+            title: 'Odd and even threats & zugzwang',
+            body: 'The deepest idea: number the rows 1–6 from the bottom. With Red moving first, an unanswered threat on an **odd** row (1, 3, 5) tends to fall to Red, and an **even**-row threat (2, 4, 6) to Yellow, because of who is forced to fill the squares beneath it. In the endgame the board fills until someone runs out of safe moves — **zugzwang** — and must drop right below the enemy threat. Steering your decisive threat onto the parity you own is how masters win even, blocked-looking positions.',
             highlight: [idx(5, 0), idx(3, 0), idx(1, 0)],
+          },
+        ],
+      },
+      {
+        title: 'Threat Trainer', icon: '🎯',
+        steps: [
+          {
+            title: 'How to play a puzzle',
+            body: 'Reading about threats is one thing — *finding* them under pressure is another. In each puzzle you play **Red**. **Click the column** you want to drop into; the disc falls to the lowest free slot. Find the move described and the trainer confirms it.',
+          },
+          {
+            title: 'Complete the four',
+            body: 'Red has three in a row along the bottom, but Yellow has plugged the left end. There is exactly one square that completes the four. Drop it.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,1,0,0,0,null,1,1],"turn":0}',
+            highlight: [idx(5, 4)],
+            challenge: {
+              prompt: 'Red to play — connect four and win in one.',
+              solution: ['Red drops in column 5'],
+              success: 'Red drops in column 5 to complete four across the bottom — game over. Whenever you hold three in a row, look first for the square that finishes it.',
+            },
+          },
+          {
+            title: 'Block the threat',
+            body: 'Now you are defending. Yellow has three in a row and threatens to connect four on the next move. Find the single column that plugs the gap before it is too late.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,1,1,1,null,null],"turn":0}',
+            highlight: [idx(5, 5)],
+            challenge: {
+              prompt: 'Red to play — block Yellow\'s four-in-a-row threat.',
+              solution: ['Red drops in column 6'],
+              success: 'Red drops in column 6, plugging the only square where Yellow could have completed four. Before every move, scan for the opponent\'s threats first — one missed block loses the game.',
+            },
+          },
+          {
+            title: 'Spot the diagonal win',
+            body: 'The hardest fours to see climb on a diagonal. Red has three discs marching up-and-to-the-right, and the columns beneath the final square have filled just enough. Find the drop that completes the diagonal four.',
+            setup: '{"board":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,0,1,null,null,null,null,0,1,0,null,null,null,0,1,1,1,null,null],"turn":0}',
+            highlight: [idx(2, 4)],
+            challenge: {
+              prompt: 'Red to play — complete the diagonal four and win.',
+              solution: ['Red drops in column 5'],
+              success: 'Red drops in column 5; the disc lands on the fourth step of the diagonal and connects four. Diagonal threats are the ones opponents overlook most — and the ones you should hunt for first.',
+            },
+          },
+          {
+            title: 'Keep training',
+            body: 'In a real game the AI tutor grades **every** drop you make — flagging open threes, forks you set up, threats you missed, and the centre squares worth fighting for — from Brilliant to Blunder. Play at rising difficulty, read each explanation, and threats will start leaping off the board.',
           },
         ],
       },
