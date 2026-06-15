@@ -166,37 +166,32 @@ export const useGameStore = create<State>((set, get) => {
       if (status.kind === 'win' || status.kind === 'draw') return;
       if (mode === 'ai' && def.getTurn(state) !== humanColor) return;
 
-      const type = def.interaction.type;
-
-      if (type === 'place') {
-        const m = def.getLegalMoves(state, null).find((mv) => mv.to === cell);
-        if (m) { commit(m, state); setTimeout(drive, 120); }
-        return;
-      }
-      if (type === 'drop') {
+      if (def.interaction.type === 'drop') {
         const cols = def.getBoardView(state).cols;
         const m = def.getLegalMoves(state, null).find((mv) => mv.to % cols === cell % cols);
         if (m) { commit(m, state); setTimeout(drive, 120); }
         return;
       }
 
-      // 'move' games: select a piece, then a destination.
-      const bv = def.getBoardView(state);
-      const cellView = bv.cells[cell];
-      const mine = cellView.piece && cellView.piece.player === def.getTurn(state);
+      // Unified resolver for place / move / adaptive games. A legal move may be
+      // a placement or removal (no `from`) or a relocation (`from`→`to`).
+      const legal = def.getLegalMoves(state, null);
+      const play = (m: MoveBase) => { commit(m, state); setTimeout(drive, 120); };
+      const directHere = legal.find((m) => m.from === undefined && m.to === cell);
+      const isSource = (sq: number) => legal.some((m) => m.from === sq);
 
       if (selected === null) {
-        if (mine) set({ selected: cell, targets: def.getLegalMoves(state, cell) });
+        if (directHere) { play(directHere); return; }
+        if (isSource(cell)) set({ selected: cell, targets: def.getLegalMoves(state, cell) });
         return;
       }
       if (cell === selected) { set({ selected: null, targets: [] }); return; }
-      if (mine) { set({ selected: cell, targets: def.getLegalMoves(state, cell) }); return; }
-
+      if (isSource(cell)) { set({ selected: cell, targets: def.getLegalMoves(state, cell) }); return; }
       const matching = get().targets.filter((m) => m.to === cell);
-      if (matching.length === 0) { set({ selected: null, targets: [] }); return; }
       if (matching.length > 1) { set({ promotion: { from: selected, to: cell, options: matching } }); return; }
-      commit(matching[0], state);
-      setTimeout(drive, 120);
+      if (matching.length === 1) { play(matching[0]); return; }
+      if (directHere) { play(directHere); return; }
+      set({ selected: null, targets: [] });
     },
 
     passTurn() {

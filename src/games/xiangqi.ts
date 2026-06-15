@@ -504,7 +504,7 @@ function searchAdapter() {
   };
 }
 
-const DEPTH: Record<Difficulty, number> = { tutor: 3, easy: 2, medium: 3, hard: 4, master: 5 };
+const DEPTH: Record<Difficulty, number> = { tutor: 3, easy: 2, medium: 3, hard: 4, master: 4 };
 const RAND: Record<Difficulty, number> = { tutor: 0, easy: 0.5, medium: 0.25, hard: 0.06, master: 0 };
 
 function pieceCount(s: XiangqiState): number {

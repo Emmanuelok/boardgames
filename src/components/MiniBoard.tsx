@@ -48,7 +48,16 @@ export default function MiniBoard({ def, setup, highlight = [], arrows = [], the
           borderColor: theme.border,
         }}
       >
-        {(intersections || !checkered) && (
+        {def.render.connections ? (
+          <svg className="grid-lines" viewBox={`0 0 ${cols} ${rows}`} preserveAspectRatio="none">
+            {def.render.connections.map(([a, b], i) => (
+              <line key={i}
+                x1={(a % cols) + 0.5} y1={Math.floor(a / cols) + 0.5}
+                x2={(b % cols) + 0.5} y2={Math.floor(b / cols) + 0.5}
+                stroke={theme.grid} strokeWidth={0.05} strokeLinecap="round" />
+            ))}
+          </svg>
+        ) : (intersections || !checkered) && (
           <svg className="grid-lines" viewBox={`0 0 ${cols} ${rows}`} preserveAspectRatio="none">
             {Array.from({ length: intersections ? cols : cols + 1 }).map((_, i) => {
               const x = intersections ? i + 0.5 : i;
@@ -70,6 +79,11 @@ export default function MiniBoard({ def, setup, highlight = [], arrows = [], the
               style={{ gridColumn: cell.col + 1, gridRow: cell.row + 1, background: sqColor }}
             >
               {hi.has(cell.index) && <div className="hl mini-hi" />}
+              {cell.count !== undefined && (
+                <div className="pit">
+                  <span className="pit-num">{cell.count}</span>
+                </div>
+              )}
               {cell.piece && (
                 <div className={`pc ${style}`} style={pieceStyleFor(style, cell.piece.player, pieceColor(cell.piece.player))}>
                   {(style === 'chess' || style === 'mark' || style === 'xiangqi') && <span className="glyph">{cell.piece.glyph}</span>}

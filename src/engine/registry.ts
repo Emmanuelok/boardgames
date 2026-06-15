@@ -9,6 +9,9 @@ import draughts from '../games/draughts';
 import pente from '../games/pente';
 import go from '../games/go';
 import xiangqi from '../games/xiangqi';
+import hex from '../games/hex';
+import mancala from '../games/mancala';
+import ninemensmorris from '../games/ninemensmorris';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -20,11 +23,14 @@ export const GAMES: GameDefinition[] = [
   xiangqi,
   checkers,
   draughts,
+  ninemensmorris,
   reversi,
   connectFour,
+  mancala,
   go,
   gomoku,
   pente,
+  hex,
   ticTacToe,
 ];
 

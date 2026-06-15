@@ -151,6 +151,8 @@ function Scene(props: Props) {
                 intersections={intersections}
               />
             )}
+
+            {cell.count !== undefined && <CountPile n={cell.count} />}
           </group>
         );
       })}
@@ -235,6 +237,23 @@ function Piece({ style, kind, crowned, color, metalness, roughness }: {
     );
   }
   return <mesh castShadow position={[0, 0.2, 0]}><sphereGeometry args={[0.3, 20, 20]} />{mat}</mesh>;
+}
+
+/** A natural-looking pile of seeds/stones for a Mancala pit (phyllotaxis layout). */
+function CountPile({ n }: { n: number }) {
+  const stones = Math.min(n, 16);
+  const items = [];
+  for (let i = 0; i < stones; i++) {
+    const a = i * 2.399963; // golden angle
+    const r = 0.08 * Math.sqrt(i);
+    items.push(
+      <mesh key={i} castShadow position={[Math.cos(a) * r, 0.18 + (i % 3) * 0.05, Math.sin(a) * r]}>
+        <sphereGeometry args={[0.09, 12, 12]} />
+        <meshStandardMaterial color="#f59e0b" roughness={0.5} metalness={0.1} />
+      </mesh>,
+    );
+  }
+  return <group>{items}</group>;
 }
 
 function Knight({ color, metalness, roughness }: { color: string; metalness: number; roughness: number }) {

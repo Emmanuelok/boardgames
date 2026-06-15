@@ -40,6 +40,10 @@ export interface CellView {
   piece: PieceView | null;
   /** False for cells that are never playable (e.g. light squares in checkers). */
   playable?: boolean;
+  /** Stone count shown inside the cell (Mancala pits & stores). */
+  count?: number;
+  /** Optional short label drawn in the cell (e.g. a Mancala store owner). */
+  label?: string;
 }
 
 export interface BoardView {
@@ -114,11 +118,17 @@ export type Difficulty = 'tutor' | 'easy' | 'medium' | 'hard' | 'master';
 
 export interface InteractionModel {
   /**
-   * - `move`  : select a source cell, then a destination (Chess, Checkers).
-   * - `place` : click an empty cell to drop a mark there (Tic-Tac-Toe, Gomoku, Reversi).
-   * - `drop`  : click a column; the piece falls to the lowest free cell (Connect Four).
+   * - `move`     : select a source cell, then a destination (Chess, Checkers).
+   * - `place`    : click an empty cell to drop a mark there (Tic-Tac-Toe, Gomoku, Reversi).
+   * - `drop`     : click a column; the piece falls to the lowest free cell (Connect Four).
+   * - `adaptive` : the board figures out place-vs-move per click from the legal
+   *                moves — used by games with phases (Nine Men's Morris).
+   *
+   * All non-`drop` types are handled by one unified click resolver, so a move
+   * may be a placement (`from` undefined), a relocation (`from`→`to`), or a
+   * removal (`from` undefined, `to` = the captured cell).
    */
-  type: 'move' | 'place' | 'drop';
+  type: 'move' | 'place' | 'drop' | 'adaptive';
 }
 
 export interface RenderConfig {
@@ -131,6 +141,10 @@ export interface RenderConfig {
   cellGap?: number;
   /** Whether the 3D board should render with a chequered pattern. */
   checkered: boolean;
+  /** Explicit connection lines (pairs of cell indices) for graph-shaped boards
+   *  such as Nine Men's Morris. When present, the default grid is suppressed and
+   *  these lines plus a dot at each playable point are drawn instead. */
+  connections?: Array<[number, number]>;
 }
 
 /* ----------------------------- Tutorials ------------------------------ */

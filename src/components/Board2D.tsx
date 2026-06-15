@@ -77,7 +77,16 @@ export default function Board2D(props: Props) {
         }}
         onMouseLeave={() => setHoverCol(null)}
       >
-        {(intersections || !checkered) && (
+        {def.render.connections ? (
+          <svg className="grid-lines" viewBox={`0 0 ${cols} ${rows}`} preserveAspectRatio="none">
+            {def.render.connections.map(([a, b], i) => (
+              <line key={i}
+                x1={dCol(a % cols) + 0.5} y1={dRow(Math.floor(a / cols)) + 0.5}
+                x2={dCol(b % cols) + 0.5} y2={dRow(Math.floor(b / cols)) + 0.5}
+                stroke={theme.grid} strokeWidth={0.05} strokeLinecap="round" />
+            ))}
+          </svg>
+        ) : (intersections || !checkered) && (
           <svg className="grid-lines" viewBox={`0 0 ${cols} ${rows}`} preserveAspectRatio="none">
             {Array.from({ length: intersections ? cols : cols + 1 }).map((_, i) => {
               const x = intersections ? i + 0.5 : i;
@@ -116,6 +125,9 @@ export default function Board2D(props: Props) {
               {isSel && <div className="hl sel" />}
               {isCheck && <div className="hl check" />}
               {isHint && <div className="hl hint" />}
+              {def.render.connections && cell.playable !== false && !cell.piece && cell.count === undefined && (
+                <div className="point" style={{ background: theme.grid }} />
+              )}
 
               {cell.piece && (
                 <motion.div
@@ -129,6 +141,16 @@ export default function Board2D(props: Props) {
                   {(style === 'chess' || style === 'mark' || style === 'xiangqi') && <span className="glyph">{cell.piece.glyph}</span>}
                   {cell.piece.crowned && <span className="crown">♛</span>}
                 </motion.div>
+              )}
+
+              {cell.count !== undefined && (
+                <div className="pit">
+                  <div className="pit-stones">
+                    {Array.from({ length: Math.min(cell.count, 14) }).map((_, i) => <span key={i} className="stone-dot" />)}
+                  </div>
+                  <span className="pit-num">{cell.count}</span>
+                  {cell.label && <span className="pit-label">{cell.label}</span>}
+                </div>
               )}
 
               {dropPreview === cell.index && (
