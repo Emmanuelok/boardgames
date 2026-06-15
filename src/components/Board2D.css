@@ -39,6 +39,8 @@
   justify-content: center;
   cursor: pointer;
   transition: background 0.25s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .cell.void { cursor: default; }
 .board.go .cell { background: transparent !important; }

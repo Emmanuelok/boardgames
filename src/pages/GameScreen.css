@@ -38,6 +38,17 @@
 @keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent); } 70% { box-shadow: 0 0 0 8px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
 
 .side-col { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 12px; max-height: calc(100vh - 24px); }
+@media (max-width: 980px) {
+  .side-col { position: static; max-height: none; }
+  .gs-toolbar { flex-wrap: wrap; }
+  .tab-panel > * { max-height: none; }
+  .board-col { max-width: 100%; }
+}
+@media (max-width: 520px) {
+  .game-screen { padding: 12px 12px 32px; }
+  .gs-toolbar .gs-title strong { font-size: 15px; }
+  .controls .btn { min-width: 0; padding: 8px 6px; font-size: 12px; }
+}
 .controls { display: flex; gap: 7px; padding: 10px; flex-wrap: wrap; }
 .controls .btn { flex: 1; justify-content: center; min-width: 64px; }
 

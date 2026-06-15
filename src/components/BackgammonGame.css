@@ -18,7 +18,8 @@
   box-shadow: var(--shadow);
 }
 .bg-half { flex: 1; display: flex; gap: 0; }
-.bg-point { position: relative; flex: 1; cursor: pointer; }
+.bg-point { position: relative; flex: 1; cursor: pointer; touch-action: manipulation; }
+@media (max-width: 560px) { .bg-hud { grid-template-columns: 1fr; gap: 8px; } .bg-player:last-child { justify-content: flex-start; } }
 .bg-point::before { content: ''; position: absolute; inset: 0; }
 .bg-point.down::before { clip-path: polygon(0 0, 100% 0, 50% 92%); }
 .bg-point.up::before { clip-path: polygon(50% 8%, 0 100%, 100% 100%); }
