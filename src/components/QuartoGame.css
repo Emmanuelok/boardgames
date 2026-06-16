@@ -1,0 +1,35 @@
+.quarto { gap: 14px; align-items: center; }
+.q-status { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; color: var(--ink-dim); min-height: 60px; }
+.q-result { font-family: var(--font-display); font-size: 20px; color: var(--ink); }
+.q-place { color: var(--accent-2); font-weight: 700; }
+.q-held { display: grid; place-items: center; }
+
+.qp { display: inline-grid; place-items: center; border: 1px solid rgba(0,0,0,0.4); }
+.qp-hole { width: 38%; height: 38%; background: #0b0e16; box-shadow: inset 0 2px 4px rgba(0,0,0,0.8); }
+
+.q-board {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  width: 100%; max-width: min(64vh, 100%); aspect-ratio: 1; margin: 0 auto;
+  padding: 14px; border-radius: 18px;
+  background: linear-gradient(160deg, rgba(202,138,4,0.16), rgba(0,0,0,0.18));
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.q-cell {
+  border: 1px solid var(--line); border-radius: 12px; background: rgba(0,0,0,0.22);
+  display: grid; place-items: center; padding: 0; cursor: default; touch-action: manipulation; aspect-ratio: 1;
+}
+.q-cell.live { cursor: pointer; border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.q-cell.live:hover { background: color-mix(in srgb, var(--accent) 14%, rgba(0,0,0,0.22)); }
+.q-cell.tent { box-shadow: inset 0 0 0 2px var(--accent); }
+.q-ghost { opacity: 0.55; animation: qpulse 1s ease-in-out infinite; }
+@keyframes qpulse { 50% { opacity: 0.85; } }
+
+.q-tray { width: 100%; max-width: min(64vh, 100%); margin: 0 auto; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,0.03); transition: all 0.25s; }
+.q-tray.active { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.q-tray-label { font-size: 12px; font-weight: 700; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+.q-tray-pieces { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; min-height: 44px; align-items: center; }
+.q-tray-piece { background: transparent; border: 1px dashed transparent; border-radius: 10px; padding: 4px; cursor: pointer; display: grid; place-items: center; min-width: 40px; min-height: 40px; }
+.q-tray-piece:disabled { cursor: default; opacity: 0.85; }
+.q-tray.active .q-tray-piece:not(:disabled):hover { border-color: var(--accent); background: rgba(255,255,255,0.08); }
+
+.q-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
