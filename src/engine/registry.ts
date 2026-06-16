@@ -25,6 +25,7 @@ import pentago from '../games/pentago';
 import cohesion from '../games/cohesion';
 import quarto from '../games/quarto';
 import tally from '../games/tally';
+import orderAndChaos from '../games/orderandchaos';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -45,6 +46,7 @@ export const GAMES: GameDefinition[] = [
   pentago,
   quarto,
   tally,
+  orderAndChaos,
   cohesion,
   reversi,
   linesOfAction,
