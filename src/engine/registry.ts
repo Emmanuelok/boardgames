@@ -22,6 +22,7 @@ import amazons from '../games/amazons';
 import dotsAndBoxes from '../games/dotsandboxes';
 import tafl from '../games/tafl';
 import pentago from '../games/pentago';
+import cohesion from '../games/cohesion';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -40,6 +41,7 @@ export const GAMES: GameDefinition[] = [
   backgammon,
   dotsAndBoxes,
   pentago,
+  cohesion,
   reversi,
   linesOfAction,
   konane,
