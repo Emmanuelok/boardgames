@@ -21,6 +21,7 @@ import clobber from '../games/clobber';
 import amazons from '../games/amazons';
 import dotsAndBoxes from '../games/dotsandboxes';
 import tafl from '../games/tafl';
+import pentago from '../games/pentago';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -38,6 +39,7 @@ export const GAMES: GameDefinition[] = [
   ninemensmorris,
   backgammon,
   dotsAndBoxes,
+  pentago,
   reversi,
   linesOfAction,
   konane,
