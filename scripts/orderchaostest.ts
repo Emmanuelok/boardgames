@@ -2,7 +2,7 @@
 import def from '../src/games/orderandchaos';
 import {
   initialState, applyMove, chooseMove, legalMoves, winnerOf, orderWins, orderThreats, evaluate, N,
-  type OCState, type Sym,
+  moveComment, coachTip, type OCState, type Sym,
 } from '../src/games/orderandchaos/logic';
 
 let fail = 0;
@@ -75,6 +75,20 @@ ok(chooseMove(init, 'medium')?.id === chooseMove(init, 'medium')?.id, 'chooseMov
   const view = def.getBoardView(applyMove(init, { id: 'x', cell: 0, sym: 0, notation: '' }));
   ok(view.rows === 6 && view.cols === 6 && view.cells.length === 36, 'board view is 6×6');
   ok(view.cells[0].piece?.glyph === '✕' && view.cells[0].piece?.player === 0, 'a placed X renders as a mark glyph');
+}
+
+// Perspective-aware commentary: the same move reads differently to each side,
+// so the human can play Order OR Chaos.
+{
+  const before: OCState = { board: row2([null, 0, 0, 0, null, null]), turn: 1 }; // three X's, Chaos to move
+  const m = { id: 'o16', cell: 16, sym: 1 as Sym, notation: '' };
+  const after = applyMove(before, m); // Chaos drops O into the line
+  ok(orderThreats(after.board).length === 0, 'Chaos can poison a three-in-a-row line dead');
+  ok(moveComment(before, m, after, 1).tone === 'good', 'as Chaos, poisoning a line reads as a GOOD move');
+  ok(moveComment(before, m, after, 0).tone === 'bad', 'as Order, that same Chaos move reads as BAD');
+  ok(/Chaos/.test(coachTip(before, 1)) && /five/.test(coachTip(before, 1)), 'coachTip speaks to the Chaos player');
+  // The AI can play Order: from the empty board (Order to move) it returns a build.
+  ok(!!chooseMove(initialState(), 'hard'), 'AI plays the Order role when the human picks Chaos');
 }
 
 // serialize / deserialize roundtrip.

@@ -167,35 +167,53 @@ export function chooseMove(s: OCState, difficulty: 'easy' | 'medium' | 'hard'): 
 
 export interface OCComment { text: string; tone: 'good' | 'bad' | 'info' }
 
-export function moveComment(before: OCState, m: OCMove, after: OCState): OCComment {
-  const mover = before.turn; // 0 = you (Order), 1 = Chaos
+export function moveComment(before: OCState, m: OCMove, after: OCState, human: Player = 0): OCComment {
+  const mover = before.turn; // 0 = Order, 1 = Chaos
   const sym = symChar(m.sym);
+  const mine = mover === human;
+  const subj = mine ? 'You' : `${mover === 0 ? 'Order' : 'Chaos'} (AI)`;
+  const v = (base: string) => (mine ? base : `${base}s`); // verb agreement: play → plays
   const w = winnerOf(after);
-  if (w === 0) {
-    return mover === 0
-      ? { text: `You place ${sym} on ${sq(m.cell)} to complete five-in-a-row — you win! 🏆`, tone: 'good' }
-      : { text: `Chaos plays ${sym} on ${sq(m.cell)} and accidentally completes a line of five — Order wins! 🏆`, tone: 'good' };
+
+  if (w === 0) { // Order completed a five
+    const youWon = human === 0;
+    const how = mover === 1 ? `${v('complete')} a line of five` : `${v('complete')} five-in-a-row`;
+    return { text: `${subj} ${v('place')} ${sym} on ${sq(m.cell)} and ${how} — ${youWon ? 'you win! 🏆' : 'Order wins.'}`, tone: youWon ? 'good' : 'bad' };
   }
-  if (w === 1) return { text: `The board is full with no line of five — Chaos wins.`, tone: 'bad' };
+  if (w === 1) { // Chaos filled the board with no five
+    const youWon = human === 1;
+    return { text: `The board is full with no line of five — ${youWon ? 'Chaos wins, you win! 🏆' : 'Chaos wins.'}`, tone: youWon ? 'good' : 'bad' };
+  }
+
   const threats = orderThreats(after.board).length;
-  if (mover === 0) {
-    if (threats >= 2) return { text: `You play ${sym} at ${sq(m.cell)} — that makes ${threats} winning squares at once. Chaos can only block one!`, tone: 'good' };
-    if (threats === 1) return { text: `You play ${sym} at ${sq(m.cell)} — one square now completes five, so Chaos is forced to block it.`, tone: 'info' };
-    return { text: `You play ${sym} at ${sq(m.cell)}, building toward a five.`, tone: 'info' };
+  if (mover === 0) { // Order built toward a line — good for whoever is Order
+    const tone: OCComment['tone'] = human === 0 ? 'good' : 'bad';
+    if (threats >= 2) return { text: `${subj} ${v('play')} ${sym} at ${sq(m.cell)} — that makes ${threats} winning squares at once; only one can be blocked!`, tone };
+    if (threats === 1) return { text: `${subj} ${v('play')} ${sym} at ${sq(m.cell)} — one square now completes five and must be blocked.`, tone: 'info' };
+    return { text: `${subj} ${v('play')} ${sym} at ${sq(m.cell)}, building toward a five.`, tone: 'info' };
   }
-  if (threats === 0) return { text: `Chaos plays ${sym} at ${sq(m.cell)}, mixing symbols to poison your lines — no win for you yet.`, tone: 'bad' };
-  return { text: `Chaos plays ${sym} at ${sq(m.cell)} but a winning square is still open for you!`, tone: 'good' };
+  // Chaos poisoned lines — good for whoever is Chaos.
+  if (threats === 0) return { text: `${subj} ${v('play')} ${sym} at ${sq(m.cell)}, mixing symbols to poison the lines — no five available.`, tone: human === 1 ? 'good' : 'bad' };
+  return { text: `${subj} ${v('play')} ${sym} at ${sq(m.cell)}, but a winning square stays open for Order!`, tone: human === 1 ? 'bad' : 'good' };
 }
 
-export function coachTip(s: OCState): string {
+export function coachTip(s: OCState, human: Player = 0): string {
   const w = winnerOf(s);
-  if (w === 0) return 'Five identical symbols in a line — Order wins!';
-  if (w === 1) return 'The board filled with no line of five — Chaos wins.';
-  const threats = orderThreats(s.board);
-  if (s.turn === 0) {
-    if (threats.length) return 'You can win right now — drop the matching symbol on a highlighted square to make five.';
-    return 'You are Order: line up FIVE of one symbol (either X or O). The winning idea is a double threat — two winning squares so Chaos can’t block both.';
+  if (w !== null) {
+    if (w === 0) return human === 0 ? 'Five in a line — you win as Order!' : 'Order lined up five — Chaos (you) couldn’t stop it.';
+    return human === 1 ? 'The board filled with no five — you win as Chaos!' : 'The board filled with no line of five — Chaos wins.';
   }
-  if (threats.length) return 'Chaos is on move and must neutralise your winning square — watch how it blocks.';
-  return 'Chaos drops the opposite symbol into your lines so none can reach five. Remember: six-in-a-row does NOT count.';
+  const threats = orderThreats(s.board);
+  const yourTurn = s.turn === human;
+  if (human === 0) { // human plays Order
+    if (yourTurn && threats.length) return 'You can win now — drop the matching symbol on a glowing square to make five.';
+    if (yourTurn) return 'You are Order: build FIVE of one symbol. Aim for a double threat — two winning squares so Chaos can’t block both.';
+    return 'Chaos (AI) is poisoning your lines with the opposite symbol — keep two threats alive at once.';
+  }
+  // human plays Chaos
+  if (threats.length) return yourTurn
+    ? 'Danger: Order can complete five on a glowing square. Block it — drop the OTHER symbol there.'
+    : 'Order has a winning square ready. On your turn you must neutralise it.';
+  if (yourTurn) return 'You are Chaos: stop every five. Poison lines that hold three of a kind, and remember — six does NOT count.';
+  return 'Order (AI) is trying to line up five — get ready to poison its strongest line on your turn.';
 }
