@@ -17,6 +17,7 @@ export const WALLPAPERS = [
   { id: 'grid', label: 'Grid', hint: 'A neon horizon that tilts as you move' },
   { id: 'warp', label: 'Warp', hint: 'Starfield that steers toward the mouse' },
   { id: 'crystal', label: 'Crystal', hint: 'Living cells that glow near the cursor' },
+  { id: 'lattice', label: 'Lattice', hint: 'A tech grid that lights up around your cursor' },
 ] as const;
 
 const VERT = `attribute vec2 a_pos; void main(){ gl_Position = vec4(a_pos, 0.0, 1.0); }`;
@@ -134,7 +135,26 @@ void main(){
   gl_FragColor=vec4(col,1.0);
 }`;
 
-const FRAGS: Record<string, string> = { aurora: AURORA, liquid: LIQUID, grid: GRID, warp: WARP, crystal: CRYSTAL };
+const LATTICE = `${COMMON}
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_res; float asp=u_res.x/u_res.y;
+  vec2 p=(uv-0.5); p.x*=asp; vec2 m=(u_mouse-0.5); m.x*=asp;
+  float t=u_time*0.25; float scale=13.0;
+  vec2 gp=p*scale + 0.35*vec2(sin(p.y*4.0+t), cos(p.x*4.0+t));
+  vec2 id=floor(gp); vec2 f=fract(gp)-0.5;
+  vec2 gm=m*scale; float md=distance(id+0.5, gm); float glow=exp(-md*0.22);
+  float d=length(f); float dotm=smoothstep(0.34,0.16,d);
+  float pulse=0.5+0.5*sin(t*2.5 - md*0.6);
+  vec3 col=vec3(0.03,0.05,0.10);
+  col += dotm*(0.12+0.9*glow)*mix(vec3(0.18,0.34,0.7), vec3(0.35,1.0,0.92), glow);
+  col += dotm*0.18*pulse*vec3(0.25,0.5,0.95);
+  float grid=max(smoothstep(0.03,0.0,abs(f.x)), smoothstep(0.03,0.0,abs(f.y)));
+  col += grid*(0.05+0.25*glow)*vec3(0.3,0.6,1.0);
+  col += max(ripples(uv),0.0)*0.8*vec3(0.4,0.9,1.0);
+  gl_FragColor=vec4(col,1.0);
+}`;
+
+const FRAGS: Record<string, string> = { aurora: AURORA, liquid: LIQUID, grid: GRID, warp: WARP, crystal: CRYSTAL, lattice: LATTICE };
 
 function compileShader(gl: WebGLRenderingContext, type: number, src: string): WebGLShader | null {
   const sh = gl.createShader(type);
