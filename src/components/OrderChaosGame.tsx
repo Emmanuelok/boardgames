@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   initialState, applyMove, chooseMove, winnerOf, orderThreats, N,
-  moveComment, coachTip, type OCState, type Sym,
+  moveComment, coachTip, gradeMove, type OCState, type Sym,
 } from '../games/orderandchaos/logic';
+import ocdef from '../games/orderandchaos';
 import type { Player } from '../engine/types';
 import { useProfile } from '../profile/profile';
 import { playSound, resumeAudio, isMuted, toggleMuted } from '../audio/sound';
 import CoachPanel, { type CoachMsg } from './CoachPanel';
+import GameReview from './GameReview';
+import type { LogEntry } from '../store/useGameStore';
 import './OrderChaosGame.css';
 
 const sqName = (i: number) => `${String.fromCharCode(97 + (i % N))}${N - Math.floor(i / N)}`;
@@ -23,6 +26,7 @@ export default function OrderChaosGame({ aiDifficulty = 'medium' }: { aiDifficul
   const [sel, setSel] = useState<Sym>(0); // the symbol the human will place
   const [last, setLast] = useState<number | null>(null);
   const [log, setLog] = useState<CoachMsg[]>([]);
+  const [review, setReview] = useState<LogEntry[]>([]);
   const [muted, setMutedState] = useState(isMuted());
   const [recorded, setRecorded] = useState(false);
   const recordResult = useProfile((p) => p.recordResult);
@@ -51,6 +55,7 @@ export default function OrderChaosGame({ aiDifficulty = 'medium' }: { aiDifficul
       playSound(res === side ? 'win' : res !== null ? 'lose' : 'move');
       setLast(m.cell);
       setLog((l) => [...l, moveComment(s, m, after, side)]);
+      setReview((r) => [...r, { ply: r.length + 1, player: s.turn, notation: `${sqName(m.cell)}=${m.sym === 0 ? 'X' : 'O'}`, explanation: gradeMove(s, m, after) }]);
       setS(after);
     }, 520);
     return () => clearTimeout(t);
@@ -65,10 +70,11 @@ export default function OrderChaosGame({ aiDifficulty = 'medium' }: { aiDifficul
     playSound(res === side ? 'win' : res !== null ? 'lose' : 'select');
     setLast(i);
     setLog((l) => [...l, moveComment(s, m, after, side)]);
+    setReview((r) => [...r, { ply: r.length + 1, player: s.turn, notation: `${sqName(i)}=${sel === 0 ? 'X' : 'O'}`, explanation: gradeMove(s, m, after) }]);
     setS(after);
   };
 
-  const reset = (nextSide: Player) => { setSide(nextSide); setS(initialState()); setSel(0); setLast(null); setLog([]); setRecorded(false); };
+  const reset = (nextSide: Player) => { setSide(nextSide); setS(initialState()); setSel(0); setLast(null); setLog([]); setReview([]); setRecorded(false); };
 
   const status = over
     ? (w === side ? 'You win! 🏆' : w === 0 ? 'Order wins — five in a row.' : 'Chaos wins — no line of five.')
@@ -123,6 +129,7 @@ export default function OrderChaosGame({ aiDifficulty = 'medium' }: { aiDifficul
       </div>
 
       <aside className="side-col">
+        {over && review.length > 0 && <GameReview def={ocdef} log={review} status={ocdef.getStatus(s)} />}
         <CoachPanel title="AI Coach" subtitle="Order and Chaos commentary" messages={log} tip={coachTip(s, side)} />
       </aside>
     </div>

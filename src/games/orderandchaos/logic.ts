@@ -12,7 +12,8 @@
  * Pure logic; no argument is mutated. Player 0 = Order (maximiser), 1 = Chaos.
  */
 import { mulberry32, searchBestMove, WIN } from '../../engine/ai';
-import type { Player } from '../../engine/types';
+import { gradeMoveBySearch } from '../../engine/review';
+import type { MoveExplanation, Player } from '../../engine/types';
 
 export const N = 6;
 export type Sym = 0 | 1; // 0 = X, 1 = O
@@ -161,6 +162,11 @@ function adapter() {
 export function chooseMove(s: OCState, difficulty: 'easy' | 'medium' | 'hard'): OCMove | null {
   const seed = (s.board.filter((v) => v !== null).length + s.turn + 1) * 2654435761;
   return searchBestMove(s, adapter(), DEPTH[difficulty], { randomness: RAND[difficulty], rng: mulberry32(seed) }).move;
+}
+
+/** Grade a played move for the post-game review (band + eval). */
+export function gradeMove(before: OCState, move: OCMove, after: OCState): MoveExplanation {
+  return gradeMoveBySearch(before, move, after, adapter(), { depth: 3, bigThreshold: 500, lossScale: 0.5 });
 }
 
 /* ----------------------------- coach commentary ----------------------------- */

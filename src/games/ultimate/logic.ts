@@ -10,7 +10,8 @@
  * row-major (0,1,2 / 3,4,5 / 6,7,8). Pure logic, nothing mutated in place.
  */
 import { mulberry32, searchBestMove, WIN } from '../../engine/ai';
-import type { Player } from '../../engine/types';
+import { gradeMoveBySearch } from '../../engine/review';
+import type { MoveExplanation, Player } from '../../engine/types';
 
 export type Mark = Player; // 0 = X, 1 = O
 export interface UTTTState {
@@ -149,6 +150,11 @@ export function chooseMove(s: UTTTState, difficulty: 'easy' | 'medium' | 'hard')
   const filled = s.cells.filter((v) => v !== null).length;
   const seed = (filled + s.turn + 1) * 2654435761;
   return searchBestMove(s, adapter(), depth, { randomness: RAND[difficulty], rng: mulberry32(seed) }).move;
+}
+
+/** Grade a played move for the post-game review (band + eval). */
+export function gradeMove(before: UTTTState, move: UTTTMove, after: UTTTState): MoveExplanation {
+  return gradeMoveBySearch(before, move, after, adapter(), { depth: 4, bigThreshold: 800 });
 }
 
 /* ----------------------------- coach commentary ----------------------------- */

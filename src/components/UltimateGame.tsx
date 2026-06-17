@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  initialState, applyMove, chooseMove, winnerOf, playableBoards, moveComment, coachTip,
+  initialState, applyMove, chooseMove, winnerOf, playableBoards, moveComment, coachTip, gradeMove,
   type UTTTState, type Mark,
 } from '../games/ultimate/logic';
+import udef from '../games/ultimate';
 import { useProfile } from '../profile/profile';
 import { playSound, resumeAudio, isMuted, toggleMuted } from '../audio/sound';
 import CoachPanel, { type CoachMsg } from './CoachPanel';
+import GameReview from './GameReview';
+import type { LogEntry } from '../store/useGameStore';
 import './UltimateGame.css';
 
 function Glyph({ v, big }: { v: Mark; big?: boolean }) {
@@ -18,6 +21,7 @@ export default function UltimateGame({ aiDifficulty = 'medium' }: { aiDifficulty
   const [last, setLast] = useState<number | null>(null); // last cell flat index
   const [hover, setHover] = useState<number | null>(null); // hovered cell index → previews where it sends
   const [log, setLog] = useState<CoachMsg[]>([]);
+  const [review, setReview] = useState<LogEntry[]>([]);
   const [muted, setMutedState] = useState(isMuted());
   const [recorded, setRecorded] = useState(false);
   const recordResult = useProfile((p) => p.recordResult);
@@ -45,6 +49,7 @@ export default function UltimateGame({ aiDifficulty = 'medium' }: { aiDifficulty
       playSound(winnerOf(after) === 1 ? 'win' : 'move');
       setLast(m.board * 9 + m.cell);
       setLog((l) => [...l, moveComment(s, m, after)]);
+      setReview((r) => [...r, { ply: r.length + 1, player: 1, notation: `B${m.board + 1}-${m.cell + 1}`, explanation: gradeMove(s, m, after) }]);
       setS(after);
     }, 520);
     return () => clearTimeout(t);
@@ -58,10 +63,11 @@ export default function UltimateGame({ aiDifficulty = 'medium' }: { aiDifficulty
     playSound(winnerOf(after) === 0 ? 'win' : 'select');
     setLast(b * 9 + c);
     setLog((l) => [...l, moveComment(s, m, after)]);
+    setReview((r) => [...r, { ply: r.length + 1, player: 0, notation: `B${b + 1}-${c + 1}`, explanation: gradeMove(s, m, after) }]);
     setS(after);
   };
 
-  const newGame = () => { setS(initialState()); setLast(null); setHover(null); setLog([]); setRecorded(false); };
+  const newGame = () => { setS(initialState()); setLast(null); setHover(null); setLog([]); setReview([]); setRecorded(false); };
 
   const status = over
     ? (w === 'draw' ? 'Draw — no meta-line' : w === 0 ? 'You win the game! 🏆' : 'Nova wins the game')
@@ -121,6 +127,7 @@ export default function UltimateGame({ aiDifficulty = 'medium' }: { aiDifficulty
       </div>
 
       <aside className="side-col">
+        {over && review.length > 0 && <GameReview def={udef} log={review} status={udef.getStatus(s)} />}
         <CoachPanel title="AI Coach" subtitle="Ultimate Tic-Tac-Toe commentary" messages={log} tip={coachTip(s)} />
       </aside>
     </div>
