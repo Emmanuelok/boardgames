@@ -26,6 +26,7 @@ import cohesion from '../games/cohesion';
 import quarto from '../games/quarto';
 import tally from '../games/tally';
 import orderAndChaos from '../games/orderandchaos';
+import ultimate from '../games/ultimate';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -47,6 +48,7 @@ export const GAMES: GameDefinition[] = [
   quarto,
   tally,
   orderAndChaos,
+  ultimate,
   cohesion,
   reversi,
   linesOfAction,

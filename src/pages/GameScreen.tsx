@@ -13,6 +13,7 @@ import DotsAndBoxesGame from '../components/DotsAndBoxesGame';
 import PentagoGame from '../components/PentagoGame';
 import QuartoGame from '../components/QuartoGame';
 import OrderChaosGame from '../components/OrderChaosGame';
+import UltimateGame from '../components/UltimateGame';
 import { isMuted, toggleMuted, resumeAudio } from '../audio/sound';
 import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
 import type { Difficulty, MoveBase, Player } from '../engine/types';
@@ -109,6 +110,7 @@ export default function GameScreen() {
           : def.id === 'pentago' ? <PentagoGame aiDifficulty={diff} />
           : def.id === 'quarto' ? <QuartoGame aiDifficulty={diff} />
           : def.id === 'order-and-chaos' ? <OrderChaosGame aiDifficulty={diff} />
+          : def.id === 'ultimate' ? <UltimateGame aiDifficulty={diff} />
           : <BackgammonGame aiDifficulty={diff} autoJoin={params.get('join') || undefined} autoHost={params.get('host') || undefined} />}
       </div>
     );
