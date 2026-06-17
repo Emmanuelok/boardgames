@@ -1,0 +1,31 @@
+.daily { max-width: 760px; margin: 0 auto; padding: 20px 18px 60px; }
+
+.dy-top { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.dy-top .gs-title { display: flex; align-items: center; gap: 10px; flex: 1; }
+.dy-top .gs-emoji { font-size: 26px; }
+
+.dy-stats { display: flex; gap: 10px; }
+.dy-stat { text-align: center; padding: 6px 12px; border-radius: 12px; background: rgba(255,255,255,0.045); border: 1px solid var(--line); min-width: 64px; }
+.dy-stat.hot { border-color: color-mix(in srgb, #fb923c 60%, transparent); background: rgba(251,146,60,0.12); }
+.dy-stat-n { font-size: 20px; font-weight: 800; font-family: var(--font-display); display: flex; align-items: center; justify-content: center; gap: 3px; }
+.dy-stat-l { font-size: 10.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+
+.dy-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 16px; }
+.dy-dot {
+  display: grid; place-items: center; aspect-ratio: 1; max-height: 52px; border-radius: 12px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--line); color: var(--ink-faint);
+  font-size: 12px; font-weight: 700; position: relative; transition: all 0.2s ease;
+}
+.dy-dot.on { background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 70%, #22d3ee), var(--accent)); color: #fff; border-color: transparent; box-shadow: 0 6px 16px -8px var(--accent); }
+.dy-dot.today { outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent); outline-offset: 1px; }
+
+.dy-stage { padding: 18px; border-radius: 20px; }
+.dy-prompt-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.dy-theme { background: color-mix(in srgb, var(--accent) 22%, transparent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); color: #fff; font-weight: 700; }
+.dy-actions { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; min-height: 24px; }
+.dy-verdict.bad { color: #fb7185; font-weight: 700; }
+
+.dy-done { text-align: center; padding: 26px 10px; }
+.dy-done-badge { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 14px; font-size: 34px; color: #fff; background: linear-gradient(150deg, #34d399, #059669); box-shadow: 0 12px 30px -10px rgba(16,185,129,0.8); }
+.dy-done h2 { margin: 0 0 8px; font-size: 24px; }
+.dy-done p { margin: 0 auto; max-width: 460px; font-size: 14.5px; line-height: 1.6; }

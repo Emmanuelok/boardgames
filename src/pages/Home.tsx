@@ -49,6 +49,7 @@ export default function Home() {
           <span className="brand-name">GrandMaster</span>
         </Link>
         <div className="row gap-sm">
+          <Link className="chip clickable hide-sm" to="/daily">📅 Daily</Link>
           <Link className="chip clickable hide-sm" to="/lobby">🌐 Lobby</Link>
           <Link className="chip clickable hide-sm" to="/puzzles">🧩 Puzzles</Link>
           <Link className="chip clickable hide-sm" to="/profile">👤 Profile</Link>
@@ -66,6 +67,7 @@ export default function Home() {
           </p>
           <div className="row gap-sm wrap">
             <button className="btn primary lg glow" onClick={() => nav('/play/chess')}>♟ Start playing</button>
+            <button className="btn lg" onClick={() => nav('/daily')}>📅 Daily challenge</button>
             <button className="btn lg" onClick={() => nav('/puzzles')}>🧩 Train tactics</button>
             <button className="btn lg" onClick={() => nav('/learn/chess')}>📖 Learn</button>
           </div>
