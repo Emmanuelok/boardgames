@@ -15,6 +15,7 @@ import ninemensmorris from '../games/ninemensmorris';
 import shogi from '../games/shogi';
 import backgammon from '../games/backgammon';
 import breakthrough from '../games/breakthrough';
+import foxAndHounds from '../games/foxandhounds';
 import linesOfAction from '../games/linesOfAction';
 import konane from '../games/konane';
 import clobber from '../games/clobber';
@@ -41,6 +42,7 @@ export const GAMES: GameDefinition[] = [
   checkers,
   draughts,
   breakthrough,
+  foxAndHounds,
   ninemensmorris,
   backgammon,
   dotsAndBoxes,
