@@ -1,12 +1,9 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, useInView } from 'framer-motion';
-import { CATALOGUE, getGame } from '../engine/registry';
-import { BOARD_THEMES, getTheme } from '../themes/boardThemes';
-import MiniBoard from '../components/MiniBoard';
+import { CATALOGUE } from '../engine/registry';
+import { BOARD_THEMES } from '../themes/boardThemes';
+import ShaderField, { WALLPAPERS } from '../components/ShaderField';
 import './Home.css';
-
-const Board3D = lazy(() => import('../components/Board3D'));
 
 const FEATURES = [
   { icon: '🧠', title: 'A tutor, not just an opponent', body: 'Every move graded Brilliant → Blunder and explained in plain English — forks, pins, hanging pieces, plans, and the stronger move you missed.' },
@@ -15,19 +12,37 @@ const FEATURES = [
   { icon: '💎', title: `${BOARD_THEMES.length}+ board themes`, body: 'Tournament wood, marble, neon, gemstone and the signature Liquid Glass — preview and switch instantly.' },
 ];
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.6, ease: [0.22, 0.7, 0.2, 1] } }),
-};
+/** One IntersectionObserver reveals every `.reveal` element as it scrolls in. */
+function useReveal() {
+  useEffect(() => {
+    const els = Array.from(document.querySelectorAll('.reveal')) as HTMLElement[];
+    if (!('IntersectionObserver' in window) || els.length === 0) {
+      els.forEach((e) => e.classList.add('in'));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    }, { rootMargin: '-6% 0px' });
+    els.forEach((e) => io.observe(e));
+    return () => io.disconnect();
+  }, []);
+}
 
 export default function Home() {
   const nav = useNavigate();
-  const chess = getGame('chess')!;
-  const heroTheme = getTheme('wood-walnut');
-  const heroState = chess.createInitialState();
+  const [wallpaper, setWallpaper] = useState<string>(() => {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('gm-wallpaper') : null;
+    return WALLPAPERS.some((w) => w.id === saved) ? (saved as string) : WALLPAPERS[0].id;
+  });
+  const pickWallpaper = (id: string) => { setWallpaper(id); try { localStorage.setItem('gm-wallpaper', id); } catch { /* ignore */ } };
+  useReveal();
 
   return (
     <div className="home">
+      <ShaderField variant={wallpaper} className="home-bg" />
+      <div className="home-veil" />
+      <div className="home-floor" />
+
       <nav className="nav">
         <Link to="/" className="brand">
           <span className="brand-mark">♞</span>
@@ -43,47 +58,48 @@ export default function Home() {
 
       <header className="hero">
         <div className="hero-copy">
-          <motion.span className="eyebrow hero-eyebrow" variants={fadeUp} initial="hidden" animate="show" custom={0}>
-            ✦ AI Game Center · 2D &amp; 3D · Step-by-step tutor
-          </motion.span>
-          <motion.h1 className="hero-title" variants={fadeUp} initial="hidden" animate="show" custom={1}>
-            Master every board game with an AI that <span className="gradient-text">teaches you</span>.
-          </motion.h1>
-          <motion.p className="hero-sub" variants={fadeUp} initial="hidden" animate="show" custom={2}>
+          <span className="eyebrow hero-eyebrow">✦ AI Game Center · 2D &amp; 3D · Step-by-step tutor</span>
+          <h1 className="hero-title">Master every board game with an AI that <span className="gradient-text">teaches you</span>.</h1>
+          <p className="hero-sub">
             Chess, Go, Backgammon, Amazons and {CATALOGUE.length - 4} more distinct games — played against an engine
             that explains the meaning behind every move, in stunning 2D and 3D, with full post-game review.
-          </motion.p>
-          <motion.div className="row gap-sm wrap" variants={fadeUp} initial="hidden" animate="show" custom={3}>
+          </p>
+          <div className="row gap-sm wrap">
             <button className="btn primary lg glow" onClick={() => nav('/play/chess')}>♟ Start playing</button>
             <button className="btn lg" onClick={() => nav('/puzzles')}>🧩 Train tactics</button>
             <button className="btn lg" onClick={() => nav('/learn/chess')}>📖 Learn</button>
-          </motion.div>
-          <motion.div className="hero-stats" variants={fadeUp} initial="hidden" animate="show" custom={4}>
+          </div>
+          <div className="hero-stats">
             <Stat n={CATALOGUE.length} l="unique games" />
             <Stat n={BOARD_THEMES.length} suffix="+" l="themes" />
             <Stat n={37} l="lessons" />
             <Stat n={2} suffix="D · 3D" l="every board" raw />
-          </motion.div>
+          </div>
         </div>
 
-        <motion.div className="hero-board" initial={{ opacity: 0, scale: 0.92, rotateY: -12 }} animate={{ opacity: 1, scale: 1, rotateY: 0 }} transition={{ duration: 0.9, ease: [0.22, 0.7, 0.2, 1] }}>
-          <div className="hero-board-frame">
-            <Suspense fallback={<MiniBoard def={chess} theme={heroTheme} />}>
-              <Board3D
-                def={chess} view={chess.getBoardView(heroState)} theme={heroTheme} turn={0}
-                flipped={false} selected={null} targets={[]} lastMove={null}
-                status={{ kind: 'playing' }} hint={null} onCell={() => {}} autoRotate
-              />
-            </Suspense>
+        <div className="wallpaper-panel glass">
+          <div className="wp-head">
+            <span className="wp-title">✦ Living wallpaper</span>
+            <span className="wp-sub">Move your cursor · click anywhere to ripple</span>
           </div>
-          <div className="hero-board-glow" />
-          <div className="hero-badge glass">♛ Live 3D</div>
-        </motion.div>
+          <div className="wp-switch">
+            {WALLPAPERS.map((w) => (
+              <button key={w.id} className={`wp-chip ${wallpaper === w.id ? 'on' : ''}`} onClick={() => pickWallpaper(w.id)}>
+                {w.label}
+              </button>
+            ))}
+          </div>
+          <p className="wp-hint">{WALLPAPERS.find((w) => w.id === wallpaper)?.hint}</p>
+        </div>
       </header>
 
-      <Section id="games" title="Choose your game" sub="Each ships with a deep course and a move-by-move AI tutor.">
+      <section id="games" className="section">
+        <div className="section-head reveal">
+          <h2>Choose your game</h2>
+          <p className="muted">Each ships with a deep course and a move-by-move AI tutor.</p>
+        </div>
         <div className="game-grid">
-          {CATALOGUE.map((entry, i) => {
+          {CATALOGUE.map((entry) => {
             const fam = entry.type === 'family' ? entry.family : null;
             const g = entry.type === 'family' ? entry.primary : entry.def;
             const name = fam ? fam.name : g.name;
@@ -91,11 +107,7 @@ export default function Home() {
             const category = fam ? fam.category : g.category;
             const tagline = fam ? fam.tagline : g.tagline;
             return (
-              <motion.div
-                className="game-card glass" key={fam ? `fam-${fam.id}` : g.id} style={{ ['--accent' as any]: g.accent }}
-                variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-8%' }} custom={(i % 4) * 0.5}
-                whileHover={{ y: -8 }}
-              >
+              <div className="game-card glass reveal" key={fam ? `fam-${fam.id}` : g.id} style={{ ['--accent' as any]: g.accent }}>
                 <div className="gc-art">
                   <span className="gc-emoji">{emoji}</span>
                   <span className="chip gc-cat">{category}</span>
@@ -110,24 +122,27 @@ export default function Home() {
                     <Link className="btn sm" to={`/learn/${g.id}`}>Learn</Link>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
-      </Section>
+      </section>
 
-      <Section id="features" title="Built to make you better" sub="Not just a place to play — a place to improve.">
+      <section id="features" className="section">
+        <div className="section-head reveal">
+          <h2>Built to make you better</h2>
+          <p className="muted">Not just a place to play — a place to improve.</p>
+        </div>
         <div className="feature-grid">
-          {FEATURES.map((f, i) => (
-            <motion.div className="feature glass-soft" key={f.title}
-              variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-8%' }} custom={i * 0.5}>
+          {FEATURES.map((f) => (
+            <div className="feature glass-soft reveal" key={f.title}>
               <span className="feat-ic">{f.icon}</span>
               <h3>{f.title}</h3>
               <p className="muted">{f.body}</p>
-            </motion.div>
+            </div>
           ))}
         </div>
-      </Section>
+      </section>
 
       <footer className="footer">
         <span className="brand"><span className="brand-mark sm">♞</span> GrandMaster</span>
@@ -137,40 +152,24 @@ export default function Home() {
   );
 }
 
-function Section({ id, title, sub, children }: { id: string; title: string; sub: string; children: React.ReactNode }) {
-  return (
-    <section id={id} className="section">
-      <motion.div className="section-head" variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-10%' }}>
-        <h2>{title}</h2>
-        <p className="muted">{sub}</p>
-      </motion.div>
-      {children}
-    </section>
-  );
-}
-
 function Stat({ n, l, suffix, raw }: { n: number; l: string; suffix?: string; raw?: boolean }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true });
-  const [val, setVal] = useState(0);
+  const [val, setVal] = useState(raw ? n : 0);
   useEffect(() => {
-    if (!inView || raw) return;
-    let start = 0;
+    if (raw) return;
     const t0 = performance.now();
     const dur = 900;
-    let raf = 0;
+    let frame = 0;
     const tick = (t: number) => {
       const p = Math.min(1, (t - t0) / dur);
       setVal(Math.round((1 - Math.pow(1 - p, 3)) * n));
-      if (p < 1) raf = requestAnimationFrame(tick);
+      if (p < 1) frame = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    void start;
-    return () => cancelAnimationFrame(raf);
-  }, [inView, n, raw]);
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [n, raw]);
   return (
-    <div className="stat" ref={ref}>
-      <div className="stat-n">{raw ? n : val}{suffix}</div>
+    <div className="stat">
+      <div className="stat-n">{val}{suffix}</div>
       <div className="stat-l">{l}</div>
     </div>
   );
