@@ -27,6 +27,7 @@ import pentago from '../games/pentago';
 import cohesion from '../games/cohesion';
 import quarto from '../games/quarto';
 import tally from '../games/tally';
+import squava from '../games/squava';
 import orderAndChaos from '../games/orderandchaos';
 import ultimate from '../games/ultimate';
 
@@ -51,6 +52,7 @@ export const GAMES: GameDefinition[] = [
   pentago,
   quarto,
   tally,
+  squava,
   orderAndChaos,
   ultimate,
   cohesion,
