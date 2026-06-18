@@ -16,6 +16,15 @@ export interface LogEntry {
   analyzing?: boolean;
 }
 
+/** The player's preferred difficulty, remembered across sessions (set in onboarding / the toolbar). */
+function loadDifficulty(): Difficulty {
+  try {
+    const d = localStorage.getItem('gm-difficulty');
+    if (d === 'tutor' || d === 'easy' || d === 'medium' || d === 'hard' || d === 'master') return d;
+  } catch { /* ignore */ }
+  return 'medium';
+}
+
 interface Snapshot { state: any; log: LogEntry[]; lastMove: LastMove | null; }
 type LastMove = { from?: number; to: number; affected?: number[] };
 export type Mode = 'ai' | 'pass' | 'online';
@@ -255,7 +264,7 @@ export const useGameStore = create<State>((set, get) => {
     hintMove: null, hintText: null, promotion: null, toast: null,
     liveEval: null, liveEvalLoading: false, liveThreats: [],
     net: null, onlineStatus: 'idle', onlineCode: '', onlineColor: 0, chat: [],
-    mode: 'ai', humanColor: 0, difficulty: 'medium', view: '2d',
+    mode: 'ai', humanColor: 0, difficulty: loadDifficulty(), view: '2d',
     themeId: DEFAULT_THEME_ID, autoTutor: true, flipped: false,
 
     newGame(gameId) {
@@ -453,7 +462,7 @@ export const useGameStore = create<State>((set, get) => {
     },
     clearHint() { set({ hintMove: null, hintText: null }); },
 
-    setDifficulty(d) { set({ difficulty: d }); },
+    setDifficulty(d) { set({ difficulty: d }); try { localStorage.setItem('gm-difficulty', d); } catch { /* ignore */ } },
     setMode(m) { set({ mode: m }); },
     setHumanColor(c) { set({ humanColor: c }); },
     setView(v) { set({ view: v }); },

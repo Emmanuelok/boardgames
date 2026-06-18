@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { CATALOGUE } from '../engine/registry';
 import { BOARD_THEMES } from '../themes/boardThemes';
 import ShaderField, { WALLPAPERS } from '../components/ShaderField';
+import Onboarding from '../components/Onboarding';
 import './Home.css';
 
 const FEATURES = [
@@ -51,6 +52,7 @@ export default function Home() {
       <ShaderField variant={wallpaper} className="home-bg" />
       <div className="home-veil" />
       <div className="home-floor" />
+      <Onboarding />
 
       <nav className="nav">
         <Link to="/" className="brand">
