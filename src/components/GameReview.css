@@ -1,4 +1,11 @@
 .review { display: flex; flex-direction: column; gap: 14px; }
+.review.fade-in { animation: rv-rise 0.5s cubic-bezier(0.22,0.7,0.2,1) both; }
+@keyframes rv-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.review-emoji { animation: rv-pop 0.6s cubic-bezier(0.34,1.56,0.64,1) both; }
+@keyframes rv-pop { 0% { transform: scale(0.2) rotate(-12deg); opacity: 0; } 60% { transform: scale(1.18) rotate(4deg); } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+.acc-card.win { animation: rv-glow 1.8s ease-in-out 0.3s infinite; }
+@keyframes rv-glow { 50% { box-shadow: 0 0 22px -6px rgba(52,211,153,0.6); border-color: rgba(52,211,153,0.85); } }
+@media (prefers-reduced-motion: reduce) { .review.fade-in, .review-emoji, .acc-card.win { animation: none; } }
 .review-head { display: flex; align-items: center; gap: 12px; }
 .review-emoji { font-size: 30px; }
 

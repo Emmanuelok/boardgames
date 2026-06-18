@@ -49,7 +49,7 @@
 .pf-hi-value { font-size: 17px; }
 
 /* Training cards */
-.pf-train { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pf-train { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
 @media (max-width: 560px) { .pf-train { grid-template-columns: 1fr; } }
 .pf-train-card { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 16px; transition: transform 0.18s ease, border-color 0.18s ease; }
 .pf-train-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 55%, transparent); }

@@ -10,6 +10,7 @@ import { useProfile } from '../profile/profile';
 import { playSound, resumeAudio, isMuted, toggleMuted } from '../audio/sound';
 import CoachPanel, { type CoachMsg } from './CoachPanel';
 import GameReview from './GameReview';
+import { summarize, saveRecord } from '../engine/reviewSummary';
 import type { LogEntry } from '../store/useGameStore';
 import './OrderChaosGame.css';
 
@@ -42,6 +43,7 @@ export default function OrderChaosGame({ aiDifficulty = 'medium' }: { aiDifficul
     setRecorded(true);
     playSound(w === side ? 'win' : 'lose');
     recordResult('order-and-chaos', w === side ? 'win' : 'loss', aiDifficulty as any);
+    if (review.length >= 4) try { saveRecord(summarize(ocdef, review, ocdef.getStatus(s), side)); } catch { /* ignore */ }
   }, [over, w, side, recorded, recordResult, aiDifficulty]);
 
   // The AI plays whichever role the human did not pick.

@@ -9,6 +9,7 @@ import { useProfile } from '../profile/profile';
 import { playSound, resumeAudio, isMuted, toggleMuted } from '../audio/sound';
 import CoachPanel, { type CoachMsg } from './CoachPanel';
 import GameReview from './GameReview';
+import { summarize, saveRecord } from '../engine/reviewSummary';
 import type { LogEntry } from '../store/useGameStore';
 import './PentagoGame.css';
 
@@ -34,6 +35,7 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
     setRecorded(true);
     playSound(res.winner === 0 ? 'win' : res.winner === 1 ? 'lose' : 'draw');
     if (res.winner !== null) recordResult('pentago', res.winner === 0 ? 'win' : 'loss', aiDifficulty as any);
+    if (review.length >= 4) try { saveRecord(summarize(pdef, review, pdef.getStatus(s), 0)); } catch { /* ignore */ }
   }, [over, res.winner, recorded, recordResult, aiDifficulty]);
 
   // AI (Blue) does place + rotate as one move.

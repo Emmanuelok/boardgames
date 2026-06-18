@@ -1,0 +1,37 @@
+.reviewhub { max-width: 860px; margin: 0 auto; padding: 16px 18px 50px; }
+.rv-top { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.rv-top .gs-title { display: flex; align-items: center; gap: 10px; flex: 1; }
+.rv-top .gs-emoji { font-size: 26px; }
+
+.rv-empty { text-align: center; padding: 48px 24px; border-radius: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.rv-empty h2 { margin: 6px 0 0; }
+.rv-empty p { margin: 0 0 8px; max-width: 420px; }
+
+.rv-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 14px; }
+@media (max-width: 560px) { .rv-list { grid-template-columns: 1fr; } }
+.rv-card { padding: 6px; overflow: hidden; transition: border-color 0.2s ease; }
+.rv-card.open { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+
+.rv-card-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; background: none; border: none; cursor: pointer; text-align: left; color: var(--ink); }
+.rv-emoji { font-size: 28px; }
+.rv-id { flex: 1; display: flex; flex-direction: column; }
+.rv-id strong { font-size: 16px; }
+.rv-result { font-size: 12px; font-weight: 800; padding: 3px 11px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.05em; }
+.rv-result.win { color: #052e1a; background: #34d399; }
+.rv-result.loss { color: #fff; background: #f8717133; border: 1px solid #f87171; }
+.rv-result.draw { color: var(--ink-dim); background: rgba(255,255,255,0.08); }
+
+.rv-mid { padding: 0 12px 10px; }
+.rv-spark { width: 100%; height: 50px; display: block; }
+.rv-spark.empty { background: rgba(255,255,255,0.03); border-radius: 8px; }
+.rv-acc { display: flex; gap: 8px; margin-top: 8px; }
+.rv-acc-chip { font-size: 12px; color: var(--ink-dim); background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+.rv-acc-chip b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.rv-detail { padding: 8px 14px 14px; border-top: 1px solid var(--line); margin-top: 2px; }
+.rv-km-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-faint); margin: 6px 0 8px; }
+.rv-km { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
+.rv-km-n { color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.rv-km-move { font-family: var(--font-mono, monospace); font-weight: 600; }
+.rv-km-band { font-size: 12px; font-weight: 700; }
+.rv-again { margin-top: 12px; }

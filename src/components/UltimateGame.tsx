@@ -9,6 +9,7 @@ import { useProfile } from '../profile/profile';
 import { playSound, resumeAudio, isMuted, toggleMuted } from '../audio/sound';
 import CoachPanel, { type CoachMsg } from './CoachPanel';
 import GameReview from './GameReview';
+import { summarize, saveRecord } from '../engine/reviewSummary';
 import type { LogEntry } from '../store/useGameStore';
 import './UltimateGame.css';
 
@@ -38,6 +39,7 @@ export default function UltimateGame({ aiDifficulty = 'medium' }: { aiDifficulty
     setRecorded(true);
     playSound(w === 0 ? 'win' : w === 1 ? 'lose' : 'draw');
     if (w === 0 || w === 1) recordResult('ultimate', w === 0 ? 'win' : 'loss', aiDifficulty as any);
+    if (review.length >= 4) try { saveRecord(summarize(udef, review, udef.getStatus(s), 0)); } catch { /* ignore */ }
   }, [over, w, recorded, recordResult, aiDifficulty]);
 
   useEffect(() => {

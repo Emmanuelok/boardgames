@@ -118,6 +118,14 @@ export default function Profile() {
             </div>
             <span className="pf-train-go">→</span>
           </Link>
+          <Link to="/reviews" className="pf-train-card glass-soft">
+            <span className="pf-train-ic">🗂</span>
+            <div className="col">
+              <strong>Game Reviews</strong>
+              <span className="faint" style={{ fontSize: 12.5 }}>Revisit recent games — accuracy & eval</span>
+            </div>
+            <span className="pf-train-go">→</span>
+          </Link>
         </div>
       </section>
 

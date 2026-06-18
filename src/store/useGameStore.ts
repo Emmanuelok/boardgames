@@ -7,6 +7,7 @@ import { playSound, resumeAudio, type SoundName } from '../audio/sound';
 import { useProfile } from '../profile/profile';
 import { OnlineSession, type NetMsg, type NetStatus } from '../net/online';
 import { DEFAULT_THEME_ID } from '../themes/boardThemes';
+import { summarize, saveRecord } from '../engine/reviewSummary';
 
 export interface LogEntry {
   ply: number;
@@ -142,6 +143,11 @@ export const useGameStore = create<State>((set, get) => {
       const hc = get().humanColor;
       const result = status.kind === 'draw' ? 'draw' : status.winner === hc ? 'win' : 'loss';
       try { useProfile.getState().recordResult(get().gameId!, result, get().difficulty); } catch { /* ignore */ }
+      // Persist a post-game review record once the final tutor notes have settled.
+      const def = get().def;
+      if (def && get().log.length >= 4) {
+        setTimeout(() => { try { saveRecord(summarize(def, get().log, get().status, hc)); } catch { /* ignore */ } }, 1100);
+      }
     }
   };
 
