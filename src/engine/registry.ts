@@ -30,6 +30,7 @@ import tally from '../games/tally';
 import squava from '../games/squava';
 import orderAndChaos from '../games/orderandchaos';
 import ultimate from '../games/ultimate';
+import surakarta from '../games/surakarta';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -55,6 +56,7 @@ export const GAMES: GameDefinition[] = [
   squava,
   orderAndChaos,
   ultimate,
+  surakarta,
   cohesion,
   reversi,
   linesOfAction,

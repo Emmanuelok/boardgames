@@ -1,0 +1,27 @@
+.surakarta { gap: 14px; align-items: center; }
+.sk-status { min-height: 28px; display: flex; align-items: center; justify-content: center; }
+.sk-role { font-size: 14.5px; font-weight: 700; color: var(--ink-dim); text-align: center; }
+.sk-role.win { color: #34d399; font-family: var(--font-display); font-size: 19px; }
+.sk-role.lose { color: #fb7185; font-family: var(--font-display); font-size: 19px; }
+
+.sk-board-wrap {
+  width: 100%; max-width: min(70vh, 100%); margin: 0 auto; padding: 10px; border-radius: 20px;
+  background: radial-gradient(120% 120% at 50% 0%, rgba(212,160,23,0.12), rgba(0,0,0,0.25));
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.sk-svg { width: 100%; height: auto; display: block; touch-action: manipulation; }
+
+.sk-line { stroke: rgba(212,160,23,0.32); stroke-width: 2; stroke-linecap: round; }
+.sk-loop { stroke: rgba(212,160,23,0.55); stroke-width: 2.5; stroke-linecap: round; }
+.sk-dot { fill: rgba(212,160,23,0.5); }
+.sk-last { stroke: rgba(255,255,255,0.35); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 4 5; }
+
+.sk-piece { stroke: rgba(0,0,0,0.45); stroke-width: 1.5; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); transition: r 0.12s ease; }
+.sk-piece.sel { stroke: #fff; }
+.sk-selring { stroke: #fff; stroke-width: 2.5; opacity: 0.9; }
+.sk-movedot { fill: rgba(255,255,255,0.6); animation: sk-pulse 1.3s ease-in-out infinite; }
+.sk-captring { stroke: #f87171; stroke-width: 3; animation: sk-cap 1s ease-in-out infinite; }
+@keyframes sk-pulse { 50% { fill: rgba(255,255,255,0.9); } }
+@keyframes sk-cap { 50% { stroke: #fca5a5; stroke-width: 4; } }
+
+.sk-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
