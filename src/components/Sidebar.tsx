@@ -1,4 +1,5 @@
 import { NavLink, Link } from 'react-router-dom';
+import { useProgression, levelFromXp } from '../progression/progression';
 import './Sidebar.css';
 
 const GROUPS: { title: string; items: { to: string; icon: string; label: string; end?: boolean }[] }[] = [
@@ -13,11 +14,17 @@ const GROUPS: { title: string; items: { to: string; icon: string; label: string;
   ] },
   { title: 'You', items: [
     { to: '/reviews', icon: '🗂', label: 'Reviews' },
+    { to: '/shop', icon: '🛍', label: 'Shop' },
     { to: '/profile', icon: '👤', label: 'Profile' },
   ] },
 ];
 
 export default function Sidebar() {
+  const xp = useProgression((s) => s.xp);
+  const coins = useProgression((s) => s.coins);
+  const { level, into, span } = levelFromXp(xp);
+  const pct = Math.round((into / span) * 100);
+
   return (
     <aside className="sidebar">
       <Link to="/" className="sb-brand">
@@ -38,6 +45,14 @@ export default function Sidebar() {
           </div>
         ))}
       </nav>
+
+      <Link to="/profile" className="sb-prog" title={`Level ${level} · ${into}/${span} XP`}>
+        <div className="sb-prog-top">
+          <span className="sb-lvl">Lv {level}</span>
+          <span className="sb-coins">🪙 {coins.toLocaleString()}</span>
+        </div>
+        <div className="sb-xp"><div className="sb-xp-fill" style={{ width: `${pct}%` }} /></div>
+      </Link>
 
       <Link to="/play/chess" className="btn primary sb-cta">♟ Quick play</Link>
     </aside>

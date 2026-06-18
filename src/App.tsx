@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import Sidebar from './components/Sidebar';
+import RewardToast from './components/RewardToast';
 
 // Every page beyond the landing pulls in the game registry (all engines, AIs and
 // tutorials), so we code-split them: the shell + landing load a tiny bundle and
@@ -14,6 +15,7 @@ const Openings = lazy(() => import('./pages/Openings'));
 const ReviewHub = lazy(() => import('./pages/ReviewHub'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Lobby = lazy(() => import('./pages/Lobby'));
+const Shop = lazy(() => import('./pages/Shop'));
 
 export default function App() {
   const location = useLocation();
@@ -40,12 +42,14 @@ export default function App() {
                 <Route path="/reviews" element={<ReviewHub />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/lobby" element={<Lobby />} />
+                <Route path="/shop" element={<Shop />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </div>
           </Suspense>
         </main>
       </div>
+      <RewardToast />
     </>
   );
 }

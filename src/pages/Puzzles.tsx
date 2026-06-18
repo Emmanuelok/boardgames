@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useProgression } from '../progression/progression';
 import { ALL_PUZZLES, PUZZLE_GAME_IDS, shuffle } from '../puzzles/allPuzzles';
 import { getGame } from '../engine/registry';
 import { getTheme } from '../themes/boardThemes';
@@ -33,6 +34,7 @@ export default function Puzzles() {
     const ns = streak + 1;
     setStreak(ns); setResult('solved');
     save({ solved: stats.solved + 1, best: Math.max(stats.best, ns) });
+    try { useProgression.getState().recordPuzzle(ns); } catch { /* ignore */ }
   };
   const onFailed = () => {
     if (result !== 'idle') return;

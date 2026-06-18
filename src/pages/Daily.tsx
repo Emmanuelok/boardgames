@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useProgression } from '../progression/progression';
 import { Link } from 'react-router-dom';
 import { ALL_PUZZLES } from '../puzzles/allPuzzles';
 import { getGame } from '../engine/registry';
@@ -53,6 +54,7 @@ export default function Daily() {
     if (store.lastDate === today) return; // already counted today
     const streak = store.lastDate === yesterday ? store.streak + 1 : 1;
     save({ lastDate: today, streak, best: Math.max(store.best, streak), total: store.total + 1, days: Array.from(new Set([...store.days, today])).slice(-60) });
+    try { useProgression.getState().recordDaily(streak); } catch { /* ignore */ }
   };
   const onFailed = () => { if (result === 'idle') { playSound('illegal'); setResult('failed'); } };
 
