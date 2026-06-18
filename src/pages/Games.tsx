@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CATALOGUE } from '../engine/registry';
 import type { GameDefinition } from '../engine/types';
@@ -8,16 +8,36 @@ import './Games.css';
 
 const THUMB_THEME = getTheme('tournament-green'); // a bright, high-contrast board reads well at thumbnail size
 
+/** Mount the heavy board preview only once the card nears the viewport. */
+function useInView<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || seen) return;
+    if (!('IntersectionObserver' in window)) { setSeen(true); return; }
+    const io = new IntersectionObserver((es) => { if (es[0]?.isIntersecting) { setSeen(true); io.disconnect(); } }, { rootMargin: '250px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen]);
+  return [ref, seen] as const;
+}
+
 /** A real preview of the game: its starting board, or an accent tile for the
  *  few games whose board isn't a simple grid (Backgammon, Dots, Quarto, Pentago). */
 function GameThumb({ def }: { def: GameDefinition }) {
+  const [ref, seen] = useInView<HTMLDivElement>();
   const renderable = useMemo(() => {
     try { return def.getBoardView(def.createInitialState()).cells.length > 1; } catch { return false; }
   }, [def]);
   if (!renderable) {
-    return <div className="gt-fallback" style={{ ['--accent' as any]: def.accent }}><span className="gt-emoji">{def.emoji}</span></div>;
+    return <div ref={ref} className="gt-fallback" style={{ ['--accent' as any]: def.accent }}><span className="gt-emoji">{def.emoji}</span></div>;
   }
-  return <div className="gt-fit"><MiniBoard def={def} theme={THUMB_THEME} /></div>;
+  return (
+    <div ref={ref} className="gt-fit">
+      {seen ? <MiniBoard def={def} theme={THUMB_THEME} /> : <span className="gt-emoji ghost">{def.emoji}</span>}
+    </div>
+  );
 }
 
 function useReveal() {

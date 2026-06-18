@@ -1,15 +1,20 @@
+import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Home from './pages/Home';
-import Games from './pages/Games';
-import GameScreen from './pages/GameScreen';
-import Learn from './pages/Learn';
-import Puzzles from './pages/Puzzles';
-import Daily from './pages/Daily';
-import Openings from './pages/Openings';
-import ReviewHub from './pages/ReviewHub';
-import Profile from './pages/Profile';
-import Lobby from './pages/Lobby';
+
+// Every page beyond the landing pulls in the game registry (all engines, AIs and
+// tutorials), so we code-split them: the landing loads a tiny bundle and the rest
+// arrives on navigation.
+const Games = lazy(() => import('./pages/Games'));
+const GameScreen = lazy(() => import('./pages/GameScreen'));
+const Learn = lazy(() => import('./pages/Learn'));
+const Puzzles = lazy(() => import('./pages/Puzzles'));
+const Daily = lazy(() => import('./pages/Daily'));
+const Openings = lazy(() => import('./pages/Openings'));
+const ReviewHub = lazy(() => import('./pages/ReviewHub'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Lobby = lazy(() => import('./pages/Lobby'));
 
 export default function App() {
   const location = useLocation();
@@ -27,19 +32,21 @@ export default function App() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.22, 0.7, 0.2, 1] }}
       >
-        <Routes location={location}>
-          <Route path="/" element={<Home />} />
-          <Route path="/games" element={<Games />} />
-          <Route path="/play/:gameId" element={<GameScreen />} />
-          <Route path="/learn/:gameId" element={<Learn />} />
-          <Route path="/puzzles" element={<Puzzles />} />
-          <Route path="/daily" element={<Daily />} />
-          <Route path="/openings" element={<Openings />} />
-          <Route path="/reviews" element={<ReviewHub />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/lobby" element={<Lobby />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={<div className="route-loading">Loading…</div>}>
+          <Routes location={location}>
+            <Route path="/" element={<Home />} />
+            <Route path="/games" element={<Games />} />
+            <Route path="/play/:gameId" element={<GameScreen />} />
+            <Route path="/learn/:gameId" element={<Learn />} />
+            <Route path="/puzzles" element={<Puzzles />} />
+            <Route path="/daily" element={<Daily />} />
+            <Route path="/openings" element={<Openings />} />
+            <Route path="/reviews" element={<ReviewHub />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/lobby" element={<Lobby />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </motion.div>
     </>
   );

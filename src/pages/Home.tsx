@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CATALOGUE } from '../engine/registry';
+import { GAME_COUNT, SAMPLE_EMOJIS } from '../engine/catalogueMeta';
 import { BOARD_THEMES } from '../themes/boardThemes';
 import ShaderField, { WALLPAPERS } from '../components/ShaderField';
 import Onboarding from '../components/Onboarding';
@@ -76,7 +76,7 @@ export default function Home() {
           <span className="eyebrow hero-eyebrow">✦ AI Game Center · 2D &amp; 3D · Step-by-step tutor</span>
           <h1 className="hero-title">Master every board game with an AI that <span className="gradient-text">teaches you</span>.</h1>
           <p className="hero-sub">
-            Chess, Go, Backgammon, Amazons and {CATALOGUE.length - 4} more distinct games — played against an engine
+            Chess, Go, Backgammon, Amazons and {GAME_COUNT - 4} more distinct games — played against an engine
             that explains the meaning behind every move, in stunning 2D and 3D, with full post-game review.
           </p>
           <div className="row gap-sm wrap">
@@ -88,7 +88,7 @@ export default function Home() {
             <button className="btn lg" onClick={() => nav('/learn/chess')}>📖 Learn</button>
           </div>
           <div className="hero-stats">
-            <Stat n={CATALOGUE.length} l="unique games" />
+            <Stat n={GAME_COUNT} l="unique games" />
             <Stat n={BOARD_THEMES.length} suffix="+" l="themes" />
             <Stat n={37} l="lessons" />
             <Stat n={2} suffix="D · 3D" l="every board" raw />
@@ -114,7 +114,7 @@ export default function Home() {
       <section id="games" className="section">
         <div className="gcta glass reveal">
           <div className="gcta-copy">
-            <h2>{CATALOGUE.length} games, one tutor</h2>
+            <h2>{GAME_COUNT} games, one tutor</h2>
             <p className="muted">From Chess, Go and Backgammon to Surakarta and a handful of our own originals — each ships with a step-by-step course, a move-by-move AI tutor, and full post-game review.</p>
             <div className="row gap-sm wrap">
               <button className="btn primary lg glow" onClick={() => nav('/games')}>🎲 Browse all games</button>
@@ -122,8 +122,8 @@ export default function Home() {
             </div>
           </div>
           <div className="gcta-emojis" aria-hidden="true">
-            {CATALOGUE.slice(0, 12).map((e, i) => (
-              <span key={i} className="gcta-chip">{e.type === 'family' ? e.family.emoji : e.def.emoji}</span>
+            {SAMPLE_EMOJIS.map((e, i) => (
+              <span key={i} className="gcta-chip">{e}</span>
             ))}
           </div>
         </div>

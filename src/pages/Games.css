@@ -15,6 +15,7 @@
   radial-gradient(110% 110% at 50% 25%, color-mix(in srgb, var(--accent) 78%, #000), color-mix(in srgb, var(--accent) 22%, #0b0e16) 72%),
   repeating-linear-gradient(135deg, rgba(255,255,255,0.07) 0 12px, transparent 12px 24px); }
 .gt-emoji { font-size: 76px; filter: drop-shadow(0 6px 16px rgba(0,0,0,0.55)); }
+.gt-emoji.ghost { font-size: 54px; opacity: 0.35; }
 .game-card:hover .gt-emoji { transform: scale(1.08) rotate(-4deg); transition: transform 0.25s ease; }
 
 .gc-cat { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); border-color: rgba(255,255,255,0.2); color: #fff; backdrop-filter: blur(6px); }
