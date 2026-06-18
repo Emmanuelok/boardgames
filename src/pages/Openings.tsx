@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { OPENINGS, type OpeningInfo } from '../games/chess/openings';
 import chess from '../games/chess';
 import MiniBoard from '../components/MiniBoard';
+import OpeningTrainer from '../components/OpeningTrainer';
 import { getTheme } from '../themes/boardThemes';
 import './Openings.css';
 
@@ -33,6 +34,7 @@ export default function Openings() {
   const [selected, setSelected] = useState<OpeningInfo>(() => OPENINGS.find((o) => o.name.includes('Ruy López (Spanish')) ?? OPENINGS[0]);
   const [ply, setPly] = useState(selected.moves.length);
   const [playing, setPlaying] = useState(false);
+  const [training, setTraining] = useState(false);
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -82,10 +84,14 @@ export default function Openings() {
           </div>
         </aside>
 
+        {training ? (
+          <OpeningTrainer opening={selected} theme={theme} onExit={() => setTraining(false)} />
+        ) : (
         <section className="op-detail glass">
           <div className="op-detail-head">
             <span className="chip op-chip">{selected.eco}</span>
             <h2>{selected.name}</h2>
+            <button className="btn sm primary op-practice" onClick={() => setTraining(true)}>🎓 Practice</button>
           </div>
           <div className="op-board">
             <MiniBoard def={chess as any} setup={fens[clamped]} theme={theme} highlight={last[clamped] ?? []} />
@@ -111,6 +117,7 @@ export default function Openings() {
           {selected.idea && <p className="op-idea">💡 {selected.idea}</p>}
           <Link to="/play/chess" className="btn primary op-play">Play this out vs the engine →</Link>
         </section>
+        )}
       </div>
     </div>
   );

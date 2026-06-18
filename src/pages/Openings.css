@@ -24,6 +24,7 @@
 .op-detail { padding: 20px; }
 .op-detail-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .op-detail-head h2 { margin: 0; font-size: 22px; }
+.op-practice { margin-left: auto; }
 .op-chip { background: rgba(124,92,255,0.18); border-color: rgba(124,92,255,0.4); color: #c4b5fd; font-weight: 800; }
 .op-board { max-width: 420px; margin: 0 auto; }
 

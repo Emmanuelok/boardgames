@@ -1,0 +1,21 @@
+.ot { display: flex; flex-direction: column; }
+.ot-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.ot-name { font-size: 18px; }
+.ot-note { color: var(--ink-dim); font-size: 14px; line-height: 1.6; }
+
+.ot-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.ot-side { display: flex; gap: 6px; }
+.ot-side-btn { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,0.04); color: var(--ink-dim); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.16s ease; }
+.ot-side-btn.on { border-color: var(--accent); color: #fff; background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.ot-score { font-size: 14px; font-weight: 700; color: #34d399; font-variant-numeric: tabular-nums; }
+.ot-miss { color: var(--ink-faint); font-weight: 600; }
+
+.ot-lead { text-align: center; font-size: 14px; color: var(--ink-dim); margin-bottom: 8px; }
+.ot-reply { text-align: center; font-size: 14px; font-weight: 700; color: var(--accent-2); margin-bottom: 8px; animation: ot-pop 0.3s ease; }
+@keyframes ot-pop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.ot-hint { text-align: center; font-size: 12px; margin: 10px 0 0; }
+
+.ot-done { text-align: center; padding: 18px 8px; }
+.ot-done-badge { width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 12px; display: grid; place-items: center; font-size: 30px; background: linear-gradient(150deg, #34d399, #059669); box-shadow: 0 12px 30px -10px rgba(16,185,129,0.7); }
+.ot-done h3 { margin: 0 0 6px; font-size: 22px; }
+.ot-done p { margin: 0 auto 16px; max-width: 380px; font-size: 14px; line-height: 1.55; }
