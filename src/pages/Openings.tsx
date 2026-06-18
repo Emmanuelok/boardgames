@@ -62,7 +62,6 @@ export default function Openings() {
   return (
     <div className="openings">
       <header className="op-top">
-        <Link to="/" className="btn ghost sm">← Hub</Link>
         <div className="gs-title"><span className="gs-emoji">📖</span><div className="col"><strong>Openings Explorer</strong><span className="faint" style={{ fontSize: 12 }}>{OPENINGS.length} named openings · step through every line</span></div></div>
         <div className="row gap-xs">
           {!gauntlet && <button className="btn sm" onClick={() => setGauntlet(true)}>⚡ Gauntlet</button>}

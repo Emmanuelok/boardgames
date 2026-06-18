@@ -42,7 +42,6 @@ export default function LobbyPage() {
   return (
     <div className="lobby">
       <header className="lobby-top">
-        <Link to="/" className="btn ghost sm">← Hub</Link>
         <div className="gs-title"><span className="gs-emoji">🌐</span><div className="col"><strong>Live Lobby</strong><span className="faint" style={{ fontSize: 12 }}>Find players online &amp; challenge them</span></div></div>
         <span className={`lobby-status ${status}`}>● {status === 'online' ? 'Online' : status === 'connecting' ? 'Connecting…' : status === 'error' ? 'Offline (no broker)' : 'Offline'}</span>
       </header>

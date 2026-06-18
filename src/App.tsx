@@ -1,12 +1,11 @@
 import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import Home from './pages/Home';
+import Sidebar from './components/Sidebar';
 
 // Every page beyond the landing pulls in the game registry (all engines, AIs and
-// tutorials), so we code-split them: the landing loads a tiny bundle and the rest
-// arrives on navigation.
-const Games = lazy(() => import('./pages/Games'));
+// tutorials), so we code-split them: the shell + landing load a tiny bundle and
+// the rest arrives on navigation.
 const GameScreen = lazy(() => import('./pages/GameScreen'));
 const Learn = lazy(() => import('./pages/Learn'));
 const Puzzles = lazy(() => import('./pages/Puzzles'));
@@ -24,30 +23,29 @@ export default function App() {
       <div className="blob a" />
       <div className="blob b" />
       <div className="blob c" />
-      <div className="blob d" />
       <div className="grain" />
-      <motion.div
-        key={location.pathname}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: [0.22, 0.7, 0.2, 1] }}
-      >
-        <Suspense fallback={<div className="route-loading">Loading…</div>}>
-          <Routes location={location}>
-            <Route path="/" element={<Home />} />
-            <Route path="/games" element={<Games />} />
-            <Route path="/play/:gameId" element={<GameScreen />} />
-            <Route path="/learn/:gameId" element={<Learn />} />
-            <Route path="/puzzles" element={<Puzzles />} />
-            <Route path="/daily" element={<Daily />} />
-            <Route path="/openings" element={<Openings />} />
-            <Route path="/reviews" element={<ReviewHub />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/lobby" element={<Lobby />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-      </motion.div>
+      <div className="shell">
+        <Sidebar />
+        <main className="shell-main">
+          <Suspense fallback={<div className="route-loading">Loading…</div>}>
+            <div className="route-fade" key={location.pathname}>
+              <Routes location={location}>
+                <Route path="/" element={<Home />} />
+                <Route path="/games" element={<Navigate to="/" replace />} />
+                <Route path="/play/:gameId" element={<GameScreen />} />
+                <Route path="/learn/:gameId" element={<Learn />} />
+                <Route path="/puzzles" element={<Puzzles />} />
+                <Route path="/daily" element={<Daily />} />
+                <Route path="/openings" element={<Openings />} />
+                <Route path="/reviews" element={<ReviewHub />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/lobby" element={<Lobby />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </div>
+          </Suspense>
+        </main>
+      </div>
     </>
   );
 }

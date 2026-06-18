@@ -53,7 +53,6 @@ export default function Profile() {
   return (
     <div className="profile">
       <header className="pf-top">
-        <Link to="/" className="btn ghost sm">← Hub</Link>
         <div className="row gap-xs">
           <Link to="/daily" className="btn sm">📅 Daily</Link>
           <Link to="/puzzles" className="btn sm">🧩 Puzzles</Link>

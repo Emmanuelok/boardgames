@@ -71,7 +71,6 @@ export default function Daily() {
   return (
     <div className="daily">
       <header className="dy-top">
-        <Link to="/" className="btn ghost sm">← Hub</Link>
         <div className="gs-title"><span className="gs-emoji">📅</span><div className="col"><strong>Daily Challenge</strong><span className="faint" style={{ fontSize: 12 }}>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span></div></div>
         <div className="dy-stats">
           <Stat n={liveStreak} l="day streak" hot={liveStreak >= 3} icon="🔥" />
