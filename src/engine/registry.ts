@@ -16,6 +16,7 @@ import shogi from '../games/shogi';
 import backgammon from '../games/backgammon';
 import breakthrough from '../games/breakthrough';
 import foxAndHounds from '../games/foxandhounds';
+import alquerque from '../games/alquerque';
 import linesOfAction from '../games/linesOfAction';
 import konane from '../games/konane';
 import clobber from '../games/clobber';
@@ -41,6 +42,7 @@ export const GAMES: GameDefinition[] = [
   tafl,
   checkers,
   draughts,
+  alquerque,
   breakthrough,
   foxAndHounds,
   ninemensmorris,
