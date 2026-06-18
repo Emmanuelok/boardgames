@@ -5,6 +5,7 @@ import GameScreen from './pages/GameScreen';
 import Learn from './pages/Learn';
 import Puzzles from './pages/Puzzles';
 import Daily from './pages/Daily';
+import Openings from './pages/Openings';
 import Profile from './pages/Profile';
 import Lobby from './pages/Lobby';
 
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/learn/:gameId" element={<Learn />} />
           <Route path="/puzzles" element={<Puzzles />} />
           <Route path="/daily" element={<Daily />} />
+          <Route path="/openings" element={<Openings />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/lobby" element={<Lobby />} />
           <Route path="*" element={<Navigate to="/" replace />} />

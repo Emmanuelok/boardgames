@@ -61,6 +61,7 @@ export default function Home() {
         </Link>
         <div className="row gap-sm">
           <Link className="chip clickable hide-sm" to="/daily">📅 Daily</Link>
+          <Link className="chip clickable hide-sm" to="/openings">📖 Openings</Link>
           <Link className="chip clickable hide-sm" to="/lobby">🌐 Lobby</Link>
           <Link className="chip clickable hide-sm" to="/puzzles">🧩 Puzzles</Link>
           <Link className="chip clickable hide-sm" to="/profile">👤 Profile</Link>

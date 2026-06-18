@@ -16,7 +16,7 @@ export interface OpeningInfo {
 
 // Ordered loosely from broad systems to specific variations; the matcher picks
 // the longest matching prefix regardless of order.
-const OPENINGS: OpeningInfo[] = [
+export const OPENINGS: OpeningInfo[] = [
   // ---- 1.e4 ----
   { eco: 'B00', name: "King's Pawn Opening", moves: ['e4'], idea: 'Stake a claim in the centre and free the bishop and queen.' },
   { eco: 'C20', name: "King's Pawn Game", moves: ['e4', 'e5'], idea: 'The classical, symmetrical reply — both sides fight for d4/f4 and rapid development.' },
