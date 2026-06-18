@@ -24,11 +24,37 @@
 .link { color: var(--accent-2); }
 
 .pf-games { padding: 8px; }
-.pf-grow { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; }
+.pf-grow { display: grid; grid-template-columns: 1fr 108px auto auto; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; }
 .pf-grow:nth-child(odd) { background: rgba(255,255,255,0.03); }
 .pf-gname { font-weight: 600; }
 .pf-record { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--ink-dim); }
 .pf-record .good { color: var(--good); } .pf-record .bad { color: var(--bad); }
+.pf-wr { display: flex; align-items: center; gap: 8px; }
+.pf-wr-bar { flex: 1; height: 7px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; }
+.pf-wr-bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), #34d399); }
+.pf-wr-n { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink-dim); min-width: 30px; text-align: right; }
+@media (max-width: 560px) { .pf-grow { grid-template-columns: 1fr auto auto; } .pf-wr { display: none; } }
+
+/* Rating progress to next rank */
+.pf-progress { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; margin-top: 8px; max-width: 320px; }
+.pf-progress-bar { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.6s cubic-bezier(0.22,0.7,0.2,1); }
+.pf-progress-l { font-size: 11.5px; color: var(--ink-faint); margin-top: 4px; }
+
+/* Highlight cards */
+.pf-highlights { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 24px; }
+@media (max-width: 560px) { .pf-highlights { grid-template-columns: 1fr; } }
+.pf-hi { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; }
+.pf-hi-ic { font-size: 28px; }
+.pf-hi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-faint); }
+.pf-hi-value { font-size: 17px; }
+
+/* Training cards */
+.pf-train { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .pf-train { grid-template-columns: 1fr; } }
+.pf-train-card { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 16px; transition: transform 0.18s ease, border-color 0.18s ease; }
+.pf-train-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.pf-train-ic { font-size: 30px; }
+.pf-train-go { margin-left: auto; font-size: 20px; color: var(--ink-faint); }
 
 .pf-achievements { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
 .pf-ach { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,0.03); }

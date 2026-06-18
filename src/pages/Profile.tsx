@@ -1,21 +1,63 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
-import { GAMES } from '../engine/registry';
+import { GAMES, getGame } from '../engine/registry';
 import './Profile.css';
+
+const readJSON = (k: string): any => { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch { return {}; } };
+
+// Rating bands → a progress bar toward the next rank.
+const BANDS: [number, number, string][] = [
+  [0, 600, 'Novice'], [600, 900, 'Casual'], [900, 1200, 'Club'],
+  [1200, 1500, 'Expert'], [1500, 1800, 'Master'], [1800, 2200, 'Grandmaster'],
+];
 
 export default function Profile() {
   const p = useProfile();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(p.name);
   const winRate = p.totals.played ? Math.round((p.totals.wins / p.totals.played) * 100) : 0;
-  const playedGames = GAMES.filter((g) => p.stats[g.id]?.played);
+
+  const playedGames = useMemo(
+    () => GAMES.filter((g) => p.stats[g.id]?.played).sort((a, b) => (p.stats[b.id].played - p.stats[a.id].played)),
+    [p.stats],
+  );
+
+  // Highlights: most-played game and best win-rate (min 3 games).
+  const favorite = playedGames[0];
+  const topGame = useMemo(() => {
+    let best: { id: string; wr: number } | null = null;
+    for (const g of playedGames) {
+      const s = p.stats[g.id];
+      if (s.played < 3) continue;
+      const wr = s.wins / s.played;
+      if (!best || wr > best.wr) best = { id: g.id, wr };
+    }
+    return best;
+  }, [playedGames, p.stats]);
+
+  // Training data lives in its own localStorage keys.
+  const daily = readJSON('gm-daily');
+  const puzzles = readJSON('gm-puzzles');
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const dailyStreak = daily.lastDate === today || daily.lastDate === yesterday ? (daily.streak || 0) : 0;
+
+  const band = BANDS.find(([lo, hi]) => p.rating >= lo && p.rating < hi) ?? BANDS[BANDS.length - 1];
+  const [lo, hi, label] = band;
+  const isMax = label === 'Grandmaster';
+  const progress = isMax ? 1 : (p.rating - lo) / (hi - lo);
+  const toNext = isMax ? 0 : hi - p.rating;
+  const nextLabel = isMax ? '' : BANDS[BANDS.indexOf(band) + 1][2];
 
   return (
     <div className="profile">
       <header className="pf-top">
         <Link to="/" className="btn ghost sm">← Hub</Link>
-        <Link to="/puzzles" className="btn sm">🧩 Puzzles</Link>
+        <div className="row gap-xs">
+          <Link to="/daily" className="btn sm">📅 Daily</Link>
+          <Link to="/puzzles" className="btn sm">🧩 Puzzles</Link>
+        </div>
       </header>
 
       <div className="pf-hero glass">
@@ -30,6 +72,10 @@ export default function Profile() {
             <h1 className="pf-name" onClick={() => { setDraft(p.name); setEditing(true); }} title="Click to rename">{p.name} ✎</h1>
           )}
           <div className="pf-rank">{ratingTitle(p.rating)}</div>
+          <div className="pf-progress" title={isMax ? 'Top rank reached' : `${toNext} rating to ${nextLabel}`}>
+            <div className="pf-progress-bar" style={{ width: `${Math.round(progress * 100)}%` }} />
+          </div>
+          <div className="pf-progress-l">{isMax ? 'Top rank reached 👑' : `${toNext} to ${nextLabel}`}</div>
         </div>
         <div className="pf-rating">
           <div className="pf-rating-n">{p.rating}</div>
@@ -45,17 +91,52 @@ export default function Profile() {
         <Tot n={`${winRate}%`} l="win rate" />
       </div>
 
+      {(favorite || topGame || dailyStreak > 0) && (
+        <div className="pf-highlights">
+          {favorite && <Highlight icon={getGame(favorite.id)?.emoji || '🎮'} label="Most played" value={getGame(favorite.id)?.name || favorite.id} sub={`${p.stats[favorite.id].played} games`} />}
+          {topGame && <Highlight icon={getGame(topGame.id)?.emoji || '🏆'} label="Best game" value={getGame(topGame.id)?.name || topGame.id} sub={`${Math.round(topGame.wr * 100)}% win rate`} />}
+          <Highlight icon="🔥" label="Daily streak" value={`${dailyStreak} day${dailyStreak === 1 ? '' : 's'}`} sub={`best ${daily.best || 0}`} />
+        </div>
+      )}
+
       <section className="pf-section">
-        <h2>By game</h2>
+        <h2>Training</h2>
+        <div className="pf-train">
+          <Link to="/daily" className="pf-train-card glass-soft">
+            <span className="pf-train-ic">📅</span>
+            <div className="col">
+              <strong>Daily Challenge</strong>
+              <span className="faint" style={{ fontSize: 12.5 }}>🔥 {dailyStreak} streak · {daily.total || 0} solved · best {daily.best || 0}</span>
+            </div>
+            <span className="pf-train-go">→</span>
+          </Link>
+          <Link to="/puzzles" className="pf-train-card glass-soft">
+            <span className="pf-train-ic">🧩</span>
+            <div className="col">
+              <strong>Puzzle Trainer</strong>
+              <span className="faint" style={{ fontSize: 12.5 }}>{puzzles.solved || 0} solved · best streak {puzzles.best || 0}</span>
+            </div>
+            <span className="pf-train-go">→</span>
+          </Link>
+        </div>
+      </section>
+
+      <section className="pf-section">
+        <h2>By game <span className="faint" style={{ fontSize: 14, fontWeight: 400 }}>· {playedGames.length} played</span></h2>
         {playedGames.length === 0 ? (
           <div className="pf-empty glass-soft">No games yet — <Link to="/play/chess" className="link">play one</Link> to start your record.</div>
         ) : (
           <div className="pf-games glass-soft">
             {playedGames.map((g) => {
               const s = p.stats[g.id];
+              const wr = s.played ? Math.round((s.wins / s.played) * 100) : 0;
               return (
                 <div className="pf-grow" key={g.id}>
                   <span className="pf-gname">{g.emoji} {g.name}</span>
+                  <div className="pf-wr">
+                    <div className="pf-wr-bar"><span style={{ width: `${wr}%` }} /></div>
+                    <span className="pf-wr-n">{wr}%</span>
+                  </div>
                   <span className="pf-record"><b className="good">{s.wins}W</b> · <b className="bad">{s.losses}L</b> · {s.draws}D</span>
                   <Link className="btn sm" to={`/play/${g.id}`}>Play</Link>
                 </div>
@@ -90,4 +171,17 @@ export default function Profile() {
 
 function Tot({ n, l, tone }: { n: number | string; l: string; tone?: 'good' | 'bad' }) {
   return <div className="pf-tot"><div className={`pf-tot-n ${tone ?? ''}`}>{n}</div><div className="pf-tot-l">{l}</div></div>;
+}
+
+function Highlight({ icon, label, value, sub }: { icon: string; label: string; value: string; sub: string }) {
+  return (
+    <div className="pf-hi glass-soft">
+      <span className="pf-hi-ic">{icon}</span>
+      <div className="col">
+        <span className="pf-hi-label">{label}</span>
+        <strong className="pf-hi-value">{value}</strong>
+        <span className="faint" style={{ fontSize: 12 }}>{sub}</span>
+      </div>
+    </div>
+  );
 }
