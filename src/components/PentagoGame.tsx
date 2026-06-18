@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  initialState, applyMove, chooseMove, result, moveComment, coachTip,
+  initialState, applyMove, chooseMove, result, moveComment, coachTip, gradeMove,
   type PentagoState, type PentagoMove,
 } from '../games/pentago/logic';
+import pdef from '../games/pentago';
 import { useProfile } from '../profile/profile';
 import { playSound, resumeAudio, isMuted, toggleMuted } from '../audio/sound';
 import CoachPanel, { type CoachMsg } from './CoachPanel';
+import GameReview from './GameReview';
+import type { LogEntry } from '../store/useGameStore';
 import './PentagoGame.css';
+
+const pgNote = (m: PentagoMove) => `${String.fromCharCode(97 + (m.cell % 6))}${6 - ((m.cell / 6) | 0)} Q${m.quad + 1}${m.dir > 0 ? '↻' : '↺'}`;
 
 const COLORS = ['#f59e0b', '#3b82f6']; // Amber (you), Blue (AI)
 const QORIGIN = [[0, 0], [0, 3], [3, 0], [3, 3]];
@@ -16,6 +21,7 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
   const [s, setS] = useState<PentagoState>(() => initialState());
   const [placed, setPlaced] = useState<number | null>(null); // tentative marble awaiting a rotation
   const [log, setLog] = useState<CoachMsg[]>([]);
+  const [review, setReview] = useState<LogEntry[]>([]);
   const [muted, setMutedState] = useState(isMuted());
   const [recorded, setRecorded] = useState(false);
   const recordResult = useProfile((p) => p.recordResult);
@@ -39,6 +45,7 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
       const after = applyMove(s, m);
       playSound(result(after.board).winner === 1 ? 'win' : 'move');
       setLog((l) => [...l, moveComment(s, m, after)]);
+      setReview((r) => [...r, { ply: r.length + 1, player: 1, notation: pgNote(m), explanation: gradeMove(s, m, after) }]);
       setS(after);
     }, 520);
     return () => clearTimeout(t);
@@ -57,11 +64,12 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
     const after = applyMove(s, m);
     playSound(result(after.board).winner === 0 ? 'win' : 'move');
     setLog((l) => [...l, moveComment(s, m, after)]);
+    setReview((r) => [...r, { ply: r.length + 1, player: 0, notation: pgNote(m), explanation: gradeMove(s, m, after) }]);
     setS(after);
     setPlaced(null);
   };
 
-  const newGame = () => { setS(initialState()); setPlaced(null); setLog([]); setRecorded(false); };
+  const newGame = () => { setS(initialState()); setPlaced(null); setLog([]); setReview([]); setRecorded(false); };
 
   return (
     <div className="play-area">
@@ -110,6 +118,7 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
       </div>
 
       <aside className="side-col">
+        {over && review.length > 0 && <GameReview def={pdef} log={review} status={pdef.getStatus(s)} />}
         <CoachPanel title="AI Coach" subtitle="Pentago commentary" messages={log} tip={coachTip(s)} />
       </aside>
     </div>

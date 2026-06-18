@@ -38,6 +38,7 @@ export default function Daily() {
 
   const [store, setStore] = useState<DailyStore>(load);
   const [result, setResult] = useState<'idle' | 'solved' | 'failed'>(store.lastDate === today ? 'solved' : 'idle');
+  const [copied, setCopied] = useState(false);
   const doneToday = store.lastDate === today;
   const liveStreak = store.lastDate === today || store.lastDate === yesterday ? store.streak : 0;
 
@@ -54,6 +55,15 @@ export default function Daily() {
     save({ lastDate: today, streak, best: Math.max(store.best, streak), total: store.total + 1, days: Array.from(new Set([...store.days, today])).slice(-60) });
   };
   const onFailed = () => { if (result === 'idle') { playSound('illegal'); setResult('failed'); } };
+
+  const share = async () => {
+    const text = `🎯 GrandMaster Daily — ${new Date().toLocaleDateString()}\nSolved today’s ${def.name} challenge! 🔥 ${Math.max(liveStreak, 1)}-day streak.`;
+    const url = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}#/daily` : '';
+    try {
+      if (typeof navigator !== 'undefined' && (navigator as any).share) await (navigator as any).share({ title: 'GrandMaster Daily', text, url });
+      else { await navigator.clipboard.writeText(`${text}\n${url}`); setCopied(true); setTimeout(() => setCopied(false), 2200); }
+    } catch { /* user dismissed the share sheet */ }
+  };
 
   // The last seven days as a little streak strip.
   const week = Array.from({ length: 7 }, (_, i) => dayKey(Date.now() - (6 - i) * DAY));
@@ -90,8 +100,9 @@ export default function Daily() {
               <div className="dy-done-badge">✓</div>
               <h2>Today’s challenge complete!</h2>
               <p className="muted">Nice work — your streak is safe. A fresh puzzle unlocks at midnight (UTC). You can replay today’s below or explore the games.</p>
-              <div className="row gap-sm" style={{ justifyContent: 'center', marginTop: 6 }}>
-                <Link className="btn primary" to={`/play/${def.id}`}>Play {def.name}</Link>
+              <div className="row gap-sm wrap" style={{ justifyContent: 'center', marginTop: 6 }}>
+                <button className="btn primary" onClick={share}>{copied ? '✓ Copied!' : '🔗 Share result'}</button>
+                <Link className="btn" to={`/play/${def.id}`}>Play {def.name}</Link>
                 <Link className="btn" to="/puzzles">More puzzles →</Link>
               </div>
             </div>

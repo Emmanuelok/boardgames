@@ -6,7 +6,8 @@
  * once, or the board fills with neither, it's a draw. Pure logic, no mutation.
  */
 import { mulberry32, searchBestMove, WIN } from '../../engine/ai';
-import type { Player } from '../../engine/types';
+import { gradeMoveBySearch } from '../../engine/review';
+import type { MoveExplanation, Player } from '../../engine/types';
 
 export type Cell = Player | null;
 export interface PentagoState { board: Cell[]; turn: Player } // 36 cells, row*6+col
@@ -132,6 +133,11 @@ function adapter() {
 export function chooseMove(s: PentagoState, difficulty: 'easy' | 'medium' | 'hard'): PentagoMove | null {
   const seed = (s.board.filter((v) => v !== null).length + s.turn + 1) * 2654435761;
   return searchBestMove(s, adapter(), DEPTH[difficulty], { randomness: RAND[difficulty], rng: mulberry32(seed) }).move;
+}
+
+/** Grade a played move for the post-game review (band + eval). */
+export function gradeMove(before: PentagoState, move: PentagoMove, after: PentagoState): MoveExplanation {
+  return gradeMoveBySearch(before, move, after, adapter(), { depth: 2, bigThreshold: 800, lossScale: 0.4 });
 }
 
 /* ----------------------------- coach commentary ----------------------------- */

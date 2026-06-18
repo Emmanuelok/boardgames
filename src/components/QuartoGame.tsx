@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  initialState, applyMove, chooseMove, available, winnerOf, attr, moveComment, coachTip,
+  initialState, applyMove, chooseMove, available, winnerOf, attr, moveComment, coachTip, gradeMove,
   type QuartoState, type QuartoMove,
 } from '../games/quarto/logic';
+import qdef from '../games/quarto';
 import { useProfile } from '../profile/profile';
 import { playSound, resumeAudio, isMuted, toggleMuted } from '../audio/sound';
 import CoachPanel, { type CoachMsg } from './CoachPanel';
+import GameReview from './GameReview';
+import type { LogEntry } from '../store/useGameStore';
 import './QuartoGame.css';
+
+const qNote = (m: QuartoMove) => {
+  if (m.cell < 0) return `give #${m.give}`;
+  const c = `${String.fromCharCode(97 + (m.cell % 4))}${4 - ((m.cell / 4) | 0)}`;
+  return m.give >= 0 ? `${c} →#${m.give}` : `${c} ✦`;
+};
 
 /** A Quarto piece, drawn from its four binary traits. */
 function QPiece({ p, big }: { p: number; big?: boolean }) {
@@ -28,6 +37,7 @@ export default function QuartoGame({ aiDifficulty = 'medium' }: { aiDifficulty?:
   const [s, setS] = useState<QuartoState>(() => initialState());
   const [tentative, setTentative] = useState<number | null>(null); // cell where the held piece is tentatively placed
   const [log, setLog] = useState<CoachMsg[]>([]);
+  const [review, setReview] = useState<LogEntry[]>([]);
   const [muted, setMutedState] = useState(isMuted());
   const [recorded, setRecorded] = useState(false);
   const recordResult = useProfile((p) => p.recordResult);
@@ -53,6 +63,7 @@ export default function QuartoGame({ aiDifficulty = 'medium' }: { aiDifficulty?:
       const after = applyMove(s, m);
       playSound(winnerOf(after) === 1 ? 'win' : 'move');
       setLog((l) => [...l, moveComment(s, m, after)]);
+      setReview((r) => [...r, { ply: r.length + 1, player: 1, notation: qNote(m), explanation: gradeMove(s, m, after) }]);
       setS(after);
     }, 560);
     return () => clearTimeout(t);
@@ -62,10 +73,12 @@ export default function QuartoGame({ aiDifficulty = 'medium' }: { aiDifficulty?:
     resumeAudio();
     if (!placePhase || s.board[idx] !== null) return;
     // Winning placement ends the turn immediately (no piece to give matters).
-    const win = applyMove(s, { id: 'w', cell: idx, give: -1, notation: '' });
+    const winMove: QuartoMove = { id: 'w', cell: idx, give: -1, notation: '' };
+    const win = applyMove(s, winMove);
     if (winnerOf(win) === 0) {
       playSound('win');
-      setLog((l) => [...l, moveComment(s, { id: 'w', cell: idx, give: -1, notation: `${String.fromCharCode(97 + idx % 4)}${4 - ((idx / 4) | 0)} ✦` }, win)]);
+      setLog((l) => [...l, moveComment(s, { ...winMove, notation: `${String.fromCharCode(97 + idx % 4)}${4 - ((idx / 4) | 0)} ✦` }, win)]);
+      setReview((r) => [...r, { ply: r.length + 1, player: 0, notation: qNote(winMove), explanation: gradeMove(s, winMove, win) }]);
       setS(win); setTentative(null); return;
     }
     playSound('select');
@@ -78,10 +91,11 @@ export default function QuartoGame({ aiDifficulty = 'medium' }: { aiDifficulty?:
     const after = applyMove(s, m);
     playSound('move');
     setLog((l) => [...l, moveComment(s, m, after)]);
+    setReview((r) => [...r, { ply: r.length + 1, player: 0, notation: qNote(m), explanation: gradeMove(s, m, after) }]);
     setS(after); setTentative(null);
   };
 
-  const newGame = () => { setS(initialState()); setTentative(null); setLog([]); setRecorded(false); };
+  const newGame = () => { setS(initialState()); setTentative(null); setLog([]); setReview([]); setRecorded(false); };
   const avail = available(s);
 
   return (
@@ -121,6 +135,7 @@ export default function QuartoGame({ aiDifficulty = 'medium' }: { aiDifficulty?:
       </div>
 
       <aside className="side-col">
+        {over && review.length > 0 && <GameReview def={qdef} log={review} status={qdef.getStatus(s)} />}
         <CoachPanel title="AI Coach" subtitle="Quarto commentary" messages={log} tip={coachTip(s)} />
       </aside>
     </div>

@@ -8,7 +8,8 @@
  * Pure logic, no mutation of arguments.
  */
 import { mulberry32, searchBestMove, WIN } from '../../engine/ai';
-import type { Player } from '../../engine/types';
+import { gradeMoveBySearch } from '../../engine/review';
+import type { MoveExplanation, Player } from '../../engine/types';
 
 // A piece is a 4-bit code: bit0 tall, bit1 dark, bit2 round, bit3 hollow.
 export const TRAITS = ['tall', 'dark', 'round', 'hollow'] as const;
@@ -135,6 +136,11 @@ function adapter() {
 export function chooseMove(s: QuartoState, difficulty: 'easy' | 'medium' | 'hard'): QuartoMove | null {
   const seed = (s.board.filter((v) => v !== null).length * 16 + (s.held ?? 0) + s.turn + 1) * 2654435761;
   return searchBestMove(s, adapter(), DEPTH[difficulty], { randomness: RAND[difficulty], rng: mulberry32(seed) }).move;
+}
+
+/** Grade a played move for the post-game review (band + eval). */
+export function gradeMove(before: QuartoState, move: QuartoMove, after: QuartoState): MoveExplanation {
+  return gradeMoveBySearch(before, move, after, adapter(), { depth: 2, bigThreshold: 60 });
 }
 
 /* ----------------------------- coach commentary ----------------------------- */

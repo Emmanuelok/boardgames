@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CATALOGUE } from '../engine/registry';
 import { BOARD_THEMES } from '../themes/boardThemes';
@@ -37,6 +37,15 @@ export default function Home() {
   const pickWallpaper = (id: string) => { setWallpaper(id); try { localStorage.setItem('gm-wallpaper', id); } catch { /* ignore */ } };
   useReveal();
 
+  // Surface the daily-challenge streak on the hero button.
+  const daily = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('gm-daily') || '{}'); } catch { return {}; }
+  }, []);
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const yesterdayKey = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const dailyDone = daily.lastDate === todayKey;
+  const dailyStreak = dailyDone || daily.lastDate === yesterdayKey ? (daily.streak || 0) : 0;
+
   return (
     <div className="home">
       <ShaderField variant={wallpaper} className="home-bg" />
@@ -67,7 +76,9 @@ export default function Home() {
           </p>
           <div className="row gap-sm wrap">
             <button className="btn primary lg glow" onClick={() => nav('/play/chess')}>♟ Start playing</button>
-            <button className="btn lg" onClick={() => nav('/daily')}>📅 Daily challenge</button>
+            <button className="btn lg" onClick={() => nav('/daily')}>
+              📅 Daily challenge{dailyDone ? ' ✓' : dailyStreak > 0 ? ` · 🔥${dailyStreak}` : ''}
+            </button>
             <button className="btn lg" onClick={() => nav('/puzzles')}>🧩 Train tactics</button>
             <button className="btn lg" onClick={() => nav('/learn/chess')}>📖 Learn</button>
           </div>
