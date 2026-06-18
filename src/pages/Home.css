@@ -82,31 +82,16 @@
 .section-head h2 { font-size: clamp(28px, 4vw, 42px); margin: 0 0 8px; }
 .section-head p { margin: 0; font-size: 16px; }
 
-/* Game cards */
-.game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 18px; }
-.game-card { position: relative; display: flex; flex-direction: column; overflow: hidden; padding: 0; }
-.game-card:hover { border-color: color-mix(in srgb, var(--accent) 60%, transparent); box-shadow: var(--shadow), 0 0 40px -16px var(--accent); }
-.gc-art {
-  position: relative; height: 96px; display: flex; align-items: center; justify-content: center;
-  background:
-    radial-gradient(120% 150% at 22% 0%, color-mix(in srgb, var(--accent) 60%, transparent), transparent 60%),
-    repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0 14px, rgba(0,0,0,0.07) 14px 28px);
-  border-bottom: 1px solid var(--line);
-}
-.gc-emoji { font-size: 46px; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6)); transition: transform 0.25s ease; }
-.game-card:hover .gc-emoji { transform: scale(1.12) rotate(-4deg); }
-.gc-cat { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.2); color: #fff; backdrop-filter: blur(6px); }
-.gc-variants { position: absolute; top: 10px; left: 10px; background: color-mix(in srgb, var(--accent) 80%, #000); border-color: rgba(255,255,255,0.3); color: #fff; font-weight: 800; }
-.gc-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 7px; }
-.gc-name { margin: 0; font-size: 21px; }
-.gc-tag { margin: 0; font-size: 13px; color: var(--ink-dim); line-height: 1.45; min-height: 36px; }
-.gc-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; font-size: 12px; }
-.depth { display: inline-flex; gap: 4px; }
-.depth i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.16); }
-.depth i.on { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-.gc-actions { display: flex; gap: 8px; margin-top: 12px; }
-.gc-actions .btn { flex: 1; justify-content: center; }
-.gc-actions .btn.primary { background: linear-gradient(120deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #5b8bff)); box-shadow: 0 10px 24px -12px var(--accent); border-color: transparent; }
+/* Games CTA band (the catalogue itself now lives on /games) */
+.gcta { display: grid; grid-template-columns: 1.45fr 1fr; gap: 26px; align-items: center; padding: 30px 32px; border-radius: 22px; }
+@media (max-width: 760px) { .gcta { grid-template-columns: 1fr; } }
+.gcta-copy h2 { font-size: clamp(26px, 4vw, 38px); margin: 0 0 10px; }
+.gcta-copy p { margin: 0 0 18px; font-size: 16px; line-height: 1.6; max-width: 560px; }
+.gcta-emojis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 480px) { .gcta-emojis { grid-template-columns: repeat(6, 1fr); } }
+.gcta-chip { display: grid; place-items: center; aspect-ratio: 1; border-radius: 14px; font-size: 28px; background: rgba(255,255,255,0.05); border: 1px solid var(--line); transition: transform 0.2s ease, background 0.2s ease; }
+.gcta:hover .gcta-chip { background: rgba(255,255,255,0.09); }
+.gcta-chip:hover { transform: translateY(-3px) scale(1.1); }
 
 .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
 .feature { padding: 24px; transition: transform 0.2s ease; }

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Home from './pages/Home';
+import Games from './pages/Games';
 import GameScreen from './pages/GameScreen';
 import Learn from './pages/Learn';
 import Puzzles from './pages/Puzzles';
@@ -28,6 +29,7 @@ export default function App() {
       >
         <Routes location={location}>
           <Route path="/" element={<Home />} />
+          <Route path="/games" element={<Games />} />
           <Route path="/play/:gameId" element={<GameScreen />} />
           <Route path="/learn/:gameId" element={<Learn />} />
           <Route path="/puzzles" element={<Puzzles />} />

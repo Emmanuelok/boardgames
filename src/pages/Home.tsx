@@ -60,6 +60,7 @@ export default function Home() {
           <span className="brand-name">GrandMaster</span>
         </Link>
         <div className="row gap-sm">
+          <Link className="chip clickable hide-sm" to="/games">🎲 Games</Link>
           <Link className="chip clickable hide-sm" to="/daily">📅 Daily</Link>
           <Link className="chip clickable hide-sm" to="/openings">📖 Openings</Link>
           <Link className="chip clickable hide-sm" to="/lobby">🌐 Lobby</Link>
@@ -111,37 +112,20 @@ export default function Home() {
       </header>
 
       <section id="games" className="section">
-        <div className="section-head reveal">
-          <h2>Choose your game</h2>
-          <p className="muted">Each ships with a deep course and a move-by-move AI tutor.</p>
-        </div>
-        <div className="game-grid">
-          {CATALOGUE.map((entry) => {
-            const fam = entry.type === 'family' ? entry.family : null;
-            const g = entry.type === 'family' ? entry.primary : entry.def;
-            const name = fam ? fam.name : g.name;
-            const emoji = fam ? fam.emoji : g.emoji;
-            const category = fam ? fam.category : g.category;
-            const tagline = fam ? fam.tagline : g.tagline;
-            return (
-              <div className="game-card glass reveal" key={fam ? `fam-${fam.id}` : g.id} style={{ ['--accent' as any]: g.accent }}>
-                <div className="gc-art">
-                  <span className="gc-emoji">{emoji}</span>
-                  <span className="chip gc-cat">{category}</span>
-                  {fam && <span className="chip gc-variants">{fam.variants.length} variants</span>}
-                </div>
-                <div className="gc-body">
-                  <h3 className="gc-name">{name}</h3>
-                  <p className="gc-tag">{tagline}</p>
-                  <div className="gc-meta"><Depth depth={g.depth} /><span className="faint">{fam ? fam.variants.map((v) => v.label.split(' · ')[0]).join(' · ') : `${g.players[0].name} v ${g.players[1].name}`}</span></div>
-                  <div className="gc-actions">
-                    <Link className="btn primary sm" to={`/play/${g.id}`}>Play</Link>
-                    <Link className="btn sm" to={`/learn/${g.id}`}>Learn</Link>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="gcta glass reveal">
+          <div className="gcta-copy">
+            <h2>{CATALOGUE.length} games, one tutor</h2>
+            <p className="muted">From Chess, Go and Backgammon to Surakarta and a handful of our own originals — each ships with a step-by-step course, a move-by-move AI tutor, and full post-game review.</p>
+            <div className="row gap-sm wrap">
+              <button className="btn primary lg glow" onClick={() => nav('/games')}>🎲 Browse all games</button>
+              <button className="btn lg" onClick={() => nav('/play/chess')}>♟ Quick play: Chess</button>
+            </div>
+          </div>
+          <div className="gcta-emojis" aria-hidden="true">
+            {CATALOGUE.slice(0, 12).map((e, i) => (
+              <span key={i} className="gcta-chip">{e.type === 'family' ? e.family.emoji : e.def.emoji}</span>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -192,6 +176,3 @@ function Stat({ n, l, suffix, raw }: { n: number; l: string; suffix?: string; ra
   );
 }
 
-function Depth({ depth }: { depth: number }) {
-  return <span className="depth" title={`Depth ${depth} / 5`}>{[1, 2, 3, 4, 5].map((i) => <i key={i} className={i <= depth ? 'on' : ''} />)}</span>;
-}

@@ -1,0 +1,36 @@
+.games-page { max-width: 1200px; margin: 0 auto; padding: 16px 20px 70px; }
+.gp-top { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.gp-top .gs-title { display: flex; align-items: center; gap: 10px; flex: 1; }
+.gp-top .gs-emoji { font-size: 26px; }
+
+.game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(244px, 1fr)); gap: 18px; }
+.game-card { position: relative; display: flex; flex-direction: column; overflow: hidden; padding: 0; transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease; }
+.game-card:hover { transform: translateY(-6px); border-color: color-mix(in srgb, var(--accent) 60%, transparent); box-shadow: var(--shadow), 0 0 44px -18px var(--accent); }
+
+/* Thumbnail = the game's real starting board (or an accent tile for non-grid games) */
+.gc-thumb { position: relative; display: block; border-bottom: 1px solid var(--line); background: radial-gradient(130% 120% at 50% 0%, color-mix(in srgb, var(--accent) 22%, transparent), rgba(0,0,0,0.28) 70%); }
+.gt-fit { height: 170px; display: grid; place-items: center; padding: 12px; }
+.gt-fit .board.mini { width: auto !important; height: 100%; max-width: 100%; border-width: 6px; box-shadow: 0 8px 22px -10px rgba(0,0,0,0.7); }
+.gt-fallback { height: 170px; display: grid; place-items: center; background:
+  radial-gradient(110% 110% at 50% 25%, color-mix(in srgb, var(--accent) 78%, #000), color-mix(in srgb, var(--accent) 22%, #0b0e16) 72%),
+  repeating-linear-gradient(135deg, rgba(255,255,255,0.07) 0 12px, transparent 12px 24px); }
+.gt-emoji { font-size: 76px; filter: drop-shadow(0 6px 16px rgba(0,0,0,0.55)); }
+.game-card:hover .gt-emoji { transform: scale(1.08) rotate(-4deg); transition: transform 0.25s ease; }
+
+.gc-cat { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); border-color: rgba(255,255,255,0.2); color: #fff; backdrop-filter: blur(6px); }
+.gc-variants { position: absolute; top: 10px; left: 10px; background: color-mix(in srgb, var(--accent) 82%, #000); border-color: rgba(255,255,255,0.3); color: #fff; font-weight: 800; }
+
+.gc-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 7px; }
+.gc-name { margin: 0; font-size: 20px; }
+.gc-tag { margin: 0; font-size: 13px; color: var(--ink-dim); line-height: 1.45; min-height: 36px; }
+.gc-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; font-size: 12px; }
+.depth { display: inline-flex; gap: 4px; }
+.depth i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.16); }
+.depth i.on { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.gc-actions { display: flex; gap: 8px; margin-top: 12px; }
+.gc-actions .btn { flex: 1; justify-content: center; }
+.gc-actions .btn.primary { background: linear-gradient(120deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #5b8bff)); box-shadow: 0 10px 24px -12px var(--accent); border-color: transparent; }
+
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22,0.7,0.2,1); }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .reveal { transition: none; opacity: 1; transform: none; } .game-card:hover { transform: none; } }
