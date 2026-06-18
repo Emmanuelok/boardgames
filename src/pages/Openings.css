@@ -21,6 +21,7 @@
 .op-name { font-size: 13px; font-weight: 600; }
 .op-empty { padding: 18px; color: var(--ink-dim); font-size: 13px; }
 
+.op-solo { max-width: 640px; margin: 0 auto; }
 .op-detail { padding: 20px; }
 .op-detail-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .op-detail-head h2 { margin: 0; font-size: 22px; }

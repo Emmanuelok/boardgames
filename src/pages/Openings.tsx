@@ -4,6 +4,7 @@ import { OPENINGS, type OpeningInfo } from '../games/chess/openings';
 import chess from '../games/chess';
 import MiniBoard from '../components/MiniBoard';
 import OpeningTrainer from '../components/OpeningTrainer';
+import OpeningGauntlet from '../components/OpeningGauntlet';
 import { getTheme } from '../themes/boardThemes';
 import './Openings.css';
 
@@ -35,6 +36,7 @@ export default function Openings() {
   const [ply, setPly] = useState(selected.moves.length);
   const [playing, setPlaying] = useState(false);
   const [training, setTraining] = useState(false);
+  const [gauntlet, setGauntlet] = useState(false);
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -62,9 +64,15 @@ export default function Openings() {
       <header className="op-top">
         <Link to="/" className="btn ghost sm">← Hub</Link>
         <div className="gs-title"><span className="gs-emoji">📖</span><div className="col"><strong>Openings Explorer</strong><span className="faint" style={{ fontSize: 12 }}>{OPENINGS.length} named openings · step through every line</span></div></div>
-        <Link to="/play/chess" className="btn sm primary">Play chess</Link>
+        <div className="row gap-xs">
+          {!gauntlet && <button className="btn sm" onClick={() => setGauntlet(true)}>⚡ Gauntlet</button>}
+          <Link to="/play/chess" className="btn sm primary">Play chess</Link>
+        </div>
       </header>
 
+      {gauntlet ? (
+        <div className="op-solo"><OpeningGauntlet theme={theme} onExit={() => setGauntlet(false)} /></div>
+      ) : (
       <div className="op-grid">
         <aside className="op-list-col">
           <input className="op-search" placeholder="Search openings or ECO…" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -119,6 +127,7 @@ export default function Openings() {
         </section>
         )}
       </div>
+      )}
     </div>
   );
 }
