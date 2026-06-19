@@ -32,7 +32,9 @@ export type SoundName =
   | 'draw'
   | 'select'
   | 'illegal'
-  | 'click';
+  | 'click'
+  | 'levelup'
+  | 'coin';
 
 /** localStorage key used to persist the mute preference. */
 const MUTE_STORAGE_KEY = 'gm-muted';
@@ -329,6 +331,21 @@ const RECIPES: Record<SoundName, () => void> = {
   // Tiny UI tick for generic button/menu clicks.
   click: () => {
     tone({ freq: 660, dur: 0.04, type: 'triangle', gain: 0.13 });
+  },
+
+  // Triumphant rising arpeggio for a level-up (C5–E5–G5–C6–E6).
+  levelup: () => {
+    tone({ freq: 523.25, dur: 0.12, type: 'triangle', gain: 0.2, when: 0 });
+    tone({ freq: 659.25, dur: 0.12, type: 'triangle', gain: 0.2, when: 0.1 });
+    tone({ freq: 783.99, dur: 0.12, type: 'triangle', gain: 0.2, when: 0.2 });
+    tone({ freq: 1046.5, dur: 0.14, type: 'triangle', gain: 0.22, when: 0.3 });
+    tone({ freq: 1318.5, dur: 0.26, type: 'triangle', gain: 0.22, when: 0.42 });
+  },
+
+  // Bright "ka-ching" for spending/earning coins (two quick high notes).
+  coin: () => {
+    tone({ freq: 1318.5, dur: 0.07, type: 'sine', gain: 0.18, when: 0 });
+    tone({ freq: 1760, dur: 0.16, type: 'sine', gain: 0.18, when: 0.07 });
   },
 };
 

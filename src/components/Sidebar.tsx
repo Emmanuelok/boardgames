@@ -1,5 +1,5 @@
 import { NavLink, Link } from 'react-router-dom';
-import { useProgression, levelFromXp } from '../progression/progression';
+import { useProgression, levelFromXp, questComplete } from '../progression/progression';
 import './Sidebar.css';
 
 const GROUPS: { title: string; items: { to: string; icon: string; label: string; end?: boolean }[] }[] = [
@@ -22,6 +22,9 @@ const GROUPS: { title: string; items: { to: string; icon: string; label: string;
 export default function Sidebar() {
   const xp = useProgression((s) => s.xp);
   const coins = useProgression((s) => s.coins);
+  const quests = useProgression((s) => s.quests);
+  const weekly = useProgression((s) => s.weekly);
+  const claimable = [...quests, ...weekly].filter((q) => questComplete(q) && !q.claimed).length;
   const { level, into, span } = levelFromXp(xp);
   const pct = Math.round((into / span) * 100);
 
@@ -40,6 +43,7 @@ export default function Sidebar() {
               <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => `sb-link ${isActive ? 'on' : ''}`}>
                 <span className="sb-ic">{n.icon}</span>
                 <span className="sb-label">{n.label}</span>
+                {n.to === '/profile' && claimable > 0 && <span className="sb-badge" title={`${claimable} reward${claimable === 1 ? '' : 's'} to claim`}>{claimable}</span>}
               </NavLink>
             ))}
           </div>

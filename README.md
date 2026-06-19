@@ -46,9 +46,9 @@ Earn **XP, levels and coins** for everything you do — winning (scaled by
 difficulty), clean high-accuracy play, solving puzzles, the **Daily Challenge**,
 finishing a game's course, unlocking achievements, and discovering new games.
 **Daily and weekly quests** rotate and pay out on claim, and a floating reward toast
-celebrates every gain. Spend
-coins in the **Shop** on living wallpapers, titles and avatar frames — or go **Pro**
-to unlock the lot. (Free-to-play; see **[MONETIZATION.md](./MONETIZATION.md)**.)
+celebrates every gain. Spend coins in the **Shop** on living wallpapers, titles and
+avatar frames, reroll a daily quest you don't fancy, or go **Pro** to unlock the lot.
+(Free-to-play; see **[MONETIZATION.md](./MONETIZATION.md)**.)
 
 ---
 

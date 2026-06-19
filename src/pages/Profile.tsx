@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
-import { useProgression, levelFromXp, levelTier, questDef, cosmetic, type QuestProgress } from '../progression/progression';
+import { useProgression, levelFromXp, levelTier, questDef, cosmetic, REROLL_COST, type QuestProgress } from '../progression/progression';
 import { GAMES, getGame } from '../engine/registry';
+import { playSound, resumeAudio } from '../audio/sound';
 import './Profile.css';
 
 const readJSON = (k: string): any => { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch { return {}; } };
@@ -106,7 +107,7 @@ export default function Profile() {
       <section className="pf-section">
         <h2>Daily Quests <span className="faint" style={{ fontSize: 14, fontWeight: 400 }}>· resets at midnight</span></h2>
         <div className="pf-quests">
-          {prog.quests.map((q) => <QuestRow key={q.id} q={q} onClaim={prog.claimQuest} />)}
+          {prog.quests.map((q) => <QuestRow key={q.id} q={q} onClaim={prog.claimQuest} onReroll={prog.rerollQuest} canReroll={prog.coins >= REROLL_COST} />)}
         </div>
       </section>
 
@@ -228,11 +229,13 @@ function Highlight({ icon, label, value, sub }: { icon: string; label: string; v
   );
 }
 
-function QuestRow({ q, onClaim }: { q: QuestProgress; onClaim: (id: string) => void }) {
+function QuestRow({ q, onClaim, onReroll, canReroll }: { q: QuestProgress; onClaim: (id: string) => void; onReroll?: (id: string) => void; canReroll?: boolean }) {
   const d = questDef(q.id);
   if (!d) return null;
   const complete = q.progress >= d.goal;
   const qpct = Math.min(100, Math.round((q.progress / d.goal) * 100));
+  const claim = () => { resumeAudio(); playSound('coin'); onClaim(q.id); };
+  const reroll = () => { if (!onReroll || !canReroll) return; resumeAudio(); playSound('coin'); onReroll(q.id); };
   return (
     <div className={`pf-quest glass-soft ${complete ? 'done' : ''}`}>
       <span className="pf-q-ic">{d.icon}</span>
@@ -245,7 +248,8 @@ function QuestRow({ q, onClaim }: { q: QuestProgress; onClaim: (id: string) => v
       </div>
       <span className="pf-q-reward">{d.reward.xp > 0 ? `+${d.reward.xp} XP · ` : ''}🪙{d.reward.coins}</span>
       {q.claimed ? <span className="pf-q-claimed">✓ Claimed</span>
-        : complete ? <button className="btn sm primary" onClick={() => onClaim(q.id)}>Claim</button>
+        : complete ? <button className="btn sm primary" onClick={claim}>Claim</button>
+        : onReroll ? <button className="btn sm ghost" disabled={!canReroll} title={canReroll ? 'Swap for a new quest' : `Need 🪙${REROLL_COST} to reroll`} onClick={reroll}>🎲 {REROLL_COST}</button>
         : <span className="pf-q-go faint">In progress</span>}
     </div>
   );

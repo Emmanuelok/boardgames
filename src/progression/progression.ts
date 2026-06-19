@@ -64,6 +64,9 @@ const DIFF_MULT: Record<Difficulty, number> = { tutor: 0.8, easy: 1, medium: 1.3
  *  perk, and deliberately a bonus rather than a gate (see MONETIZATION.md). */
 export const PRO_BONUS = 0.2;
 
+/** Coin cost to reroll a single daily quest for a fresh one (a coin sink). */
+export const REROLL_COST = 60;
+
 export function gameReward(result: ResultKind, difficulty: Difficulty): Reward {
   const baseXp = result === 'win' ? 50 : result === 'draw' ? 25 : 12;
   const baseCoins = result === 'win' ? 20 : result === 'draw' ? 10 : 5;
@@ -185,6 +188,7 @@ export interface ProgressionState {
   recordLesson: (gameId: string) => void;
   awardAchievement: (title: string) => void;
   claimQuest: (id: string) => void;
+  rerollQuest: (id: string) => boolean;
   buyCosmetic: (id: string) => boolean;
   equipCosmetic: (slot: CosmeticSlot, id: string) => void;
   setPro: (v: boolean) => void;
@@ -374,6 +378,20 @@ export const useProgression = create<ProgressionState>()((set, get) => {
       const mark = (list: QuestProgress[]) => list.map((x) => (x.id === id ? { ...x, claimed: true } : x));
       set(inDaily ? { quests: mark(s.quests) } : { weekly: mark(s.weekly) });
       grant(def.reward, `Quest: ${def.label}`, '✅', false);
+    },
+
+    rerollQuest(id) {
+      const s = get();
+      const cur = s.quests.find((x) => x.id === id);
+      if (!cur || cur.claimed || s.coins < REROLL_COST) return false;
+      // Swap it for a random daily quest not already in today's set.
+      const inUse = new Set(s.quests.map((q) => q.id));
+      const options = QUEST_POOL.filter((d) => !inUse.has(d.id));
+      if (!options.length) return false;
+      const pick = options[Math.floor(Math.random() * options.length)];
+      set({ coins: s.coins - REROLL_COST, quests: s.quests.map((q) => (q.id === id ? { id: pick.id, progress: 0, claimed: false } : q)) });
+      save(get());
+      return true;
     },
 
     buyCosmetic(id) {

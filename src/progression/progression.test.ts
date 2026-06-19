@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   xpToNext, levelFromXp, levelTier, gameReward, accuracyBonus,
-  pickDailyQuests, pickWeeklyQuests, questDef, useProgression, COSMETICS, cosmetic, PRO_BONUS,
+  pickDailyQuests, pickWeeklyQuests, questDef, useProgression, COSMETICS, cosmetic, PRO_BONUS, REROLL_COST,
 } from './progression';
 
 describe('level curve', () => {
@@ -184,5 +184,23 @@ describe('progression store', () => {
     expect(useProgression.getState().weekly.find((x) => x.id === 'w-win10')!.claimed).toBe(true);
     useProgression.getState().claimQuest('w-win10'); // no double-claim
     expect(useProgression.getState().coins).toBe(reward.coins);
+  });
+
+  it('rerolls a daily quest for coins, swapping it for a fresh one', () => {
+    const before = useProgression.getState().quests.map((q) => q.id);
+    useProgression.setState({ coins: 100 });
+    expect(useProgression.getState().rerollQuest(before[0])).toBe(true);
+    expect(useProgression.getState().coins).toBe(100 - REROLL_COST);
+    const after = useProgression.getState().quests.map((q) => q.id);
+    expect(after).not.toContain(before[0]); // swapped out
+    expect(after).toHaveLength(3);
+    expect(new Set(after).size).toBe(3);    // no duplicates
+  });
+
+  it('refuses to reroll without enough coins', () => {
+    useProgression.setState({ coins: 10 });
+    const id = useProgression.getState().quests[0].id;
+    expect(useProgression.getState().rerollQuest(id)).toBe(false);
+    expect(useProgression.getState().coins).toBe(10);
   });
 });

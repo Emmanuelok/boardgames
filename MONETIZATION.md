@@ -38,7 +38,7 @@ cosmetics → equip).
 - **XP, levels & coins** awarded for games, move accuracy, puzzles, the Daily,
   finishing a game's course, discovering a new game, unlocking achievements, and
   daily quests (`src/progression/progression.ts`).
-- **Daily and weekly quests** that rotate and pay out on claim (weekly = bigger goals, chunkier rewards).
+- **Daily and weekly quests** that rotate and pay out on claim (weekly = bigger goals, chunkier rewards); spend coins to **reroll** a daily you don't fancy (a coin sink).
 - **Cosmetic store** (`/shop`) — spend earned coins on wallpapers, titles and avatar
   frames; equip them on your profile / home hero.
 - **Pro feature flag** (`pro`) with a paywall surface and an "Enable Pro (preview)"
