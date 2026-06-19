@@ -43,7 +43,7 @@ export default function Sidebar() {
               <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => `sb-link ${isActive ? 'on' : ''}`}>
                 <span className="sb-ic">{n.icon}</span>
                 <span className="sb-label">{n.label}</span>
-                {n.to === '/profile' && claimable > 0 && <span className="sb-badge" title={`${claimable} reward${claimable === 1 ? '' : 's'} to claim`}>{claimable}</span>}
+                {n.to === '/profile' && claimable > 0 && <span className="sb-badge" role="status" aria-label={`${claimable} reward${claimable === 1 ? '' : 's'} to claim`} title={`${claimable} reward${claimable === 1 ? '' : 's'} to claim`}>{claimable}</span>}
               </NavLink>
             ))}
           </div>

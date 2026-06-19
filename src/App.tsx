@@ -21,6 +21,7 @@ export default function App() {
   const location = useLocation();
   return (
     <>
+      <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); const m = document.getElementById('main'); m?.focus(); m?.scrollIntoView(); }}>Skip to content</a>
       <div className="app-bg" />
       <div className="blob a" />
       <div className="blob b" />
@@ -28,7 +29,7 @@ export default function App() {
       <div className="grain" />
       <div className="shell">
         <Sidebar />
-        <main className="shell-main">
+        <main id="main" tabIndex={-1} className="shell-main">
           <Suspense fallback={<div className="route-loading">Loading…</div>}>
             <div className="route-fade" key={location.pathname}>
               <Routes location={location}>

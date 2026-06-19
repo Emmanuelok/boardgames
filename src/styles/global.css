@@ -199,8 +199,26 @@ button { font-family: inherit; cursor: pointer; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
+
+/* Keyboard focus: a clear, high-contrast ring shown only for keyboard users. */
+:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+
+/* Skip-to-content link — visually hidden until focused (first tab stop). */
+.skip-link {
+  position: fixed; top: 10px; left: 10px; z-index: 200;
+  padding: 10px 16px; border-radius: 10px;
+  background: var(--accent); color: #fff; font-weight: 700;
+  transform: translateY(-160%); transition: transform 0.15s ease;
+}
+.skip-link:focus { transform: none; }
+.shell-main:focus { outline: none; }
 
 /* Lazy-route suspense fallback */
 .route-loading { display: grid; place-items: center; min-height: 70vh; color: var(--ink-faint); font-size: 15px; letter-spacing: 0.04em; }
