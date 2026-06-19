@@ -302,6 +302,7 @@ export const useProfile = create<ProfileState>()((set, get) => ({
   },
 
   recordResult(gameId, result, difficulty) {
+    let unlocked: string[] = [];
     set((s) => {
       // 1. Elo update.
       const rating = nextRating(s.rating, OPPONENT_RATING[difficulty], SCORE[result]);
@@ -335,12 +336,21 @@ export const useProfile = create<ProfileState>()((set, get) => ({
       const newlyUnlocked = [...earned].filter((id) => !have.has(id));
       const achievements = newlyUnlocked.length > 0 ? [...s.achievements, ...newlyUnlocked] : s.achievements;
       const lastUnlocked = newlyUnlocked.length > 0 ? newlyUnlocked[newlyUnlocked.length - 1] : null;
+      unlocked = newlyUnlocked;
 
       return { rating, stats, totals, beatenDifficulties, achievements, lastUnlocked };
     });
     save(get());
-    // Feed the progression economy (XP, coins, quests). Decoupled + best-effort.
-    try { useProgression.getState().recordGame({ gameId, result, difficulty }); } catch { /* ignore */ }
+    // Feed the progression economy (XP, coins, quests) and pay out any achievement
+    // this result unlocked. Decoupled + best-effort.
+    try {
+      const prog = useProgression.getState();
+      prog.recordGame({ gameId, result, difficulty });
+      for (const id of unlocked) {
+        const a = ACHIEVEMENTS.find((x) => x.id === id);
+        if (a) prog.awardAchievement(a.title);
+      }
+    } catch { /* ignore */ }
   },
 
   clearLastUnlocked() {
