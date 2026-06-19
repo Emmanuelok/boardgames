@@ -61,6 +61,8 @@
 }
 .cell.void { cursor: default; }
 .board.go .cell { background: transparent !important; }
+/* Keyboard focus: a crisp inset ring (the board clips overflow, so an outline would be cut off). */
+.cell:focus-visible { outline: none; box-shadow: inset 0 0 0 3px var(--accent-2); z-index: 5; }
 
 /* Highlights */
 .hl { position: absolute; inset: 0; pointer-events: none; z-index: 1; }

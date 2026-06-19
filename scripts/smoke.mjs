@@ -41,6 +41,18 @@ try {
   console.log('Game (chess) — 2D and 3D parity');
   await page.goto(BASE + '/#/play/chess', { waitUntil: 'networkidle0', timeout: 60000 });
   const w2d = await waitWidth('.board');
+  // The board is a roving-tabindex grid — arrow keys move focus between cells.
+  const kbd = await page.evaluate(async () => {
+    const start = document.querySelector('.board [role="gridcell"][tabindex="0"]');
+    if (!start) return false;
+    start.focus();
+    const before = document.activeElement?.getAttribute('data-idx');
+    start.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await new Promise((r) => setTimeout(r, 150));
+    const after = document.activeElement?.getAttribute('data-idx');
+    return !!before && !!after && before !== after;
+  });
+  check('board is keyboard-navigable (arrow key moves focus)', kbd);
   await page.evaluate(() => { const b = [...document.querySelectorAll('.seg button')].find((x) => x.textContent.trim() === '3D'); if (b) b.click(); });
   const w3d = await waitWidth('.board3d');
   check('2D board renders with width', w2d > 100);
