@@ -24,9 +24,11 @@ interface Props {
 export default function Board3D(props: Props) {
   const { view } = props;
   const span = Math.max(view.rows, view.cols);
-  const dist = span * 1.15 + 3;
+  // Frame the board so it fills the canvas like the 2D view (was 1.15·span+3,
+  // which left a lot of empty sky and made the board read as small).
+  const dist = span * 0.78 + 2;
   return (
-    <div className="board3d glass-soft" style={{ aspectRatio: '1 / 1', width: '100%', maxWidth: 'min(78vh, 620px)', margin: '0 auto', borderRadius: 16, overflow: 'hidden' }}>
+    <div className="board3d glass-soft" style={{ aspectRatio: '1 / 1', width: '100%', maxWidth: 'min(86vh, 100%)', margin: '0 auto', borderRadius: 16, overflow: 'hidden' }}>
       <Canvas shadows dpr={[1, 2]} camera={{ position: [0, dist * 0.92, dist * 0.78], fov: 42 }}>
         <color attach="background" args={[props.theme.glass ? '#0a1018' : '#0c0f1a']} />
         <hemisphereLight intensity={0.55} groundColor={'#1a1f2e'} />
