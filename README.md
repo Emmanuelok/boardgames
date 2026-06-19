@@ -41,6 +41,14 @@ plus a huge procedurally generated range. Live-preview and switch instantly.
 Dial the AI from a gentle **Beginner** to a relentless **Master**, play
 **pass-and-play** with a friend, or use **Tutor** mode to learn as you go.
 
+### 🏆 A progression system that rewards every session
+Earn **XP, levels and coins** for everything you do — winning (scaled by
+difficulty), clean high-accuracy play, solving puzzles, the **Daily Challenge**,
+finishing a game's course, and discovering new games. **Daily quests** rotate each
+day and pay out on claim, and a floating reward toast celebrates every gain. Spend
+coins in the **Shop** on living wallpapers, titles and avatar frames — or go **Pro**
+to unlock the lot. (Free-to-play; see **[MONETIZATION.md](./MONETIZATION.md)**.)
+
 ---
 
 ## 🎲 The games
@@ -88,7 +96,9 @@ src/
     Board2D.tsx  Board3D.tsx  TutorPanel.tsx  ThemePicker.tsx  MiniBoard.tsx
   themes/boardThemes.ts   # 200+ templates incl. Liquid Glass
   store/useGameStore.ts   # game session: play, undo/redo, AI driver, passes
-  pages/  Home  GameScreen  Learn
+  progression/progression.ts  # XP, levels, coins, daily quests & cosmetic economy
+  profile/profile.ts      # player profile, Elo rating & achievements
+  pages/  Home  GameScreen  Learn  Daily  Puzzles  Shop  Profile
 ```
 
 Because the UI talks only to `GameDefinition`, the 2D board, 3D board, tutor and

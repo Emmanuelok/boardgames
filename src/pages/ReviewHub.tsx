@@ -41,7 +41,6 @@ export default function ReviewHub() {
   return (
     <div className="reviewhub">
       <header className="rv-top">
-        <Link to="/" className="btn ghost sm">← Hub</Link>
         <div className="gs-title"><span className="gs-emoji">🗂</span><div className="col"><strong>Game Reviews</strong><span className="faint" style={{ fontSize: 12 }}>{records.length} recent game{records.length === 1 ? '' : 's'} · accuracy & evaluation</span></div></div>
         {records.length > 0 && <button className="btn ghost sm" onClick={wipe}>Clear</button>}
       </header>

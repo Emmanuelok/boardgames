@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useProgression } from '../progression/progression';
 
 /**
  * Self-contained, localStorage-backed player profile + Elo rating system.
@@ -338,6 +339,8 @@ export const useProfile = create<ProfileState>()((set, get) => ({
       return { rating, stats, totals, beatenDifficulties, achievements, lastUnlocked };
     });
     save(get());
+    // Feed the progression economy (XP, coins, quests). Decoupled + best-effort.
+    try { useProgression.getState().recordGame({ gameId, result, difficulty }); } catch { /* ignore */ }
   },
 
   clearLastUnlocked() {

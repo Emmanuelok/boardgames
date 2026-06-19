@@ -5,6 +5,7 @@ import { engine } from '../engine/engineClient';
 import { resolveClick } from '../engine/interaction';
 import { playSound, resumeAudio, type SoundName } from '../audio/sound';
 import { useProfile } from '../profile/profile';
+import { useProgression } from '../progression/progression';
 import { OnlineSession, type NetMsg, type NetStatus } from '../net/online';
 import { DEFAULT_THEME_ID } from '../themes/boardThemes';
 import { summarize, saveRecord } from '../engine/reviewSummary';
@@ -146,7 +147,14 @@ export const useGameStore = create<State>((set, get) => {
       // Persist a post-game review record once the final tutor notes have settled.
       const def = get().def;
       if (def && get().log.length >= 4) {
-        setTimeout(() => { try { saveRecord(summarize(def, get().log, get().status, hc)); } catch { /* ignore */ } }, 1100);
+        setTimeout(() => {
+          try {
+            const rec = summarize(def, get().log, get().status, hc);
+            saveRecord(rec);
+            // Reward clean play (only the engine path knows per-move accuracy).
+            useProgression.getState().awardAccuracy(rec.acc[hc] ?? 0);
+          } catch { /* ignore */ }
+        }, 1100);
       }
     }
   };

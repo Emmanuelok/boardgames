@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useProgression } from '../progression/progression';
 import { ALL_PUZZLES, PUZZLE_GAME_IDS, shuffle } from '../puzzles/allPuzzles';
 import { getGame } from '../engine/registry';
 import { getTheme } from '../themes/boardThemes';
@@ -34,6 +34,7 @@ export default function Puzzles() {
     const ns = streak + 1;
     setStreak(ns); setResult('solved');
     save({ solved: stats.solved + 1, best: Math.max(stats.best, ns) });
+    try { useProgression.getState().recordPuzzle(ns); } catch { /* ignore */ }
   };
   const onFailed = () => {
     if (result !== 'idle') return;
@@ -44,7 +45,6 @@ export default function Puzzles() {
   return (
     <div className="puzzles">
       <header className="pz-top">
-        <Link to="/" className="btn ghost sm">← Hub</Link>
         <div className="gs-title"><span className="gs-emoji">🧩</span><div className="col"><strong>Puzzle Trainer</strong><span className="faint" style={{ fontSize: 12 }}>{ALL_PUZZLES.length} tactics across {PUZZLE_GAME_IDS.length} games</span></div></div>
         <div className="pz-stats">
           <Stat n={streak} l="streak" hot={streak >= 3} icon="🔥" />

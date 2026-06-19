@@ -62,3 +62,30 @@
 .pf-ach.locked { opacity: 0.55; }
 .pf-ach-ic { font-size: 28px; }
 .pf-reset { color: var(--ink-faint); }
+
+/* Title / Pro chips next to the rank */
+.pf-title-chip { margin-left: 8px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #c4b5fd; background: rgba(124,92,255,0.16); border: 1px solid rgba(124,92,255,0.34); vertical-align: middle; }
+.pf-pro-chip { margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 900; letter-spacing: 0.06em; color: #1a1205; background: linear-gradient(90deg, #f5c451, #ffe9a8); vertical-align: middle; }
+
+/* Level band */
+.pf-level { display: flex; align-items: center; gap: 16px; padding: 14px 18px; margin-bottom: 14px; }
+.pf-lvl-badge { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 64px; }
+.pf-lvl-ic { font-size: 26px; line-height: 1; }
+.pf-lvl-n { font-weight: 800; font-size: 14px; }
+.pf-lvl-mid { flex: 1; min-width: 0; }
+.pf-lvl-bar { height: 9px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; }
+.pf-lvl-bar > div { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.4s ease; }
+.pf-lvl-coins { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.pf-coins-n { font-weight: 800; color: #f5c451; font-size: 16px; }
+@media (max-width: 620px) { .pf-level { flex-wrap: wrap; } .pf-lvl-mid { order: 3; flex-basis: 100%; } }
+
+/* Quests */
+.pf-quests { display: grid; gap: 10px; }
+.pf-quest { display: flex; align-items: center; gap: 13px; padding: 12px 15px; }
+.pf-quest.done { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.pf-q-ic { font-size: 22px; }
+.pf-q-bar { height: 7px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; margin-top: 6px; }
+.pf-q-bar > div { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #34d399, #4ade80); transition: width 0.4s ease; }
+.pf-q-reward { font-size: 12.5px; font-weight: 700; color: #f5c451; white-space: nowrap; }
+.pf-q-claimed { font-size: 12.5px; font-weight: 700; color: #4ade80; white-space: nowrap; }
+.pf-q-go { font-size: 12px; white-space: nowrap; }

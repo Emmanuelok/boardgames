@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
+import { useProgression, levelFromXp, levelTier, questDef, cosmetic } from '../progression/progression';
 import { GAMES, getGame } from '../engine/registry';
 import './Profile.css';
 
@@ -14,9 +15,17 @@ const BANDS: [number, number, string][] = [
 
 export default function Profile() {
   const p = useProfile();
+  const prog = useProgression();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(p.name);
   const winRate = p.totals.played ? Math.round((p.totals.wins / p.totals.played) * 100) : 0;
+
+  // Progression / economy view-model.
+  const { level, into, span } = levelFromXp(prog.xp);
+  const tier = levelTier(level);
+  const xpPct = Math.round((into / span) * 100);
+  const frameColor = cosmetic(prog.equipped.frame || '')?.value || '';
+  const titleText = cosmetic(prog.equipped.title || '')?.value || '';
 
   const playedGames = useMemo(
     () => GAMES.filter((g) => p.stats[g.id]?.played).sort((a, b) => (p.stats[b.id].played - p.stats[a.id].played)),
@@ -53,7 +62,6 @@ export default function Profile() {
   return (
     <div className="profile">
       <header className="pf-top">
-        <Link to="/" className="btn ghost sm">← Hub</Link>
         <div className="row gap-xs">
           <Link to="/daily" className="btn sm">📅 Daily</Link>
           <Link to="/puzzles" className="btn sm">🧩 Puzzles</Link>
@@ -61,7 +69,7 @@ export default function Profile() {
       </header>
 
       <div className="pf-hero glass">
-        <div className="pf-avatar">{(p.name || 'You').charAt(0).toUpperCase()}</div>
+        <div className="pf-avatar" style={frameColor ? { boxShadow: `0 0 0 3px ${frameColor}, 0 8px 22px -8px ${frameColor}` } : undefined}>{(p.name || 'You').charAt(0).toUpperCase()}</div>
         <div className="pf-id">
           {editing ? (
             <form onSubmit={(e) => { e.preventDefault(); p.setName(draft.trim() || 'You'); setEditing(false); }} className="row gap-xs">
@@ -71,7 +79,7 @@ export default function Profile() {
           ) : (
             <h1 className="pf-name" onClick={() => { setDraft(p.name); setEditing(true); }} title="Click to rename">{p.name} ✎</h1>
           )}
-          <div className="pf-rank">{ratingTitle(p.rating)}</div>
+          <div className="pf-rank">{ratingTitle(p.rating)}{titleText && <span className="pf-title-chip">{titleText}</span>}{prog.pro && <span className="pf-pro-chip">PRO</span>}</div>
           <div className="pf-progress" title={isMax ? 'Top rank reached' : `${toNext} rating to ${nextLabel}`}>
             <div className="pf-progress-bar" style={{ width: `${Math.round(progress * 100)}%` }} />
           </div>
@@ -82,6 +90,46 @@ export default function Profile() {
           <div className="pf-rating-l">rating</div>
         </div>
       </div>
+
+      <div className="pf-level glass-soft">
+        <div className="pf-lvl-badge"><span className="pf-lvl-ic">{tier.icon}</span><span className="pf-lvl-n">Lv {level}</span></div>
+        <div className="pf-lvl-mid">
+          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
+            <strong>{tier.name}</strong>
+            <span className="faint" style={{ fontSize: 12.5 }}>{into} / {span} XP to Lv {level + 1}</span>
+          </div>
+          <div className="pf-lvl-bar"><div style={{ width: `${xpPct}%` }} /></div>
+        </div>
+        <div className="pf-lvl-coins"><span className="pf-coins-n">🪙 {prog.coins.toLocaleString()}</span><Link to="/shop" className="btn sm">🛍 Shop</Link></div>
+      </div>
+
+      <section className="pf-section">
+        <h2>Daily Quests <span className="faint" style={{ fontSize: 14, fontWeight: 400 }}>· resets at midnight</span></h2>
+        <div className="pf-quests">
+          {prog.quests.map((q) => {
+            const d = questDef(q.id);
+            if (!d) return null;
+            const complete = q.progress >= d.goal;
+            const qpct = Math.min(100, Math.round((q.progress / d.goal) * 100));
+            return (
+              <div className={`pf-quest glass-soft ${complete ? 'done' : ''}`} key={q.id}>
+                <span className="pf-q-ic">{d.icon}</span>
+                <div className="col grow">
+                  <div className="row" style={{ justifyContent: 'space-between' }}>
+                    <strong>{d.label}</strong>
+                    <span className="faint" style={{ fontSize: 12.5 }}>{Math.min(q.progress, d.goal)}/{d.goal}</span>
+                  </div>
+                  <div className="pf-q-bar"><div style={{ width: `${qpct}%` }} /></div>
+                </div>
+                <span className="pf-q-reward">{d.reward.xp > 0 ? `+${d.reward.xp} XP · ` : ''}🪙{d.reward.coins}</span>
+                {q.claimed ? <span className="pf-q-claimed">✓ Claimed</span>
+                  : complete ? <button className="btn sm primary" onClick={() => prog.claimQuest(q.id)}>Claim</button>
+                  : <span className="pf-q-go faint">In progress</span>}
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <div className="pf-totals">
         <Tot n={p.totals.played} l="played" />
