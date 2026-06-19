@@ -4,6 +4,7 @@ import { useGameStore } from '../store/useGameStore';
 import { getGame, familyOf } from '../engine/registry';
 import { getTheme } from '../themes/boardThemes';
 import Board2D from '../components/Board2D';
+import ErrorBoundary from '../components/ErrorBoundary';
 import EvalBar from '../components/EvalBar';
 import TutorPanel from '../components/TutorPanel';
 import ThemePicker from '../components/ThemePicker';
@@ -160,13 +161,20 @@ export default function GameScreen() {
             {def.evalScale != null && <EvalBar info={store.liveEval} loading={store.liveEvalLoading} status={store.status} flipped={store.flipped} scale={def.evalScale} />}
             <div className="board-host">
               {store.view === '3d' ? (
-                <Suspense fallback={<div className="board3d-fallback glass-soft">Loading 3D board…</div>}>
-                  <Board3D
-                    def={def} view={view} theme={theme} turn={turn} flipped={store.flipped}
-                    selected={store.selected} targets={store.targets} lastMove={store.lastMove}
-                    status={store.status} hint={store.hintMove} onCell={store.onCellClick}
-                  />
-                </Suspense>
+                <ErrorBoundary fallback={
+                  <div className="board3d-fallback glass-soft">
+                    <p>The 3D board couldn’t load on this device.</p>
+                    <button className="btn sm primary" onClick={() => store.setView('2d')}>Switch to the 2D board</button>
+                  </div>
+                }>
+                  <Suspense fallback={<div className="board3d-fallback glass-soft">Loading 3D board…</div>}>
+                    <Board3D
+                      def={def} view={view} theme={theme} turn={turn} flipped={store.flipped}
+                      selected={store.selected} targets={store.targets} lastMove={store.lastMove}
+                      status={store.status} hint={store.hintMove} onCell={store.onCellClick}
+                    />
+                  </Suspense>
+                </ErrorBoundary>
               ) : (
                 <Board2D
                   def={def} view={view} theme={theme} turn={turn} flipped={store.flipped}

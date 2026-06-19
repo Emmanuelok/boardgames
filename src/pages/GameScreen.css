@@ -28,7 +28,7 @@
 .board-col { display: flex; flex-direction: column; gap: 10px; }
 .board-stage { display: flex; gap: 12px; align-items: stretch; width: 100%; }
 .board-host { flex: 1; min-width: 0; }
-.board3d-fallback { display: grid; place-items: center; aspect-ratio: 1; border-radius: 16px; color: var(--ink-dim); }
+.board3d-fallback { display: grid; place-items: center; gap: 12px; text-align: center; padding: 20px; aspect-ratio: 1; border-radius: 16px; color: var(--ink-dim); }
 
 .player-tag {
   display: flex; align-items: center; gap: 10px;
