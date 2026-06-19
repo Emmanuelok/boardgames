@@ -1,9 +1,10 @@
-import { Suspense, lazy, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Suspense, lazy, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { GAME_COUNT } from '../engine/catalogueMeta';
 import { BOARD_THEMES } from '../themes/boardThemes';
-import ShaderField, { WALLPAPERS } from '../components/ShaderField';
+import ShaderField from '../components/ShaderField';
 import Onboarding from '../components/Onboarding';
+import { useProgression, cosmetic, COSMETICS } from '../progression/progression';
 import './Home.css';
 
 // The catalogue (and the whole game registry) loads only when the gallery mounts,
@@ -19,11 +20,14 @@ const FEATURES = [
 
 export default function Home() {
   const nav = useNavigate();
-  const [wallpaper, setWallpaper] = useState<string>(() => {
-    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('gm-wallpaper') : null;
-    return WALLPAPERS.some((w) => w.id === saved) ? (saved as string) : WALLPAPERS[0].id;
-  });
-  const pickWallpaper = (id: string) => { setWallpaper(id); try { localStorage.setItem('gm-wallpaper', id); } catch { /* ignore */ } };
+  // The hero's living wallpaper is the equipped cosmetic — one source of truth
+  // shared with the Shop. Two wallpapers are free; the rest are earned or bought,
+  // so switching to one here means you own it.
+  const equippedWp = useProgression((s) => s.equipped.wallpaper);
+  const owned = useProgression((s) => s.owned);
+  const equip = useProgression((s) => s.equipCosmetic);
+  const activeWp = cosmetic(equippedWp || '')?.value || 'aurora';
+  const wallpapers = useMemo(() => COSMETICS.filter((c) => c.slot === 'wallpaper'), []);
 
   const daily = useMemo(() => { try { return JSON.parse(localStorage.getItem('gm-daily') || '{}'); } catch { return {}; } }, []);
   const today = new Date().toISOString().slice(0, 10);
@@ -36,7 +40,7 @@ export default function Home() {
       <Onboarding />
 
       <header className="home-hero">
-        <ShaderField variant={wallpaper} className="hh-bg" />
+        <ShaderField variant={activeWp} className="hh-bg" />
         <div className="hh-veil" />
         <div className="hh-inner">
           <div className="hh-copy">
@@ -51,8 +55,10 @@ export default function Home() {
           <div className="hh-wp" role="group" aria-label="Living wallpaper">
             <span className="hh-wp-label">✦ Living wallpaper — move & click to play</span>
             <div className="hh-wp-chips">
-              {WALLPAPERS.map((w) => (
-                <button key={w.id} className={`wp-chip ${wallpaper === w.id ? 'on' : ''}`} onClick={() => pickWallpaper(w.id)}>{w.label}</button>
+              {wallpapers.map((w) => (
+                owned.includes(w.id)
+                  ? <button key={w.id} className={`wp-chip ${equippedWp === w.id ? 'on' : ''}`} onClick={() => equip('wallpaper', w.id)}>{w.name}</button>
+                  : <Link key={w.id} className="wp-chip locked" to="/shop" title={`Unlock ${w.name} in the Shop`}>🔒 {w.name}</Link>
               ))}
             </div>
           </div>

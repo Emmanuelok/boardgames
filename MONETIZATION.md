@@ -35,14 +35,17 @@ cosmetics → equip).
 
 ## What's already implemented (no payments required)
 
-- **XP, levels & coins** awarded for games, accuracy, puzzles, the Daily, discovery
-  of new games, and daily quests (`src/progression/progression.ts`).
+- **XP, levels & coins** awarded for games, move accuracy, puzzles, the Daily,
+  finishing a game's course, discovering a new game, and daily quests
+  (`src/progression/progression.ts`).
 - **Daily quests** that rotate each day and pay out on claim.
 - **Cosmetic store** (`/shop`) — spend earned coins on wallpapers, titles and avatar
   frames; equip them on your profile / home hero.
-- **Pro feature flag** (`pro`) with a paywall surface, an "Enable Pro (preview)"
-  toggle for trying Pro features, and a `setPro()` that grants the cosmetic
-  catalogue. Pro gating is centralized so features can check `useProgression.getState().pro`.
+- **Pro feature flag** (`pro`) with a paywall surface and an "Enable Pro (preview)"
+  toggle. Turning Pro on grants the whole cosmetic catalogue **and** applies a
+  standing **+20% XP/coin bonus** to every earn (`PRO_BONUS`) — a perk, never a
+  gate, exactly as recommended below. Pro state is centralized so any feature can
+  check `useProgression.getState().pro`.
 
 The **only** thing not wired is taking real money — there is no backend in this
 client-only build, and we deliberately do not fake a charge.

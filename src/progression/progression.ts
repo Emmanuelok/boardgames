@@ -60,6 +60,10 @@ export function levelTier(level: number): { name: string; icon: string } {
 
 const DIFF_MULT: Record<Difficulty, number> = { tutor: 0.8, easy: 1, medium: 1.3, hard: 1.7, master: 2.2 };
 
+/** Standing bonus Pro applies to every XP/coin earn — the headline "no-limits"
+ *  perk, and deliberately a bonus rather than a gate (see MONETIZATION.md). */
+export const PRO_BONUS = 0.2;
+
 export function gameReward(result: ResultKind, difficulty: Difficulty): Reward {
   const baseXp = result === 'win' ? 50 : result === 'draw' ? 25 : 12;
   const baseCoins = result === 'win' ? 20 : result === 'draw' ? 10 : 5;
@@ -111,6 +115,7 @@ export function pickDailyQuests(dateStr: string): QuestDef[] {
 export const COSMETICS: Cosmetic[] = [
   // wallpapers (value = ShaderField variant id consumed by the Home hero)
   { id: 'wp-aurora', slot: 'wallpaper', name: 'Aurora', icon: '🌌', price: 0, value: 'aurora' },
+  { id: 'wp-lattice', slot: 'wallpaper', name: 'Lattice', icon: '🔷', price: 0, value: 'lattice' },
   { id: 'wp-liquid', slot: 'wallpaper', name: 'Liquid Glass', icon: '🌊', price: 300, value: 'liquid' },
   { id: 'wp-grid', slot: 'wallpaper', name: 'Neon Grid', icon: '🟪', price: 300, value: 'grid' },
   { id: 'wp-warp', slot: 'wallpaper', name: 'Warp', icon: '🌠', price: 600, value: 'warp', pro: true },
@@ -243,19 +248,22 @@ export const useProgression = create<ProgressionState>()((set, get) => {
   /** Core mutation: grant a reward, advance the XP quest + daily counter, detect level-ups, raise a flash. */
   const grant = (reward: Reward, label: string, icon: string, countDaily = true) => {
     set((s) => {
+      // Pro pays a standing bonus on every earn (the advertised "no-limits" perk).
+      const mult = s.pro ? 1 + PRO_BONUS : 1;
+      const gainedXp = Math.round(Math.max(0, reward.xp) * mult);
+      const gainedCoins = Math.round(Math.max(0, reward.coins) * mult);
       const before = levelFromXp(s.xp).level;
-      const xp = s.xp + Math.max(0, reward.xp);
-      const coins = s.coins + Math.max(0, reward.coins);
+      const xp = s.xp + gainedXp;
       const after = levelFromXp(xp).level;
       const levelUp = after > before ? after : undefined;
-      let next: ProgressionState = { ...s, xp, coins };
-      if (countDaily && reward.xp > 0) {
-        const xpToday = s.xpToday + reward.xp;
+      // Level-up pays a (flat) coin bonus and is the headline of the flash.
+      const levelBonus = levelUp ? 25 * (levelUp - before) : 0;
+      let next: ProgressionState = { ...s, xp, coins: s.coins + gainedCoins + levelBonus };
+      if (countDaily && gainedXp > 0) {
+        const xpToday = s.xpToday + gainedXp;
         next = { ...next, xpToday, quests: bumpQuests(s.quests, 'xp', xpToday, true) };
       }
-      // Level-up pays a coin bonus and is the headline of the flash.
-      if (levelUp) next = { ...next, coins: next.coins + 25 * (levelUp - before) };
-      next.flash = { id: flashSeq++, xp: reward.xp, coins: reward.coins + (levelUp ? 25 * (levelUp - before) : 0), label, icon, levelUp };
+      next.flash = { id: flashSeq++, xp: gainedXp, coins: gainedCoins + levelBonus, label, icon, levelUp };
       return next;
     });
     save(get());

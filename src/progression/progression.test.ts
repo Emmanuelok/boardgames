@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   xpToNext, levelFromXp, levelTier, gameReward, accuracyBonus,
-  pickDailyQuests, questDef, useProgression, COSMETICS, cosmetic,
+  pickDailyQuests, questDef, useProgression, COSMETICS, cosmetic, PRO_BONUS,
 } from './progression';
 
 describe('level curve', () => {
@@ -122,5 +122,29 @@ describe('progression store', () => {
     useProgression.getState().recordGame({ gameId: 'chess', result: 'win', difficulty: 'hard' });
     const xp = useProgression.getState().xp;
     expect(JSON.parse(localStorage.getItem('gm-progression')!).xp).toBe(xp);
+  });
+
+  it('awards a finished course once, then never again', () => {
+    expect(useProgression.getState().xp).toBe(0);
+    useProgression.getState().recordLesson('chess');
+    expect(useProgression.getState().xp).toBe(35);
+    useProgression.getState().recordLesson('chess'); // repeat is a no-op
+    expect(useProgression.getState().xp).toBe(35);
+  });
+
+  it('applies the Pro bonus to every earn', () => {
+    // Park XP exactly at a level start so a small gain can't add a level-up coin bonus.
+    useProgression.setState({ xp: 2340, coins: 0, seenGames: ['chess'], pro: true });
+    useProgression.getState().recordGame({ gameId: 'chess', result: 'win', difficulty: 'easy' }); // base 50 XP / 20 coins
+    expect(useProgression.getState().coins).toBe(Math.round(20 * (1 + PRO_BONUS))); // 24
+    expect(useProgression.getState().xp).toBe(2340 + Math.round(50 * (1 + PRO_BONUS))); // +60, no level-up
+  });
+
+  it('offers two free wallpapers, owned from the start', () => {
+    const freeWallpapers = COSMETICS.filter((c) => c.slot === 'wallpaper' && c.price === 0).map((c) => c.id).sort();
+    expect(freeWallpapers).toEqual(['wp-aurora', 'wp-lattice']);
+    const owned = useProgression.getState().owned;
+    expect(owned).toContain('wp-aurora');
+    expect(owned).toContain('wp-lattice');
   });
 });

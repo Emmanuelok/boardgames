@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getGame } from '../engine/registry';
+import { useProgression } from '../progression/progression';
 import { getTheme } from '../themes/boardThemes';
 import MiniBoard from '../components/MiniBoard';
 import InteractiveLesson from '../components/InteractiveLesson';
@@ -21,6 +22,13 @@ export default function Learn() {
     });
     return flat;
   }, [def]);
+
+  // Reward finishing a game's course — the first time the last lesson is reached.
+  useEffect(() => {
+    if (def && steps.length > 0 && cur >= steps.length - 1) {
+      try { useProgression.getState().recordLesson(def.id); } catch { /* ignore */ }
+    }
+  }, [cur, steps.length, def]);
 
   if (!def) return <div className="loading">Game not found. <Link to="/">Back to hub</Link></div>;
 
