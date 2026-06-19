@@ -147,4 +147,12 @@ describe('progression store', () => {
     expect(owned).toContain('wp-aurora');
     expect(owned).toContain('wp-lattice');
   });
+
+  it('pays a flat bonus for unlocking an achievement', () => {
+    useProgression.setState({ xp: 2340, coins: 0, pro: false }); // level start → no level-up coin bonus
+    useProgression.getState().awardAchievement('First Blood');
+    expect(useProgression.getState().coins).toBe(60);
+    expect(useProgression.getState().xp).toBe(2340 + 75);
+    expect(useProgression.getState().flash?.label).toContain('First Blood');
+  });
 });

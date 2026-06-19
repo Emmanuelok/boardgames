@@ -156,6 +156,7 @@ export interface ProgressionState {
   recordPuzzle: (streak?: number) => void;
   recordDaily: (streak?: number) => void;
   recordLesson: (gameId: string) => void;
+  awardAchievement: (title: string) => void;
   claimQuest: (id: string) => void;
   buyCosmetic: (id: string) => boolean;
   equipCosmetic: (slot: CosmeticSlot, id: string) => void;
@@ -311,6 +312,11 @@ export const useProgression = create<ProgressionState>()((set, get) => {
       if (s.seenGames.includes(key)) return; // first completion only
       set({ seenGames: [...s.seenGames, key] });
       grant({ xp: 35, coins: 15 }, 'Lesson complete', '📖');
+    },
+
+    awardAchievement(title) {
+      // Milestones (First Blood, Giant Slayer, …) pay into the chase too.
+      grant({ xp: 75, coins: 60 }, `Achievement: ${title}`, '🏅');
     },
 
     claimQuest(id) {

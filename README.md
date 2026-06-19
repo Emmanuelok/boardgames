@@ -44,7 +44,8 @@ Dial the AI from a gentle **Beginner** to a relentless **Master**, play
 ### 🏆 A progression system that rewards every session
 Earn **XP, levels and coins** for everything you do — winning (scaled by
 difficulty), clean high-accuracy play, solving puzzles, the **Daily Challenge**,
-finishing a game's course, and discovering new games. **Daily quests** rotate each
+finishing a game's course, unlocking achievements, and discovering new games.
+**Daily quests** rotate each
 day and pay out on claim, and a floating reward toast celebrates every gain. Spend
 coins in the **Shop** on living wallpapers, titles and avatar frames — or go **Pro**
 to unlock the lot. (Free-to-play; see **[MONETIZATION.md](./MONETIZATION.md)**.)
