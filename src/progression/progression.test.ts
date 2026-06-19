@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   xpToNext, levelFromXp, levelTier, gameReward, accuracyBonus,
-  pickDailyQuests, questDef, useProgression, COSMETICS, cosmetic, PRO_BONUS,
+  pickDailyQuests, pickWeeklyQuests, questDef, useProgression, COSMETICS, cosmetic, PRO_BONUS,
 } from './progression';
 
 describe('level curve', () => {
@@ -54,6 +54,16 @@ describe('daily quests', () => {
     expect(a.map((q) => q.id)).toEqual(b.map((q) => q.id)); // stable within a day
     // Different day very likely yields a different set (not a hard guarantee, but holds here).
     expect(a.map((q) => q.id).join()).not.toBe(c.map((q) => q.id).join());
+  });
+});
+
+describe('weekly quests', () => {
+  it('picks 3 distinct weekly quests deterministically per week', () => {
+    const a = pickWeeklyQuests('2026-06-15');
+    const b = pickWeeklyQuests('2026-06-15');
+    expect(a).toHaveLength(3);
+    expect(new Set(a.map((q) => q.id)).size).toBe(3);
+    expect(a.map((q) => q.id)).toEqual(b.map((q) => q.id));
   });
 });
 
@@ -154,5 +164,25 @@ describe('progression store', () => {
     expect(useProgression.getState().coins).toBe(60);
     expect(useProgression.getState().xp).toBe(2340 + 75);
     expect(useProgression.getState().flash?.label).toContain('First Blood');
+  });
+
+  it('tracks weekly quests in parallel with daily, past the daily cap', () => {
+    useProgression.setState({
+      quests: [{ id: 'win2', progress: 0, claimed: false }],
+      weekly: [{ id: 'w-win10', progress: 0, claimed: false }],
+    });
+    for (let i = 0; i < 3; i++) useProgression.getState().recordGame({ gameId: 'chess', result: 'win', difficulty: 'easy' });
+    expect(useProgression.getState().quests.find((x) => x.id === 'win2')!.progress).toBe(2);   // daily caps at goal
+    expect(useProgression.getState().weekly.find((x) => x.id === 'w-win10')!.progress).toBe(3); // weekly keeps counting
+  });
+
+  it('claims a completed weekly quest exactly once', () => {
+    const reward = questDef('w-win10')!.reward;
+    useProgression.setState({ weekly: [{ id: 'w-win10', progress: 10, claimed: false }], xp: 2340, coins: 0 });
+    useProgression.getState().claimQuest('w-win10');
+    expect(useProgression.getState().coins).toBe(reward.coins);
+    expect(useProgression.getState().weekly.find((x) => x.id === 'w-win10')!.claimed).toBe(true);
+    useProgression.getState().claimQuest('w-win10'); // no double-claim
+    expect(useProgression.getState().coins).toBe(reward.coins);
   });
 });

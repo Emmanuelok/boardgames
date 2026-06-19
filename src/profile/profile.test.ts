@@ -86,3 +86,19 @@ describe('profile · progression hook', () => {
     expect(prog.xp).toBeGreaterThan(0);
   });
 });
+
+describe('profile · flawless', () => {
+  beforeEach(reset);
+
+  it('unlocks Flawless Victory on a blunder-free win and pays once', () => {
+    expect(useProfile.getState().achievements).not.toContain('flawless');
+    useProfile.getState().recordFlawlessWin();
+    const s = useProfile.getState();
+    expect(s.flawless).toBe(true);
+    expect(s.achievements).toContain('flawless');
+    const coins = useProgression.getState().coins;
+    expect(coins).toBeGreaterThan(0); // achievement bonus paid into the economy
+    useProfile.getState().recordFlawlessWin(); // idempotent — no second payout
+    expect(useProgression.getState().coins).toBe(coins);
+  });
+});

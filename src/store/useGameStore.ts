@@ -153,6 +153,12 @@ export const useGameStore = create<State>((set, get) => {
             saveRecord(rec);
             // Reward clean play (only the engine path knows per-move accuracy).
             useProgression.getState().awardAccuracy(rec.acc[hc] ?? 0);
+            // Flawless win: a victory with enough graded moves and zero blunders.
+            const humanGraded = get().log.filter((e) => e.player === hc && e.explanation);
+            const blunders = humanGraded.filter((e) => e.explanation!.band === 'blunder').length;
+            if (result === 'win' && humanGraded.length >= 6 && blunders === 0) {
+              useProfile.getState().recordFlawlessWin();
+            }
           } catch { /* ignore */ }
         }, 1100);
       }

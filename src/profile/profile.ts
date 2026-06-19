@@ -49,10 +49,13 @@ export interface ProfileState {
   lastUnlocked: string | null;
   /** Difficulties the player has beaten at least once (for "Giant Slayer" etc.). */
   beatenDifficulties: Difficulty[];
+  /** Set once the player wins a game with no blunders (unlocks "Flawless Victory"). */
+  flawless: boolean;
 
   // actions
   setName: (name: string) => void;
   recordResult: (gameId: string, result: ResultKind, difficulty: Difficulty) => void;
+  recordFlawlessWin: () => void;
   clearLastUnlocked: () => void;
   reset: () => void;
 }
@@ -184,7 +187,7 @@ function earnedAchievements(s: ProfileState): Set<string> {
   if (s.totals.wins >= 10) earned.add('win-10');
   if (s.totals.played >= 25) earned.add('play-25');
   if (distinctGamesWon(s.stats) >= 5) earned.add('polymath');
-  // 'flawless' — intentionally not computable yet; hook left for blunder tracking.
+  if (s.flawless) earned.add('flawless');
   if (s.rating >= 1200) earned.add('expert');
   if (s.rating >= 1600) earned.add('rating-master');
   if (distinctCategoriesPlayed(s.stats) >= ALL_CATEGORIES.length) earned.add('all-rounder');
@@ -202,7 +205,7 @@ const emptyTally = (): Tally => ({ played: 0, wins: 0, losses: 0, draws: 0 });
 /** A fresh, default profile (data fields only). */
 function freshProfile(): Pick<
   ProfileState,
-  'name' | 'rating' | 'stats' | 'totals' | 'achievements' | 'lastUnlocked' | 'beatenDifficulties'
+  'name' | 'rating' | 'stats' | 'totals' | 'achievements' | 'lastUnlocked' | 'beatenDifficulties' | 'flawless'
 > {
   return {
     name: 'You',
@@ -212,6 +215,7 @@ function freshProfile(): Pick<
     achievements: [],
     lastUnlocked: null,
     beatenDifficulties: [],
+    flawless: false,
   };
 }
 
@@ -264,6 +268,7 @@ function load(): PersistShape {
               x === 'tutor' || x === 'easy' || x === 'medium' || x === 'hard' || x === 'master',
           ) as Difficulty[])
         : [],
+      flawless: Boolean(parsed.flawless),
     };
   } catch {
     return base;
@@ -282,6 +287,7 @@ function save(s: ProfileState): void {
       achievements: s.achievements,
       lastUnlocked: s.lastUnlocked,
       beatenDifficulties: s.beatenDifficulties,
+      flawless: s.flawless,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {
@@ -346,6 +352,30 @@ export const useProfile = create<ProfileState>()((set, get) => ({
     try {
       const prog = useProgression.getState();
       prog.recordGame({ gameId, result, difficulty });
+      for (const id of unlocked) {
+        const a = ACHIEVEMENTS.find((x) => x.id === id);
+        if (a) prog.awardAchievement(a.title);
+      }
+    } catch { /* ignore */ }
+  },
+
+  recordFlawlessWin() {
+    if (get().flawless) return; // one-way flag — "Flawless Victory" unlocks once
+    let unlocked: string[] = [];
+    set((s) => {
+      const snap: ProfileState = { ...s, flawless: true };
+      const earned = earnedAchievements(snap);
+      const have = new Set(s.achievements);
+      unlocked = [...earned].filter((id) => !have.has(id));
+      return {
+        flawless: true,
+        achievements: unlocked.length ? [...s.achievements, ...unlocked] : s.achievements,
+        lastUnlocked: unlocked.length ? unlocked[unlocked.length - 1] : s.lastUnlocked,
+      };
+    });
+    save(get());
+    try {
+      const prog = useProgression.getState();
       for (const id of unlocked) {
         const a = ACHIEVEMENTS.find((x) => x.id === id);
         if (a) prog.awardAchievement(a.title);
