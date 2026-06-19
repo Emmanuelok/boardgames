@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { useEffect, useMemo } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import type { BoardView, GameDefinition, GameStatus, MoveBase, Player } from '../engine/types';
@@ -46,12 +46,16 @@ export default function Board3D(props: Props) {
         <pointLight position={[-span, span, -span]} intensity={0.4} color={props.theme.glow ?? '#88aaff'} />
 
         <Scene {...props} />
+        <CameraRig dist={dist} />
 
         <ContactShadows position={[0, -0.12, 0]} opacity={0.5} scale={span * 2.2} blur={2.4} far={6} resolution={512} color="#000000" />
         <OrbitControls
+          makeDefault
           enablePan={false}
           enableZoom={!props.autoRotate}
           enableRotate={!props.autoRotate}
+          enableDamping
+          dampingFactor={0.12}
           minDistance={span * 0.7}
           maxDistance={span * 2.2}
           maxPolarAngle={Math.PI / 2.05}
@@ -62,6 +66,22 @@ export default function Board3D(props: Props) {
       </Canvas>
     </div>
   );
+}
+
+/**
+ * Re-frame the camera when the board's size changes (e.g. switching games or
+ * variants while staying in 3D). The Canvas mounts once, so its initial `camera`
+ * prop never updates afterwards; this sets the identical position on first
+ * render (so initial framing is unchanged) and updates it whenever `dist` moves.
+ */
+function CameraRig({ dist }: { dist: number }) {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as { update?: () => void } | null;
+  useEffect(() => {
+    camera.position.set(0, dist * 0.92, dist * 0.78);
+    controls?.update?.();
+  }, [dist, camera, controls]);
+  return null;
 }
 
 function Scene(props: Props) {
