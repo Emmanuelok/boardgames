@@ -11,10 +11,11 @@
 .sb-nav { display: flex; flex-direction: column; gap: 14px; flex: 1; overflow-y: auto; }
 .sb-group { display: flex; flex-direction: column; gap: 2px; }
 .sb-group-title { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-faint); padding: 0 10px 4px; }
-.sb-link { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 11px; color: var(--ink-dim); font-weight: 600; font-size: 14.5px; transition: background 0.15s ease, color 0.15s ease; }
+.sb-link { position: relative; display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 11px; color: var(--ink-dim); font-weight: 600; font-size: 14.5px; transition: background 0.15s ease, color 0.15s ease; }
 .sb-link:hover { background: rgba(255,255,255,0.06); color: var(--ink); }
 .sb-link.on { background: color-mix(in srgb, var(--accent) 18%, transparent); color: #fff; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent); }
 .sb-ic { font-size: 18px; width: 22px; text-align: center; }
+.sb-badge { margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px -2px var(--accent); }
 .sb-cta { justify-content: center; margin-top: 6px; }
 
 /* Live progression widget */
@@ -39,4 +40,5 @@
   .sb-group { flex-direction: row; gap: 2px; }
   .sb-link { flex-direction: column; padding: 7px 12px; gap: 2px; font-size: 11px; }
   .sb-ic { font-size: 20px; }
+  .sb-badge { position: absolute; top: 2px; right: calc(50% - 22px); margin: 0; min-width: 16px; height: 16px; font-size: 10px; }
 }

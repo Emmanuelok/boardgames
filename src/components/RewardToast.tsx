@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useProgression, levelTier } from '../progression/progression';
+import { playSound } from '../audio/sound';
 import './RewardToast.css';
 
 /**
@@ -14,6 +15,7 @@ export default function RewardToast() {
 
   useEffect(() => {
     if (!flash) return;
+    if (flash.levelUp) playSound('levelup'); // celebrate the big moment
     clearTimeout(timer.current);
     timer.current = setTimeout(() => clearFlash(), flash.levelUp ? 3800 : 2400);
     return () => clearTimeout(timer.current);
