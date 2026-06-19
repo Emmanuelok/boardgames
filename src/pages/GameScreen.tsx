@@ -140,11 +140,11 @@ export default function GameScreen() {
         </div>
         <div className="row gap-xs">
           <span className="chip rating-chip hide-sm" title="Your rating">⚡ {rating} · {ratingTitle(rating)}</span>
-          <div className="seg">
-            <button className={store.view === '2d' ? 'on' : ''} onClick={() => store.setView('2d')}>2D</button>
-            <button className={store.view === '3d' ? 'on' : ''} onClick={() => store.setView('3d')}>3D</button>
+          <div className="seg" role="group" aria-label="Board view">
+            <button className={store.view === '2d' ? 'on' : ''} aria-pressed={store.view === '2d'} onClick={() => store.setView('2d')}>2D</button>
+            <button className={store.view === '3d' ? 'on' : ''} aria-pressed={store.view === '3d'} onClick={() => store.setView('3d')}>3D</button>
           </div>
-          <button className="btn icon sm" title={muted ? 'Unmute' : 'Mute'} onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
+          <button className="btn icon sm" aria-label={muted ? 'Unmute' : 'Mute'} title={muted ? 'Unmute' : 'Mute'} onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
           <button className="btn sm" onClick={() => setThemeOpen(true)}>🎨 Theme</button>
           <Link className="btn sm ghost hide-sm" to={`/learn/${def.id}`}>📖 Learn</Link>
         </div>
@@ -266,7 +266,7 @@ function AchievementToast({ id }: { id: string }) {
   const a = ACHIEVEMENTS.find((x) => x.id === id);
   if (!a) return null;
   return (
-    <div className="achievement-toast glass">
+    <div className="achievement-toast glass" role="status" aria-live="polite">
       <span className="at-ic">{a.icon}</span>
       <div className="col">
         <span className="at-title">Achievement unlocked</span>
@@ -406,7 +406,7 @@ function Setup({ store, def }: any) {
           <Field label="AI strength">
             <div className="diff-grid">
               {DIFFS.map((d) => (
-                <button key={d.id} className={`diff ${store.difficulty === d.id ? 'on' : ''}`} onClick={() => store.setDifficulty(d.id)}>
+                <button key={d.id} className={`diff ${store.difficulty === d.id ? 'on' : ''}`} aria-pressed={store.difficulty === d.id} onClick={() => store.setDifficulty(d.id)}>
                   <strong>{d.label}</strong><span>{d.sub}</span>
                 </button>
               ))}
@@ -428,9 +428,9 @@ function Setup({ store, def }: any) {
       </Field>
 
       <Field label="Board view">
-        <div className="seg full">
-          <button className={store.view === '2d' ? 'on' : ''} onClick={() => store.setView('2d')}>2D</button>
-          <button className={store.view === '3d' ? 'on' : ''} onClick={() => store.setView('3d')}>3D</button>
+        <div className="seg full" role="group" aria-label="Board view">
+          <button className={store.view === '2d' ? 'on' : ''} aria-pressed={store.view === '2d'} onClick={() => store.setView('2d')}>2D</button>
+          <button className={store.view === '3d' ? 'on' : ''} aria-pressed={store.view === '3d'} onClick={() => store.setView('3d')}>3D</button>
         </div>
       </Field>
     </div>
