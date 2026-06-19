@@ -95,18 +95,41 @@ export const QUEST_POOL: QuestDef[] = [
 
 export function todayStr(d = new Date()): string { return d.toISOString().slice(0, 10); }
 
-/** Deterministically pick 3 quests for a given date so they're stable all day. */
-export function pickDailyQuests(dateStr: string): QuestDef[] {
+/** Monday-anchored week key (UTC), e.g. "2026-06-15" — stable for the whole week. */
+export function weekStr(d = new Date()): string {
+  const dt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  dt.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7)); // back up to Monday
+  return dt.toISOString().slice(0, 10);
+}
+
+/** Deterministic seeded pick of `n` quests from `pool`, stable for a given key. */
+function seededPick(pool: QuestDef[], key: string, n: number): QuestDef[] {
   let seed = 0;
-  for (let i = 0; i < dateStr.length; i++) seed = (seed * 31 + dateStr.charCodeAt(i)) >>> 0;
-  const pool = [...QUEST_POOL];
+  for (let i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) >>> 0;
+  const p = [...pool];
   const out: QuestDef[] = [];
-  for (let i = 0; i < 3 && pool.length; i++) {
+  for (let i = 0; i < n && p.length; i++) {
     seed = (seed * 1103515245 + 12345) >>> 0;
-    out.push(pool.splice(seed % pool.length, 1)[0]);
+    out.push(p.splice(seed % p.length, 1)[0]);
   }
   return out;
 }
+
+/** Deterministically pick 3 daily quests for a date so they're stable all day. */
+export function pickDailyQuests(dateStr: string): QuestDef[] { return seededPick(QUEST_POOL, dateStr, 3); }
+
+/** Bigger, slower goals for the week — chunkier rewards, picked stably per week. */
+export const WEEKLY_POOL: QuestDef[] = [
+  { id: 'w-win10', label: 'Win 10 games', icon: '🏆', goal: 10, track: 'win', reward: { xp: 300, coins: 250 } },
+  { id: 'w-play6', label: 'Play 6 different games', icon: '🎲', goal: 6, track: 'distinct', reward: { xp: 250, coins: 220 } },
+  { id: 'w-puzzle12', label: 'Solve 12 puzzles', icon: '🧩', goal: 12, track: 'puzzle', reward: { xp: 250, coins: 220 } },
+  { id: 'w-xp1500', label: 'Earn 1500 XP', icon: '⚡', goal: 1500, track: 'xp', reward: { xp: 0, coins: 300 } },
+  { id: 'w-hard5', label: 'Beat 5 Hard+ opponents', icon: '🔥', goal: 5, track: 'hardwin', reward: { xp: 350, coins: 280 } },
+  { id: 'w-daily4', label: 'Complete 4 Daily Challenges', icon: '📅', goal: 4, track: 'daily', reward: { xp: 300, coins: 250 } },
+];
+
+/** Deterministically pick 3 weekly quests for a week so they're stable all week. */
+export function pickWeeklyQuests(weekKey: string): QuestDef[] { return seededPick(WEEKLY_POOL, weekKey, 3); }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Cosmetics catalogue
@@ -149,6 +172,10 @@ export interface ProgressionState {
   quests: QuestProgress[];
   xpToday: number;
   gamesToday: string[];
+  weekKey: string;
+  weekly: QuestProgress[];
+  xpThisWeek: number;
+  gamesThisWeek: string[];
   flash: RewardFlash | null;
 
   recordGame: (e: { gameId: string; result: ResultKind; difficulty: Difficulty }) => void;
@@ -176,10 +203,14 @@ function freshQuests(date: string): { questDate: string; quests: QuestProgress[]
   return { questDate: date, quests: pickDailyQuests(date).map((q) => ({ id: q.id, progress: 0, claimed: false })), xpToday: 0, gamesToday: [] };
 }
 
-type PersistShape = Pick<ProgressionState, 'xp' | 'coins' | 'seenGames' | 'owned' | 'equipped' | 'pro' | 'questDate' | 'quests' | 'xpToday' | 'gamesToday'>;
+function freshWeekly(week: string): { weekKey: string; weekly: QuestProgress[]; xpThisWeek: number; gamesThisWeek: string[] } {
+  return { weekKey: week, weekly: pickWeeklyQuests(week).map((q) => ({ id: q.id, progress: 0, claimed: false })), xpThisWeek: 0, gamesThisWeek: [] };
+}
+
+type PersistShape = Pick<ProgressionState, 'xp' | 'coins' | 'seenGames' | 'owned' | 'equipped' | 'pro' | 'questDate' | 'quests' | 'xpToday' | 'gamesToday' | 'weekKey' | 'weekly' | 'xpThisWeek' | 'gamesThisWeek'>;
 
 function fresh(): PersistShape {
-  return { xp: 0, coins: 0, seenGames: [], owned: [...FREE_COSMETICS], equipped: { wallpaper: 'wp-aurora', title: 'ti-rookie', frame: 'fr-none' }, pro: false, ...freshQuests(todayStr()) };
+  return { xp: 0, coins: 0, seenGames: [], owned: [...FREE_COSMETICS], equipped: { wallpaper: 'wp-aurora', title: 'ti-rookie', frame: 'fr-none' }, pro: false, ...freshQuests(todayStr()), ...freshWeekly(weekStr()) };
 }
 
 function load(): PersistShape {
@@ -201,9 +232,14 @@ function load(): PersistShape {
       quests: Array.isArray(p.quests) ? p.quests.map((q) => ({ id: String(q.id), progress: Number(q.progress) || 0, claimed: Boolean(q.claimed) })) : base.quests,
       xpToday: Number(p.xpToday) || 0,
       gamesToday: Array.isArray(p.gamesToday) ? p.gamesToday.filter((x): x is string => typeof x === 'string') : [],
+      weekKey: typeof p.weekKey === 'string' ? p.weekKey : base.weekKey,
+      weekly: Array.isArray(p.weekly) ? p.weekly.map((q) => ({ id: String(q.id), progress: Number(q.progress) || 0, claimed: Boolean(q.claimed) })) : base.weekly,
+      xpThisWeek: Number(p.xpThisWeek) || 0,
+      gamesThisWeek: Array.isArray(p.gamesThisWeek) ? p.gamesThisWeek.filter((x): x is string => typeof x === 'string') : [],
     };
-    // Roll over quests if the persisted set is from a previous day.
+    // Roll over quests if the persisted set is from a previous day / week.
     if (merged.questDate !== todayStr()) Object.assign(merged, freshQuests(todayStr()));
+    if (merged.weekKey !== weekStr()) Object.assign(merged, freshWeekly(weekStr()));
     return merged;
   } catch { return base; }
 }
@@ -211,7 +247,7 @@ function load(): PersistShape {
 function save(s: ProgressionState): void {
   if (typeof window === 'undefined' || !window.localStorage) return;
   try {
-    const payload: PersistShape = { xp: s.xp, coins: s.coins, seenGames: s.seenGames, owned: s.owned, equipped: s.equipped, pro: s.pro, questDate: s.questDate, quests: s.quests, xpToday: s.xpToday, gamesToday: s.gamesToday };
+    const payload: PersistShape = { xp: s.xp, coins: s.coins, seenGames: s.seenGames, owned: s.owned, equipped: s.equipped, pro: s.pro, questDate: s.questDate, quests: s.quests, xpToday: s.xpToday, gamesToday: s.gamesToday, weekKey: s.weekKey, weekly: s.weekly, xpThisWeek: s.xpThisWeek, gamesThisWeek: s.gamesThisWeek };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch { /* ignore */ }
 }
@@ -222,23 +258,27 @@ function save(s: ProgressionState): void {
 
 let flashSeq = 1;
 
-/** Roll the quest set over to `date` if needed; returns the (possibly reset) slice. */
-function rollQuests<T extends Pick<ProgressionState, 'questDate' | 'quests' | 'xpToday' | 'gamesToday'>>(s: T, date: string): T {
-  if (s.questDate === date) return s;
-  return { ...s, ...freshQuests(date) };
+/** Roll the daily and weekly quest sets over when the day / week changes. */
+function rollPeriods(s: ProgressionState): ProgressionState {
+  let next = s;
+  const today = todayStr();
+  if (next.questDate !== today) next = { ...next, ...freshQuests(today) };
+  const week = weekStr();
+  if (next.weekKey !== week) next = { ...next, ...freshWeekly(week) };
+  return next;
 }
 
 /** Advance any quests tracking `track` by `amount` (distinct uses absolute value). */
 function bumpQuests(quests: QuestProgress[], track: QuestTrack, amount: number, absolute = false): QuestProgress[] {
   return quests.map((q) => {
-    const def = QUEST_POOL.find((d) => d.id === q.id);
+    const def = questDef(q.id);
     if (!def || def.track !== track) return q;
     const progress = Math.min(def.goal, absolute ? amount : q.progress + amount);
     return { ...q, progress };
   });
 }
 
-export function questDef(id: string): QuestDef | undefined { return QUEST_POOL.find((d) => d.id === id); }
+export function questDef(id: string): QuestDef | undefined { return QUEST_POOL.find((d) => d.id === id) ?? WEEKLY_POOL.find((d) => d.id === id); }
 export function questComplete(q: QuestProgress): boolean { const d = questDef(q.id); return !!d && q.progress >= d.goal; }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -262,7 +302,8 @@ export const useProgression = create<ProgressionState>()((set, get) => {
       let next: ProgressionState = { ...s, xp, coins: s.coins + gainedCoins + levelBonus };
       if (countDaily && gainedXp > 0) {
         const xpToday = s.xpToday + gainedXp;
-        next = { ...next, xpToday, quests: bumpQuests(s.quests, 'xp', xpToday, true) };
+        const xpThisWeek = s.xpThisWeek + gainedXp;
+        next = { ...next, xpToday, xpThisWeek, quests: bumpQuests(s.quests, 'xp', xpToday, true), weekly: bumpQuests(s.weekly, 'xp', xpThisWeek, true) };
       }
       next.flash = { id: flashSeq++, xp: gainedXp, coins: gainedCoins + levelBonus, label, icon, levelUp };
       return next;
@@ -275,17 +316,22 @@ export const useProgression = create<ProgressionState>()((set, get) => {
     flash: null,
 
     recordGame({ gameId, result, difficulty }) {
-      set((s) => rollQuests(s, todayStr()));
+      set((s) => rollPeriods(s));
       const s = get();
       const isNew = !s.seenGames.includes(gameId);
+      const hard = difficulty === 'hard' || difficulty === 'master';
       const base = gameReward(result, difficulty);
       const total: Reward = isNew ? { xp: base.xp + DISCOVERY_REWARD.xp, coins: base.coins + DISCOVERY_REWARD.coins } : base;
-      // Quest tracking (before granting, on the freshest slice).
+      // Quest tracking (before granting, on the freshest slice) — daily + weekly.
       const gamesToday = s.gamesToday.includes(gameId) ? s.gamesToday : [...s.gamesToday, gameId];
       let quests = bumpQuests(s.quests, 'distinct', gamesToday.length, true);
       if (result === 'win') quests = bumpQuests(quests, 'win', 1);
-      if (result === 'win' && (difficulty === 'hard' || difficulty === 'master')) quests = bumpQuests(quests, 'hardwin', 1);
-      set({ seenGames: isNew ? [...s.seenGames, gameId] : s.seenGames, gamesToday, quests });
+      if (result === 'win' && hard) quests = bumpQuests(quests, 'hardwin', 1);
+      const gamesThisWeek = s.gamesThisWeek.includes(gameId) ? s.gamesThisWeek : [...s.gamesThisWeek, gameId];
+      let weekly = bumpQuests(s.weekly, 'distinct', gamesThisWeek.length, true);
+      if (result === 'win') weekly = bumpQuests(weekly, 'win', 1);
+      if (result === 'win' && hard) weekly = bumpQuests(weekly, 'hardwin', 1);
+      set({ seenGames: isNew ? [...s.seenGames, gameId] : s.seenGames, gamesToday, quests, gamesThisWeek, weekly });
       grant(total, isNew ? `New game! ${result === 'win' ? 'Win' : 'Played'}` : result === 'win' ? 'Victory' : result === 'draw' ? 'Draw' : 'Game played', result === 'win' ? '🏆' : '🎮');
     },
 
@@ -295,14 +341,14 @@ export const useProgression = create<ProgressionState>()((set, get) => {
     },
 
     recordPuzzle(streak = 0) {
-      set((s) => rollQuests(s, todayStr()));
-      set((s) => ({ quests: bumpQuests(s.quests, 'puzzle', 1) }));
+      set((s) => rollPeriods(s));
+      set((s) => ({ quests: bumpQuests(s.quests, 'puzzle', 1), weekly: bumpQuests(s.weekly, 'puzzle', 1) }));
       grant({ xp: 20 + Math.min(streak, 10) * 2, coins: 8 }, 'Puzzle solved', '🧩');
     },
 
     recordDaily(streak = 1) {
-      set((s) => rollQuests(s, todayStr()));
-      set((s) => ({ quests: bumpQuests(s.quests, 'daily', 1) }));
+      set((s) => rollPeriods(s));
+      set((s) => ({ quests: bumpQuests(s.quests, 'daily', 1), weekly: bumpQuests(s.weekly, 'daily', 1) }));
       grant({ xp: 60 + Math.min(streak, 8) * 5, coins: 30 }, `Daily Challenge · 🔥${streak}`, '📅');
     },
 
@@ -321,10 +367,12 @@ export const useProgression = create<ProgressionState>()((set, get) => {
 
     claimQuest(id) {
       const s = get();
-      const q = s.quests.find((x) => x.id === id);
       const def = questDef(id);
+      const inDaily = s.quests.some((x) => x.id === id);
+      const q = (inDaily ? s.quests : s.weekly).find((x) => x.id === id);
       if (!q || !def || q.claimed || q.progress < def.goal) return;
-      set({ quests: s.quests.map((x) => (x.id === id ? { ...x, claimed: true } : x)) });
+      const mark = (list: QuestProgress[]) => list.map((x) => (x.id === id ? { ...x, claimed: true } : x));
+      set(inDaily ? { quests: mark(s.quests) } : { weekly: mark(s.weekly) });
       grant(def.reward, `Quest: ${def.label}`, '✅', false);
     },
 

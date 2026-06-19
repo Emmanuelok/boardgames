@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
-import { useProgression, levelFromXp, levelTier, questDef, cosmetic } from '../progression/progression';
+import { useProgression, levelFromXp, levelTier, questDef, cosmetic, type QuestProgress } from '../progression/progression';
 import { GAMES, getGame } from '../engine/registry';
 import './Profile.css';
 
@@ -106,28 +106,14 @@ export default function Profile() {
       <section className="pf-section">
         <h2>Daily Quests <span className="faint" style={{ fontSize: 14, fontWeight: 400 }}>· resets at midnight</span></h2>
         <div className="pf-quests">
-          {prog.quests.map((q) => {
-            const d = questDef(q.id);
-            if (!d) return null;
-            const complete = q.progress >= d.goal;
-            const qpct = Math.min(100, Math.round((q.progress / d.goal) * 100));
-            return (
-              <div className={`pf-quest glass-soft ${complete ? 'done' : ''}`} key={q.id}>
-                <span className="pf-q-ic">{d.icon}</span>
-                <div className="col grow">
-                  <div className="row" style={{ justifyContent: 'space-between' }}>
-                    <strong>{d.label}</strong>
-                    <span className="faint" style={{ fontSize: 12.5 }}>{Math.min(q.progress, d.goal)}/{d.goal}</span>
-                  </div>
-                  <div className="pf-q-bar"><div style={{ width: `${qpct}%` }} /></div>
-                </div>
-                <span className="pf-q-reward">{d.reward.xp > 0 ? `+${d.reward.xp} XP · ` : ''}🪙{d.reward.coins}</span>
-                {q.claimed ? <span className="pf-q-claimed">✓ Claimed</span>
-                  : complete ? <button className="btn sm primary" onClick={() => prog.claimQuest(q.id)}>Claim</button>
-                  : <span className="pf-q-go faint">In progress</span>}
-              </div>
-            );
-          })}
+          {prog.quests.map((q) => <QuestRow key={q.id} q={q} onClaim={prog.claimQuest} />)}
+        </div>
+      </section>
+
+      <section className="pf-section">
+        <h2>Weekly Quests <span className="faint" style={{ fontSize: 14, fontWeight: 400 }}>· bigger goals · resets Monday</span></h2>
+        <div className="pf-quests">
+          {prog.weekly.map((q) => <QuestRow key={q.id} q={q} onClaim={prog.claimQuest} />)}
         </div>
       </section>
 
@@ -238,6 +224,29 @@ function Highlight({ icon, label, value, sub }: { icon: string; label: string; v
         <strong className="pf-hi-value">{value}</strong>
         <span className="faint" style={{ fontSize: 12 }}>{sub}</span>
       </div>
+    </div>
+  );
+}
+
+function QuestRow({ q, onClaim }: { q: QuestProgress; onClaim: (id: string) => void }) {
+  const d = questDef(q.id);
+  if (!d) return null;
+  const complete = q.progress >= d.goal;
+  const qpct = Math.min(100, Math.round((q.progress / d.goal) * 100));
+  return (
+    <div className={`pf-quest glass-soft ${complete ? 'done' : ''}`}>
+      <span className="pf-q-ic">{d.icon}</span>
+      <div className="col grow">
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <strong>{d.label}</strong>
+          <span className="faint" style={{ fontSize: 12.5 }}>{Math.min(q.progress, d.goal)}/{d.goal}</span>
+        </div>
+        <div className="pf-q-bar"><div style={{ width: `${qpct}%` }} /></div>
+      </div>
+      <span className="pf-q-reward">{d.reward.xp > 0 ? `+${d.reward.xp} XP · ` : ''}🪙{d.reward.coins}</span>
+      {q.claimed ? <span className="pf-q-claimed">✓ Claimed</span>
+        : complete ? <button className="btn sm primary" onClick={() => onClaim(q.id)}>Claim</button>
+        : <span className="pf-q-go faint">In progress</span>}
     </div>
   );
 }
