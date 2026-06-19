@@ -29,6 +29,7 @@ export default function Board2D(props: Props) {
   const boardRef = useRef<HTMLDivElement>(null);
   const [cellPx, setCellPx] = useState(56);
   const [hoverCol, setHoverCol] = useState<number | null>(null);
+  const [cursor, setCursor] = useState<number | null>(null);
 
   useLayoutEffect(() => {
     const el = boardRef.current;
@@ -112,11 +113,54 @@ export default function Board2D(props: Props) {
       ? (player === 0 ? theme.pieceLight : theme.pieceDark)
       : def.players[player].color;
 
+  // ── Keyboard navigation: a roving-tabindex grid. Arrow keys move a cursor in
+  // visual (display) space, skipping unplayable squares; Enter/Space activates
+  // the focused square via the same handler a click uses. ────────────────────
+  const firstPlayable = view.cells.find((cv) => cv.playable !== false)?.index ?? -1;
+  const cursorIdx = cursor != null && view.cells.some((cv) => cv.index === cursor && cv.playable !== false) ? cursor : firstPlayable;
+  const displayMap = new Map<number, number>(); // display (r*cols+c) → cell index
+  for (const cv of view.cells) if (cv.playable !== false) displayMap.set(dRow(cv.row) * cols + dCol(cv.col), cv.index);
+
+  const PIECE_NAMES: Record<string, string> = { P: 'pawn', N: 'knight', B: 'bishop', R: 'rook', Q: 'queen', K: 'king' };
+  const cellLabel = (cell: CellView): string => {
+    const file = view.fileLabels?.[cell.col] ?? String.fromCharCode(97 + cell.col);
+    const rank = view.rankLabels?.[cell.row] ?? String(rows - cell.row);
+    let contents = 'empty';
+    if (cell.piece) contents = `${def.players[cell.piece.player].name} ${PIECE_NAMES[cell.piece.kind] ?? cell.piece.glyph ?? cell.piece.kind ?? 'piece'}`;
+    else if (cell.count !== undefined) contents = `${cell.count} ${cell.label ?? 'pieces'}`;
+    const extra = targetSet.has(cell.index) ? ', legal move' : selected === cell.index ? ', selected' : '';
+    return `${file}${rank}, ${contents}${extra}`;
+  };
+  const focusCell = (idx: number) => { (boardRef.current?.querySelector(`[data-idx="${idx}"]`) as HTMLElement | null)?.focus(); };
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      if (cursorIdx >= 0) { e.preventDefault(); onCell(cursorIdx); }
+      return;
+    }
+    const dir: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+    const d = dir[e.key];
+    const cur = view.cells.find((cv) => cv.index === cursorIdx);
+    if (!d || !cur) return;
+    e.preventDefault();
+    let r = dRow(cur.row), c = dCol(cur.col);
+    for (let step = 0; step < Math.max(rows, cols); step++) {
+      r += d[0]; c += d[1];
+      if (r < 0 || r >= rows || c < 0 || c >= cols) return; // ran off the edge — stay put
+      const next = displayMap.get(r * cols + c);
+      if (next != null) { setCursor(next); focusCell(next); return; }
+    }
+  };
+
   return (
     <div className="board-wrap" style={{ ['--glow' as any]: theme.glow ?? 'transparent' }}>
       <div
         ref={boardRef}
         className={`board ${theme.glass ? 'glassy' : ''} ${intersections ? 'go' : ''}`}
+        role="grid"
+        aria-label={`${def.name} board, ${rows} by ${cols}. Use the arrow keys to move and Enter to select.`}
+        aria-rowcount={rows}
+        aria-colcount={cols}
+        onKeyDown={onKeyDown}
         style={{
           aspectRatio: `${cols} / ${rows}`,
           gridTemplateColumns: `repeat(${cols}, 1fr)`,
@@ -168,8 +212,14 @@ export default function Board2D(props: Props) {
               key={cell.index}
               data-idx={cell.index}
               className={`cell ${isDark ? 'dark' : 'light'} ${cell.playable === false ? 'void' : ''}`}
+              role={cell.playable !== false ? 'gridcell' : undefined}
+              tabIndex={cell.playable !== false ? (cell.index === cursorIdx ? 0 : -1) : undefined}
+              aria-label={cell.playable !== false ? cellLabel(cell) : undefined}
+              aria-selected={isSel || undefined}
+              aria-rowindex={r + 1}
+              aria-colindex={c + 1}
               style={{ gridColumn: c + 1, gridRow: r + 1, background: sqColor, touchAction: 'none' }}
-              onClick={() => cell.playable !== false && onCell(cell.index)}
+              onClick={() => { if (cell.playable !== false) { setCursor(cell.index); onCell(cell.index); } }}
               onPointerDown={(e) => startDrag(e, cell)}
               onMouseEnter={() => def.interaction.type === 'drop' && setHoverCol(cell.col)}
             >
