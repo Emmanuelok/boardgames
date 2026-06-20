@@ -34,6 +34,27 @@ export interface ChessPuzzle {
 export const CHESS_PUZZLES: ChessPuzzle[] = [
   /* ----------------------------- Mate in 1 ---------------------------- */
   {
+    id: 'm1-queen-backrank',
+    fen: '6k1/5ppp/8/8/8/8/5PPP/3Q2K1 w - - 0 1',
+    solution: ['Qd8#'],
+    theme: 'Mate in 1',
+    rating: 640,
+  },
+  {
+    id: 'm1-rook-backrank-e',
+    fen: '6k1/5ppp/8/8/8/8/8/4R1K1 w - - 0 1',
+    solution: ['Re8#'],
+    theme: 'Mate in 1',
+    rating: 600,
+  },
+  {
+    id: 'm1-rook-corner',
+    fen: '7k/8/6K1/8/8/8/8/R7 w - - 0 1',
+    solution: ['Ra8#'],
+    theme: 'Mate in 1',
+    rating: 700,
+  },
+  {
     id: 'm1-backrank-rook',
     fen: '6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1',
     solution: ['Ra8#'],
