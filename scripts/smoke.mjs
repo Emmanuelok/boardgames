@@ -85,6 +85,20 @@ try {
   await sleep(300);
   const note = await page.evaluate(() => document.querySelector('.sh-note')?.textContent || '');
   check('checkout is honest with no backend (no fake charge)', /isn.t connected/i.test(note));
+
+  console.log('Teeko (new game) — renders and plays');
+  await page.evaluate(() => { location.hash = '#/play/teeko'; });
+  await waitSel('.gs-toolbar .seg');
+  // The 2D/3D view persists across games; the chess test left it on 3D, so force 2D.
+  await page.evaluate(() => { const b = [...document.querySelectorAll('.gs-toolbar .seg button')].find((x) => x.textContent.trim() === '2D'); if (b) b.click(); });
+  await waitSel('.board');
+  await sleep(700);
+  const cells = await page.evaluate(() => document.querySelectorAll('.board .cell').length);
+  await page.evaluate(() => { const c = document.querySelector('.board .cell[data-idx="12"]'); if (c) c.click(); }); // drop on the centre
+  await sleep(1000); // let the drop land and the AI reply
+  const men = await page.evaluate(() => document.querySelectorAll('.board .pc').length);
+  check('Teeko board renders 25 cells', cells === 25);
+  check('dropping a man places a piece (and the AI replies)', men >= 1);
 } catch (e) {
   fail++; console.log('  ✗ EXCEPTION:', e.message);
 } finally {
