@@ -32,6 +32,7 @@ import orderAndChaos from '../games/orderandchaos';
 import ultimate from '../games/ultimate';
 import surakarta from '../games/surakarta';
 import teeko from '../games/teeko';
+import threeMensMorris from '../games/threemensmorris';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -49,6 +50,7 @@ export const GAMES: GameDefinition[] = [
   breakthrough,
   foxAndHounds,
   ninemensmorris,
+  threeMensMorris,
   backgammon,
   dotsAndBoxes,
   pentago,

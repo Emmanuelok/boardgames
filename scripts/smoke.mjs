@@ -99,6 +99,19 @@ try {
   const men = await page.evaluate(() => document.querySelectorAll('.board .pc').length);
   check('Teeko board renders 25 cells', cells === 25);
   check('dropping a man places a piece (and the AI replies)', men >= 1);
+
+  console.log("Three Men's Morris (new game) — renders and plays");
+  await page.evaluate(() => { location.hash = '#/play/three-mens-morris'; });
+  await waitSel('.gs-toolbar .seg');
+  await page.evaluate(() => { const b = [...document.querySelectorAll('.gs-toolbar .seg button')].find((x) => x.textContent.trim() === '2D'); if (b) b.click(); });
+  await waitSel('.board');
+  await sleep(700);
+  const tmCells = await page.evaluate(() => document.querySelectorAll('.board .cell').length);
+  await page.evaluate(() => { const c = document.querySelector('.board .cell[data-idx="4"]'); if (c) c.click(); }); // place on the centre
+  await sleep(1000);
+  const tmMen = await page.evaluate(() => document.querySelectorAll('.board .pc').length);
+  check("Three Men's Morris renders its 9-point board", tmCells === 9);
+  check('placing a man works (and the AI replies)', tmMen >= 1);
 } catch (e) {
   fail++; console.log('  ✗ EXCEPTION:', e.message);
 } finally {
