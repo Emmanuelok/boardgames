@@ -47,13 +47,18 @@ cosmetics → equip).
   gate, exactly as recommended below. Pro state is centralized so any feature can
   check `useProgression.getState().pro`.
 
-The **only** thing not wired is taking real money — there is no backend in this
-client-only build, and we deliberately do not fake a charge.
+The **only** thing not wired is taking real money — there is no backend deployed in
+this client-only build, and we deliberately do not fake a charge. The client seam
+(`src/billing/billing.ts`) and ready-to-deploy backend **templates** (`/serverless`)
+already exist; they stay inert until you point `VITE_API_BASE` at a backend.
 
 ## Crossing the payment boundary (integration path)
 
-The single integration point is the `startCheckout()` stub in `src/pages/Shop.tsx`
-(and any future Pro gates). Recommended stack:
+The client integration point is **`src/billing/billing.ts`**: `startCheckout()`
+redirects to Stripe Checkout when `VITE_API_BASE` is set (else shows an honest
+note), and `hydrateEntitlements()` pulls `pro`/coins from the server on load.
+Ready-to-deploy backend templates live in **`/serverless`** (`checkout`,
+`webhook`, `entitlements`; see its README). Recommended stack:
 
 1. **Stripe** for web (Checkout + Customer Portal + the Billing webhook). For native
    wrappers later, use **RevenueCat** to unify App Store / Play Store receipts.

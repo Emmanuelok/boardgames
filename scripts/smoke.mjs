@@ -80,6 +80,11 @@ try {
   check('coin packs render', shop.packs === 3);
   check('cosmetics grid renders (>=14)', shop.items >= 14);
   check('Pro panel renders', shop.pro);
+  // With no billing backend configured, checkout must be honest — not a fake charge.
+  await page.evaluate(() => { const b = [...document.querySelectorAll('.sh-pro-panel button')].find((x) => /Subscribe/i.test(x.textContent || '')); if (b) b.click(); });
+  await sleep(300);
+  const note = await page.evaluate(() => document.querySelector('.sh-note')?.textContent || '');
+  check('checkout is honest with no backend (no fake charge)', /isn.t connected/i.test(note));
 } catch (e) {
   fail++; console.log('  ✗ EXCEPTION:', e.message);
 } finally {

@@ -1,8 +1,9 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import Sidebar from './components/Sidebar';
 import RewardToast from './components/RewardToast';
+import { hydrateEntitlements } from './billing/billing';
 
 // Every page beyond the landing pulls in the game registry (all engines, AIs and
 // tutorials), so we code-split them: the shell + landing load a tiny bundle and
@@ -19,6 +20,9 @@ const Shop = lazy(() => import('./pages/Shop'));
 
 export default function App() {
   const location = useLocation();
+  // If a billing backend is configured (VITE_API_BASE), sync server entitlements
+  // (e.g. Pro) on load. No-op otherwise — see src/billing/billing.ts.
+  useEffect(() => { void hydrateEntitlements(); }, []);
   return (
     <>
       <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); const m = document.getElementById('main'); m?.focus(); m?.scrollIntoView(); }}>Skip to content</a>
