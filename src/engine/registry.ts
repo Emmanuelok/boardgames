@@ -31,6 +31,7 @@ import squava from '../games/squava';
 import orderAndChaos from '../games/orderandchaos';
 import ultimate from '../games/ultimate';
 import surakarta from '../games/surakarta';
+import teeko from '../games/teeko';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -62,6 +63,7 @@ export const GAMES: GameDefinition[] = [
   linesOfAction,
   konane,
   clobber,
+  teeko,
   amazons,
   connectFour,
   mancala,
