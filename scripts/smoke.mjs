@@ -112,6 +112,24 @@ try {
   const tmMen = await page.evaluate(() => document.querySelectorAll('.board .pc').length);
   check("Three Men's Morris renders its 9-point board", tmCells === 9);
   check('placing a man works (and the AI replies)', tmMen >= 1);
+
+  console.log('Five Field Kono (new game) — renders and plays');
+  await page.evaluate(() => { location.hash = '#/play/five-field-kono'; });
+  await waitSel('.gs-toolbar .seg');
+  await page.evaluate(() => { const b = [...document.querySelectorAll('.gs-toolbar .seg button')].find((x) => x.textContent.trim() === '2D'); if (b) b.click(); });
+  await waitSel('.board');
+  await sleep(700);
+  const koCells = await page.evaluate(() => document.querySelectorAll('.board .cell').length);
+  const koMen = await page.evaluate(() => document.querySelectorAll('.board .pc').length);
+  // Select a Blue stone (c5 = idx 2), then step it diagonally to e4 (idx 8).
+  await page.evaluate(() => { const c = document.querySelector('.board .cell[data-idx="2"]'); if (c) c.click(); });
+  await sleep(300);
+  await page.evaluate(() => { const c = document.querySelector('.board .cell[data-idx="8"]'); if (c) c.click(); });
+  await sleep(1000);
+  const koMoved = await page.evaluate(() => !document.querySelector('.board .cell[data-idx="2"] .pc'));
+  check('Five Field Kono renders its 25-cell board', koCells === 25);
+  check('starts with 14 stones', koMen === 14);
+  check('select-then-step moves a stone diagonally', koMoved);
 } catch (e) {
   fail++; console.log('  ✗ EXCEPTION:', e.message);
 } finally {

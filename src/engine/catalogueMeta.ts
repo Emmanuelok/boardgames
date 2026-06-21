@@ -7,7 +7,7 @@
  * starter games — so they read this tiny, dependency-free module instead. Keep
  * it roughly in sync with the registry when games are added (it is cosmetic).
  */
-export const GAME_COUNT = 28;
+export const GAME_COUNT = 29;
 
 export interface StarterMeta { id: string; name: string; emoji: string; tagline: string }
 

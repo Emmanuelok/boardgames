@@ -33,6 +33,7 @@ import ultimate from '../games/ultimate';
 import surakarta from '../games/surakarta';
 import teeko from '../games/teeko';
 import threeMensMorris from '../games/threemensmorris';
+import fiveFieldKono from '../games/fivefieldkono';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -66,6 +67,7 @@ export const GAMES: GameDefinition[] = [
   konane,
   clobber,
   teeko,
+  fiveFieldKono,
   amazons,
   connectFour,
   mancala,
