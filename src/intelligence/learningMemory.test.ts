@@ -3,6 +3,7 @@ import {
   LEARNING_MEMORY_STORAGE_KEY,
   MAX_LEARNING_EVENTS,
   MISSION_STAGES,
+  activateMissionData,
   createLearningMemoryData,
   createLearningMission,
   mergeLearningMemoryData,
@@ -98,6 +99,16 @@ describe('learning mission creation and start', () => {
     const result = startMissionData(data, mission('mission-2', 'go'));
     expect(result.activeMission?.id).toBe('mission-2');
     expect(result.activeMission?.currentStage).toBe('observe');
+  });
+
+  it('replaces an active route only through explicit activation and keeps evidence', () => {
+    let first = withMission();
+    first = reduceLearningEvent(first, event('observe', 'preserved-evidence'));
+    const result = activateMissionData(first, mission('studio-route', 'go'));
+
+    expect(result.activeMission?.id).toBe('studio-route');
+    expect(result.activeMission?.currentStage).toBe('observe');
+    expect(result.events.map((item) => item.id)).toContain('preserved-evidence');
   });
 });
 
@@ -252,6 +263,16 @@ describe('learning memory persistence and migration', () => {
     expect(returned.id).toBe('mission-1');
     expect(useLearningMemory.getState().activeMission?.id).toBe('mission-1');
     expect(JSON.parse(localStorage.getItem(LEARNING_MEMORY_STORAGE_KEY)!).activeMission.id).toBe('mission-1');
+  });
+
+  it('persists an explicitly activated Studio route without discarding evidence', () => {
+    useLearningMemory.getState().startMission(mission());
+    useLearningMemory.getState().recordEvent(event('observe', 'route-evidence'));
+    useLearningMemory.getState().activateMission(mission('studio-route', 'go'));
+
+    const persisted = JSON.parse(localStorage.getItem(LEARNING_MEMORY_STORAGE_KEY)!);
+    expect(persisted.activeMission.id).toBe('studio-route');
+    expect(persisted.events.map((item: LearningEvent) => item.id)).toContain('route-evidence');
   });
 
   it('returns safe empty data for corrupt or structurally invalid payloads', () => {

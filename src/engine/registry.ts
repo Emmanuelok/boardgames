@@ -34,6 +34,9 @@ import surakarta from '../games/surakarta';
 import teeko from '../games/teeko';
 import threeMensMorris from '../games/threemensmorris';
 import fiveFieldKono from '../games/fivefieldkono';
+import muTorere from '../games/mutorere';
+import domineering from '../games/domineering';
+import hexapawn from '../games/hexapawn';
 
 /**
  * The master catalogue. Every game in the center is registered here; the hub,
@@ -52,6 +55,7 @@ export const GAMES: GameDefinition[] = [
   foxAndHounds,
   ninemensmorris,
   threeMensMorris,
+  muTorere,
   backgammon,
   dotsAndBoxes,
   pentago,
@@ -62,6 +66,7 @@ export const GAMES: GameDefinition[] = [
   ultimate,
   surakarta,
   cohesion,
+  domineering,
   reversi,
   linesOfAction,
   konane,
@@ -75,6 +80,7 @@ export const GAMES: GameDefinition[] = [
   gomoku,
   pente,
   hex,
+  hexapawn,
   ticTacToe,
 ];
 

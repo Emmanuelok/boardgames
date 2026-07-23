@@ -130,6 +130,7 @@ const GAME_CATEGORY: Record<string, string> = {
   'fox-and-hounds': 'Classic',
   'nine-mens-morris': 'Classic',
   'three-mens-morris': 'Classic',
+  'mu-torere': 'Strategy',
   backgammon: 'Classic',
   surakarta: 'Classic',
   reversi: 'Strategy',
@@ -153,6 +154,8 @@ const GAME_CATEGORY: Record<string, string> = {
   squava: 'Abstract',
   tally: 'Abstract',
   teeko: 'Abstract',
+  domineering: 'Abstract',
+  hexapawn: 'Strategy',
   ultimate: 'Abstract',
   'tic-tac-toe': 'Family',
 };

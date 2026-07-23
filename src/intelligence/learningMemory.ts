@@ -81,6 +81,11 @@ export interface LearningMemoryState extends LearningMemoryData {
    */
   startMission: (mission: ActiveLearningMission) => ActiveLearningMission;
   /**
+   * Explicitly activates a newly authored route. Existing evidence is retained,
+   * while the previous in-progress route is replaced by the learner's choice.
+   */
+  activateMission: (mission: ActiveLearningMission) => ActiveLearningMission;
+  /**
    * Records a unique event and returns whether it was accepted. An accepted
    * event may still be unrelated evidence and therefore not advance the mission.
    */
@@ -324,6 +329,23 @@ export function startMissionData(
   };
 }
 
+/**
+ * Pure explicit route activation. Unlike {@link startMissionData}, this is only
+ * used after a learner deliberately launches a new Studio blueprint.
+ */
+export function activateMissionData(
+  data: LearningMemoryData,
+  proposedMission: ActiveLearningMission,
+): LearningMemoryData {
+  const mission = normaliseMission(proposedMission);
+  if (!mission) throw new Error('Cannot activate an invalid learning mission.');
+  return {
+    ...data,
+    version: LEARNING_MEMORY_VERSION,
+    activeMission: mission,
+  };
+}
+
 function eventCompletesCurrentStage(
   mission: ActiveLearningMission,
   event: LearningEvent,
@@ -537,6 +559,13 @@ export const useLearningMemory = create<LearningMemoryState>((set, get) => ({
       set(next);
       persist(next);
     }
+    return next.activeMission!;
+  },
+
+  activateMission(mission) {
+    const next = activateMissionData(stateData(get()), mission);
+    set(next);
+    persist(next);
     return next.activeMission!;
   },
 

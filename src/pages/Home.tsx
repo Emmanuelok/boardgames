@@ -83,7 +83,8 @@ export default function Home() {
             <h1 className="hh-title">Every move becomes your <span>next lesson.</span></h1>
             <p className="hh-sub">Play the world’s great board games inside one connected intelligence that observes, teaches, challenges, reviews and adapts around you.</p>
             <div className="hh-actions">
-              <Link className="btn primary lg glow" to="/path">✦ Build my strategy path</Link>
+              <Link className="btn primary lg glow" to="/studio">⊹ Open Strategy Studio</Link>
+              <Link className="btn lg hh-secondary" to="/path">✦ Build my path</Link>
               <button type="button" className="btn lg hh-secondary" onClick={() => navigate(`/play/${favoriteId}`)}>Play now</button>
             </div>
             <div className="hh-trust">
@@ -164,7 +165,10 @@ export default function Home() {
               </article>
             ))}
           </div>
-          <Link className="btn" to="/path">See the coordinated system →</Link>
+          <div className="row gap-sm wrap">
+            <Link className="btn primary" to="/studio">Build a coordinated session →</Link>
+            <Link className="btn" to="/path">See the adaptive path</Link>
+          </div>
         </div>
       </section>
 
