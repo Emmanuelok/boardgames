@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   xpToNext, levelFromXp, levelTier, gameReward, accuracyBonus,
   pickDailyQuests, pickWeeklyQuests, questDef, useProgression, COSMETICS, cosmetic, PRO_BONUS, REROLL_COST,
+  normalizeProgressionData, todayStr, weekStr, MAX_XP, MAX_COINS,
 } from './progression';
 
 describe('level curve', () => {
@@ -24,6 +25,100 @@ describe('level curve', () => {
     expect(levelFromXp(-50).level).toBe(1);
     expect(levelTier(1).name).toBe('Apprentice');
     expect(levelTier(40).name).toBe('Legend');
+  });
+
+  it('cannot loop on non-finite or enormous XP', () => {
+    expect(levelFromXp(Number.NaN)).toEqual({ level: 1, into: 0, span: 80 });
+    expect(levelFromXp(Number.POSITIVE_INFINITY)).toEqual({ level: 1, into: 0, span: 80 });
+    expect(levelFromXp(Number.MAX_VALUE)).toEqual(levelFromXp(MAX_XP));
+  });
+});
+
+describe('progression persistence normalization', () => {
+  const now = new Date(2026, 6, 22, 12);
+
+  it('preserves valid current-period progress', () => {
+    const normalized = normalizeProgressionData({
+      xp: '1234',
+      coins: 456,
+      seenGames: ['chess', 'lesson:chess'],
+      owned: ['wp-liquid'],
+      equipped: { wallpaper: 'wp-liquid', title: 'ti-rookie', frame: 'fr-none' },
+      pro: true,
+      questDate: todayStr(now),
+      quests: [{ id: 'win2', progress: 1, claimed: false }],
+      xpToday: 75,
+      gamesToday: ['chess'],
+      weekKey: weekStr(now),
+      weekly: [{ id: 'w-win10', progress: 4, claimed: false }],
+      xpThisWeek: 375,
+      gamesThisWeek: ['chess', 'go'],
+    }, now);
+
+    expect(normalized).toMatchObject({
+      xp: 1234,
+      coins: 456,
+      seenGames: ['chess', 'lesson:chess'],
+      pro: true,
+      xpToday: 75,
+      gamesToday: ['chess'],
+      xpThisWeek: 375,
+      gamesThisWeek: ['chess', 'go'],
+    });
+    expect(normalized.owned).toContain('wp-liquid');
+    expect(normalized.equipped.wallpaper).toBe('wp-liquid');
+    expect(normalized.quests.find((quest) => quest.id === 'win2')).toMatchObject({ progress: 1, claimed: false });
+    expect(normalized.weekly.find((quest) => quest.id === 'w-win10')).toMatchObject({ progress: 4, claimed: false });
+  });
+
+  it('bounds counters and repairs malformed catalogue data', () => {
+    const normalized = normalizeProgressionData({
+      xp: Number.MAX_VALUE,
+      coins: -500,
+      seenGames: ['chess', 'chess', null, 'x'.repeat(200)],
+      owned: ['not-a-cosmetic', 'wp-liquid'],
+      equipped: { wallpaper: 'not-a-cosmetic', title: 42 },
+      pro: 'false',
+      questDate: todayStr(now),
+      quests: [
+        null,
+        { id: 'win2', progress: Number.POSITIVE_INFINITY, claimed: true },
+        { id: 'unknown', progress: 999, claimed: true },
+      ],
+      xpToday: Number.POSITIVE_INFINITY,
+      gamesToday: 'chess',
+      weekKey: weekStr(now),
+      weekly: [{ id: 'w-win10', progress: -10, claimed: true }],
+      xpThisWeek: Number.MAX_VALUE,
+      gamesThisWeek: [null, 'go', 'go'],
+    }, now);
+
+    expect(normalized.xp).toBe(MAX_XP);
+    expect(normalized.coins).toBe(0);
+    expect(normalized.xpToday).toBe(0);
+    expect(normalized.xpThisWeek).toBe(MAX_XP);
+    expect(normalized.seenGames).toEqual(['chess']);
+    expect(normalized.pro).toBe(false);
+    expect(normalized.owned).toContain('wp-liquid');
+    expect(normalized.owned).not.toContain('not-a-cosmetic');
+    expect(normalized.equipped.wallpaper).toBe('wp-aurora');
+    expect(normalized.quests).toHaveLength(3);
+    expect(normalized.quests.find((quest) => quest.id === 'win2')).toMatchObject({ progress: 0, claimed: false });
+    expect(normalized.weekly.find((quest) => quest.id === 'w-win10')).toMatchObject({ progress: 0, claimed: false });
+    expect(normalized.gamesToday).toEqual([]);
+    expect(normalized.gamesThisWeek).toEqual(['go']);
+  });
+
+  it('treats non-finite persisted totals as empty instead of maximum rewards', () => {
+    const normalized = normalizeProgressionData({
+      xp: 'Infinity',
+      coins: Number.NaN,
+      questDate: todayStr(now),
+      weekKey: weekStr(now),
+    }, now);
+    expect(normalized.xp).toBe(0);
+    expect(normalized.coins).toBe(0);
+    expect(normalized.coins).toBeLessThanOrEqual(MAX_COINS);
   });
 });
 
@@ -142,12 +237,13 @@ describe('progression store', () => {
     expect(useProgression.getState().xp).toBe(35);
   });
 
-  it('applies the Pro bonus to every earn', () => {
+  it('keeps learning rewards equal for supporter and free accounts', () => {
     // Park XP exactly at a level start so a small gain can't add a level-up coin bonus.
     useProgression.setState({ xp: 2340, coins: 0, seenGames: ['chess'], pro: true });
     useProgression.getState().recordGame({ gameId: 'chess', result: 'win', difficulty: 'easy' }); // base 50 XP / 20 coins
-    expect(useProgression.getState().coins).toBe(Math.round(20 * (1 + PRO_BONUS))); // 24
-    expect(useProgression.getState().xp).toBe(2340 + Math.round(50 * (1 + PRO_BONUS))); // +60, no level-up
+    expect(PRO_BONUS).toBe(0);
+    expect(useProgression.getState().coins).toBe(20);
+    expect(useProgression.getState().xp).toBe(2340 + 50);
   });
 
   it('offers two free wallpapers, owned from the start', () => {
@@ -186,21 +282,22 @@ describe('progression store', () => {
     expect(useProgression.getState().coins).toBe(reward.coins);
   });
 
-  it('rerolls a daily quest for coins, swapping it for a fresh one', () => {
+  it('swaps a daily quest deterministically without charging coins', () => {
     const before = useProgression.getState().quests.map((q) => q.id);
     useProgression.setState({ coins: 100 });
     expect(useProgression.getState().rerollQuest(before[0])).toBe(true);
-    expect(useProgression.getState().coins).toBe(100 - REROLL_COST);
+    expect(REROLL_COST).toBe(0);
+    expect(useProgression.getState().coins).toBe(100);
     const after = useProgression.getState().quests.map((q) => q.id);
     expect(after).not.toContain(before[0]); // swapped out
     expect(after).toHaveLength(3);
     expect(new Set(after).size).toBe(3);    // no duplicates
   });
 
-  it('refuses to reroll without enough coins', () => {
-    useProgression.setState({ coins: 10 });
+  it('allows the same deterministic swap with a zero balance', () => {
+    useProgression.setState({ coins: 0 });
     const id = useProgression.getState().quests[0].id;
-    expect(useProgression.getState().rerollQuest(id)).toBe(false);
-    expect(useProgression.getState().coins).toBe(10);
+    expect(useProgression.getState().rerollQuest(id)).toBe(true);
+    expect(useProgression.getState().coins).toBe(0);
   });
 });

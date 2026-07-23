@@ -6,13 +6,13 @@ import { getGame } from '../engine/registry';
 import { getTheme } from '../themes/boardThemes';
 import InteractiveLesson from '../components/InteractiveLesson';
 import { playSound, resumeAudio } from '../audio/sound';
+import {
+  isLocalDateKey,
+  localDateKey,
+  localDateKeyAtOffset,
+  parseLocalDateKey,
+} from '../utils/localDate';
 import './Daily.css';
-
-const DAY = 86400000;
-const dayKey = (d: Date | number) => {
-  const date = new Date(d);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-};
 
 function hashStr(s: string): number {
   let h = 2166136261 >>> 0;
@@ -20,27 +20,57 @@ function hashStr(s: string): number {
   return h >>> 0;
 }
 
-interface DailyStore { lastDate: string; streak: number; best: number; total: number; days: string[] }
+export interface DailyStore { lastDate: string; streak: number; best: number; total: number; days: string[] }
 const KEY = 'gm-daily';
-const load = (): DailyStore => {
-  try { return { lastDate: '', streak: 0, best: 0, total: 0, days: [], ...JSON.parse(localStorage.getItem(KEY) || '{}') }; }
-  catch { return { lastDate: '', streak: 0, best: 0, total: 0, days: [] }; }
-};
+const MAX_DAILY_COUNTER = 1_000_000;
+const emptyDaily = (): DailyStore => ({ lastDate: '', streak: 0, best: 0, total: 0, days: [] });
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function counter(value: unknown): number {
+  const parsed = typeof value === 'number' || typeof value === 'string' ? Number(value) : Number.NaN;
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.min(MAX_DAILY_COUNTER, Math.max(0, Math.floor(parsed)));
+}
+
+export function normalizeDailyStore(value: unknown): DailyStore {
+  if (!isRecord(value)) return emptyDaily();
+  const days = Array.isArray(value.days)
+    ? Array.from(new Set(value.days.filter(isLocalDateKey))).slice(-60)
+    : [];
+  const streak = counter(value.streak);
+  return {
+    lastDate: isLocalDateKey(value.lastDate) ? value.lastDate : '',
+    streak,
+    best: Math.max(streak, counter(value.best)),
+    total: Math.max(days.length, counter(value.total)),
+    days,
+  };
+}
+
+export function loadDailyStore(): DailyStore {
+  if (typeof window === 'undefined' || !window.localStorage) return emptyDaily();
+  try { return normalizeDailyStore(JSON.parse(window.localStorage.getItem(KEY) || '{}')); }
+  catch { return emptyDaily(); }
+}
 
 /** Today's puzzle, chosen deterministically from the whole catalogue by date. */
 export function dailyPuzzleFor(date = new Date()) {
   const pool = ALL_PUZZLES.filter((p) => p.setup);
-  return pool[hashStr(dayKey(date)) % pool.length];
+  return pool[hashStr(localDateKey(date)) % pool.length];
 }
 
 export default function Daily() {
-  const today = dayKey(Date.now());
-  const yesterday = dayKey(Date.now() - DAY);
-  const puzzle = useMemo(() => dailyPuzzleFor(new Date()), []);
+  const now = useMemo(() => new Date(), []);
+  const today = localDateKey(now);
+  const yesterday = localDateKeyAtOffset(now, -1);
+  const puzzle = useMemo(() => dailyPuzzleFor(now), [now]);
   const def = getGame(puzzle.gameId)!;
   const theme = getTheme('tournament-green');
 
-  const [store, setStore] = useState<DailyStore>(load);
+  const [store, setStore] = useState<DailyStore>(loadDailyStore);
   const [result, setResult] = useState<'idle' | 'solved' | 'failed'>(store.lastDate === today ? 'solved' : 'idle');
   const [copied, setCopied] = useState(false);
   const doneToday = store.lastDate === today;
@@ -48,15 +78,25 @@ export default function Daily() {
 
   useEffect(() => { resumeAudio(); }, []);
 
-  const save = (s: DailyStore) => { setStore(s); try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } };
+  const save = (value: DailyStore) => {
+    const normalized = normalizeDailyStore(value);
+    setStore(normalized);
+    try { localStorage.setItem(KEY, JSON.stringify(normalized)); } catch { /* ignore */ }
+  };
 
   const onSolved = () => {
     if (result !== 'idle') return;
     playSound('win');
     setResult('solved');
     if (store.lastDate === today) return; // already counted today
-    const streak = store.lastDate === yesterday ? store.streak + 1 : 1;
-    save({ lastDate: today, streak, best: Math.max(store.best, streak), total: store.total + 1, days: Array.from(new Set([...store.days, today])).slice(-60) });
+    const streak = store.lastDate === yesterday ? Math.min(MAX_DAILY_COUNTER, store.streak + 1) : 1;
+    save({
+      lastDate: today,
+      streak,
+      best: Math.max(store.best, streak),
+      total: Math.min(MAX_DAILY_COUNTER, store.total + 1),
+      days: Array.from(new Set([...store.days, today])).slice(-60),
+    });
     try { useProgression.getState().recordDaily(streak); } catch { /* ignore */ }
   };
   const onFailed = () => { if (result === 'idle') { playSound('illegal'); setResult('failed'); } };
@@ -71,7 +111,7 @@ export default function Daily() {
   };
 
   // The last seven days as a little streak strip.
-  const week = Array.from({ length: 7 }, (_, i) => dayKey(Date.now() - (6 - i) * DAY));
+  const week = Array.from({ length: 7 }, (_, i) => localDateKeyAtOffset(now, i - 6));
 
   return (
     <div className="daily">
@@ -87,7 +127,7 @@ export default function Daily() {
       <div className="dy-week">
         {week.map((k) => (
           <div key={k} className={`dy-dot ${store.days.includes(k) ? 'on' : ''} ${k === today ? 'today' : ''}`} title={k}>
-            <span>{new Date(k).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>
+            <span>{parseLocalDateKey(k)?.toLocaleDateString(undefined, { weekday: 'narrow' })}</span>
           </div>
         ))}
       </div>
@@ -103,7 +143,7 @@ export default function Daily() {
             <div className="dy-done">
               <div className="dy-done-badge">✓</div>
               <h2>Today’s challenge complete!</h2>
-              <p className="muted">Nice work — your streak is safe. A fresh puzzle unlocks at midnight (UTC). You can replay today’s below or explore the games.</p>
+              <p className="muted">Nice work — your streak is safe. A fresh puzzle unlocks at local midnight. You can replay today’s below or explore the games.</p>
               <div className="row gap-sm wrap" style={{ justifyContent: 'center', marginTop: 6 }}>
                 <button className="btn primary" onClick={share}>{copied ? '✓ Copied!' : '🔗 Share result'}</button>
                 <Link className="btn" to={`/play/${def.id}`}>Play {def.name}</Link>

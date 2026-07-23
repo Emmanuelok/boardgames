@@ -9,6 +9,7 @@ import EvalBar from '../components/EvalBar';
 import TutorPanel from '../components/TutorPanel';
 import ThemePicker from '../components/ThemePicker';
 import HandStrip from '../components/HandStrip';
+import JourneyContext from '../components/JourneyContext';
 import BackgammonGame from '../components/BackgammonGame';
 import DotsAndBoxesGame from '../components/DotsAndBoxesGame';
 import PentagoGame from '../components/PentagoGame';
@@ -20,6 +21,7 @@ import { isMuted, toggleMuted, resumeAudio } from '../audio/sound';
 import { QUICK_CHAT_PHRASES } from '../net/online';
 import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
 import type { Difficulty, MoveBase, Player } from '../engine/types';
+import { readMissionContext } from '../intelligence/missionRouting';
 import './GameScreen.css';
 
 const Board3D = lazy(() => import('../components/Board3D'));
@@ -31,6 +33,12 @@ const DIFFS: { id: Difficulty; label: string; sub: string }[] = [
   { id: 'master', label: 'Master', sub: 'relentless' },
   { id: 'tutor', label: 'Tutor', sub: 'teaches' },
 ];
+
+function routeDifficulty(value: string | null): Difficulty | null {
+  return value === 'tutor' || value === 'easy' || value === 'medium' || value === 'hard' || value === 'master'
+    ? value
+    : null;
+}
 
 export default function GameScreen() {
   const { gameId } = useParams();
@@ -52,11 +60,22 @@ export default function GameScreen() {
   const routeDef = gameId ? getGame(gameId) : undefined;
   const joinCode = params.get('join');
   const hostCode = params.get('host');
+  const requestedDifficulty = routeDifficulty(params.get('difficulty'));
+  const missionContext = readMissionContext(params);
+  const journeyStage = missionContext?.stage === 'observe'
+    || missionContext?.stage === 'practice'
+    || missionContext?.stage === 'play'
+    ? missionContext.stage
+    : null;
 
   useEffect(() => {
-    if (gameId && routeDef) useGameStore.getState().newGame(gameId);
+    if (gameId && routeDef) {
+      const game = useGameStore.getState();
+      if (requestedDifficulty) game.setDifficulty(requestedDifficulty);
+      game.newGame(gameId);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId, routeDef]);
+  }, [gameId, routeDef, requestedDifficulty]);
 
   // Auto host/join a room from the URL (?join=GM-XXXXX from an invite link,
   // or ?host=GM-XXXXX when a lobby challenge sends both players to a shared code).
@@ -128,9 +147,12 @@ export default function GameScreen() {
     const diff = store.difficulty === 'easy' ? 'easy' : store.difficulty === 'hard' || store.difficulty === 'master' ? 'hard' : 'medium';
     return (
       <div className="game-screen" style={{ ['--accent' as any]: def.accent }}>
+        {journeyStage && (
+          <JourneyContext gameId={def.id} gameName={def.name} gameEmoji={def.emoji} stage={journeyStage} />
+        )}
         <header className="gs-toolbar">
-          <Link to="/" className="btn ghost sm">← Hub</Link>
-          <div className="gs-title"><span className="gs-emoji">{def.emoji}</span><div className="col"><strong>{def.name}</strong><span className="faint" style={{ fontSize: 12 }}>vs AI · {diff}</span></div></div>
+          <Link to={journeyStage ? '/path' : '/'} className="btn ghost sm">{journeyStage ? '← My Path' : '← Hub'}</Link>
+          <div className="gs-title"><span className="gs-emoji">{def.emoji}</span><div className="col"><h1>{def.name}</h1><span className="faint" style={{ fontSize: 12 }}>vs AI · {diff}</span></div></div>
           <Link className="btn sm ghost" to={`/learn/${def.id}`}>📖 Learn</Link>
         </header>
         {def.id === 'dots-and-boxes' ? <DotsAndBoxesGame aiDifficulty={diff} />
@@ -155,12 +177,15 @@ export default function GameScreen() {
 
   return (
     <div className="game-screen" style={{ ['--accent' as any]: def.accent }}>
+      {journeyStage && (
+        <JourneyContext gameId={def.id} gameName={def.name} gameEmoji={def.emoji} stage={journeyStage} />
+      )}
       <header className="gs-toolbar">
-        <Link to="/" className="btn ghost sm">← Hub</Link>
+        <Link to={journeyStage ? '/path' : '/'} className="btn ghost sm">{journeyStage ? '← My Path' : '← Hub'}</Link>
         <div className="gs-title">
           <span className="gs-emoji">{def.emoji}</span>
           <div className="col">
-            <strong>{def.name}</strong>
+            <h1>{def.name}</h1>
             <span className="faint" style={{ fontSize: 12 }}>{statusLine(store)}</span>
           </div>
         </div>

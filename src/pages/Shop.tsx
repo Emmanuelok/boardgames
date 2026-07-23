@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useProgression, COSMETICS } from '../progression/progression';
 import type { CosmeticSlot } from '../progression/progression';
-import { GAME_COUNT } from '../engine/catalogueMeta';
-import { startCheckout as billingCheckout, type CheckoutItem } from '../billing/billing';
+import { isBillingConfigured, startCheckout as billingCheckout, type CheckoutItem } from '../billing/billing';
+import { Link } from 'react-router-dom';
 import './Shop.css';
 
 const SLOTS: { slot: CosmeticSlot; title: string; hint: string }[] = [
@@ -13,39 +13,29 @@ const SLOTS: { slot: CosmeticSlot; title: string; hint: string }[] = [
 
 const PRO_PERKS = [
   '🎨 Every premium wallpaper, title & frame — unlocked',
-  '🧠 Unlimited deep analysis & full post-game review',
-  `♟ All ${GAME_COUNT} games and every difficulty, no limits`,
-  '⚡ Bonus coins & XP on everything you play',
-  '💜 Support the project — and no ads, ever',
-];
-
-const COIN_PACKS = [
-  { n: 500, p: '$1.99' },
-  { n: 1500, p: '$4.99', best: true },
-  { n: 4000, p: '$9.99' },
+  '◇ A supporter badge on your learning profile',
+  '💜 Support continued development — with no ads, ever',
 ];
 
 export default function Shop() {
   const prog = useProgression();
   const [note, setNote] = useState<string | null>(null);
+  const billingReady = isBillingConfigured();
 
-  // Single payment seam (src/billing/billing.ts): when a backend is configured
-  // (VITE_API_BASE) this redirects to real Stripe Checkout; otherwise it shows an
-  // honest note rather than faking a charge.
   const startCheckout = async (what: string, item: CheckoutItem) => {
     const r = await billingCheckout(item);
     if (r.ok) { window.location.href = r.url; return; }
     setNote(r.reason === 'not-configured'
-      ? `💳 ${what} checkout isn't connected in this build yet — see MONETIZATION.md for the Stripe wiring. Meanwhile, try “Enable Pro (preview)”.`
-      : `⚠️ Couldn't start ${what} checkout — please try again in a moment.`);
+      ? `${what} is not available in this build.`
+      : `Couldn’t start ${what} checkout. Please try again in a moment.`);
   };
 
   return (
     <div className="shop">
       <header className="sh-top">
         <div className="col">
-          <h1>Shop</h1>
-          <p className="muted">Earn 🪙 by playing, then spend them on cosmetics — or go Pro to unlock everything.</p>
+          <h1>Collection</h1>
+          <p className="muted">Earn tokens through learning, then choose the visual style that feels like yours.</p>
         </div>
         <div className="sh-balance">
           <span className="sh-coins">🪙 {prog.coins.toLocaleString()}</span>
@@ -57,32 +47,30 @@ export default function Shop() {
 
       <section className={`sh-pro-panel ${prog.pro ? 'active' : ''}`}>
         <div className="sh-pro-head">
-          <h2>{prog.pro ? '✓ GrandMaster Pro' : 'Go Pro'}</h2>
-          {!prog.pro && <span className="sh-price">$4.99<span>/mo</span></span>}
+          <h2>{prog.pro ? '✓ GrandMaster Supporter' : billingReady ? 'Supporter collection' : 'Complete learning access'}</h2>
+          {billingReady && !prog.pro && <span className="sh-price">$4.99<span>/mo</span></span>}
         </div>
-        <ul className="sh-perks">{PRO_PERKS.map((p) => <li key={p}>{p}</li>)}</ul>
-        {prog.pro ? (
-          <button className="btn" onClick={() => prog.setPro(false)}>Turn off Pro (preview)</button>
+        {billingReady || prog.pro ? (
+          <ul className="sh-perks">{PRO_PERKS.map((p) => <li key={p}>{p}</li>)}</ul>
         ) : (
-          <div className="row gap-sm wrap">
-            <button className="btn primary lg glow" onClick={() => startCheckout('Pro subscription', { kind: 'pro', sku: 'pro_monthly' })}>Subscribe — $4.99/mo</button>
-            <button className="btn lg" onClick={() => prog.setPro(true)} title="Try Pro features without payment">Enable Pro (preview)</button>
-          </div>
+          <p className="sh-access-note">Every game, course, puzzle, difficulty and review tool is available to every learner. Optional supporter billing is not connected in this build.</p>
+        )}
+        {billingReady && !prog.pro && (
+          <>
+            <button className="btn primary lg glow" onClick={() => startCheckout('Supporter subscription', { kind: 'pro', sku: 'pro_monthly' })}>Continue to secure checkout</button>
+            <p className="sh-purchase-note">Purchases require the account holder’s approval.</p>
+          </>
         )}
       </section>
 
       <section className="sh-section">
-        <h2>Get more coins</h2>
-        <div className="sh-coins-grid">
-          {COIN_PACKS.map((pack) => (
-            <button className={`sh-coin-pack glass-soft ${pack.best ? 'best' : ''}`} key={pack.n} onClick={() => startCheckout(`${pack.n.toLocaleString()} coins`, { kind: 'coins', sku: `coins_${pack.n}` })}>
-              {pack.best && <span className="sh-best">Best value</span>}
-              <span className="sh-pack-n">🪙 {pack.n.toLocaleString()}</span>
-              <span className="btn sm primary">{pack.p}</span>
-            </button>
-          ))}
+        <h2>Earn through mastery</h2>
+        <div className="sh-earn-grid">
+          <Link className="sh-earn-card glass-soft" to="/path"><span>◎</span><strong>Follow My Path</strong><small>Complete one connected learning mission.</small></Link>
+          <Link className="sh-earn-card glass-soft" to="/puzzles"><span>✦</span><strong>Solve positions</strong><small>Build pattern recognition and streaks.</small></Link>
+          <Link className="sh-earn-card glass-soft" to="/daily"><span>◇</span><strong>Daily challenge</strong><small>Return for one focused board each day.</small></Link>
         </div>
-        <p className="faint" style={{ fontSize: 12.5, marginTop: 8 }}>No spending required — you earn coins from every game, puzzle, daily and quest.</p>
+        <p className="faint" style={{ fontSize: 12.5, marginTop: 8 }}>Tokens are earned—not sold—and every unlock has a visible, fixed cost.</p>
       </section>
 
       {SLOTS.map(({ slot, title, hint }) => (
@@ -100,7 +88,11 @@ export default function Shop() {
                   <strong className="sh-item-name">{c.name}{c.pro && <span className="sh-tag">PRO</span>}</strong>
                   {equipped ? <span className="sh-state equipped">✓ Equipped</span>
                     : owned ? <button className="btn sm" onClick={() => prog.equipCosmetic(slot, c.id)}>Equip</button>
-                    : locked ? <button className="btn sm" onClick={() => startCheckout('Pro', { kind: 'pro', sku: 'pro_monthly' })}>🔒 Go Pro</button>
+                    : locked ? (
+                      billingReady
+                        ? <button className="btn sm" onClick={() => startCheckout('Supporter collection', { kind: 'pro', sku: 'pro_monthly' })}>Supporter item</button>
+                        : <span className="sh-state">Supporter item</span>
+                    )
                     : <button className="btn sm primary" disabled={!affordable} title={affordable ? '' : 'Not enough coins'} onClick={() => prog.buyCosmetic(c.id)}>🪙 {c.price}</button>}
                 </div>
               );

@@ -1,83 +1,63 @@
-# Monetization strategy
+# Sustainable, learner-first funding
 
-This document captures the recommended monetization approach for GrandMaster and
-how the (already-built) in-app economy plugs into a real payment provider.
+GrandMaster is designed as a learning platform first. Its core games, courses,
+puzzles, difficulties, analysis and reviews remain available without payment.
+Funding must never distort a learner's progress or turn uncertainty into a
+purchase prompt.
 
-## Recommendation: free-to-play, monetized by **Pro subscription + cosmetic IAP**
+## Product rules
 
-Make the game **free**, and monetize two complementary ways:
+- **Tokens are earned, not sold.** They unlock only visible, fixed-price
+  cosmetics.
+- **No paid randomness.** Quest swaps are free and deterministic. There are no
+  mystery items, loot boxes, chance-based purchases or variable rewards bought
+  with money.
+- **No pay-to-progress.** Supporter and free accounts receive identical XP,
+  token rewards, opponent strengths and learning recommendations.
+- **No punitive engagement design.** A missed day does not cost money, hide
+  content or create a paid recovery offer.
+- **No fake checkout.** When a verified billing backend is absent, the
+  Collection explicitly says billing is unavailable and renders no purchase
+  action.
+- **Clear account-holder approval.** Any future purchase screen must disclose
+  the exact price and renewal cadence before redirecting to checkout.
 
-1. **GrandMaster Pro** — a recurring subscription ($4.99/mo or ~$34.99/yr). This is
-   the revenue engine: predictable, compounding, and it sells the thing players
-   actually want from a teaching app — *unlimited depth*. Bundle the "no limits"
-   value here (unlimited deep analysis & full review, every difficulty, bonus
-   XP/coins, all cosmetics, no ads).
-2. **Cosmetic & consumable IAP** — coin packs and premium cosmetics for players who
-   won't subscribe but will spend occasionally. These ride on the engagement
-   economy and convert the "whale" and "one-time buyer" segments the subscription
-   misses.
+## Optional supporter model
 
-### Why not subscription-only from day one?
+The implemented `pro` entitlement is best treated as an optional supporter
+status. It may provide:
 
-A pure paywall kills the top of the funnel for a game whose growth depends on word
-of mouth and daily habit (Daily Challenge, streaks, quests). The free loop **is**
-the marketing: the longer players stay free, the more the points chase, streaks and
-cosmetic goals warm them up — and the higher Pro converts. Launch free with a
-generous loop; introduce Pro as the natural upgrade once the habit exists.
+- the premium cosmetic collection;
+- a supporter badge;
+- non-essential personalization or hosted convenience features.
 
-### Why build the cosmetic economy first (which we did)
+It must not gate rules, courses, puzzles, accessibility features, analysis,
+review history or the adaptive Strategy Path.
 
-Cosmetics give the earned currency a **sink**, which is what makes earning feel
-meaningful and keeps the points chase alive. That same economy is the surface IAP
-sells into. The engagement system and the monetization system are the same system —
-so it was built first, money-free, and is fully functional today (earn coins → buy
-cosmetics → equip).
+## Current implementation
 
-## What's already implemented (no payments required)
+- `src/progression/progression.ts` owns earned XP, tokens, quests and
+  deterministic cosmetic unlocks.
+- `/shop` is presented to users as the **Collection**. It links back to learning
+  activities instead of selling token packs.
+- `src/billing/billing.ts` is the only client payment seam. With no
+  `VITE_API_BASE`, checkout is unavailable and no network request is made.
+- `/serverless` contains backend templates, but they remain inert until a
+  properly authenticated deployment is configured.
 
-- **XP, levels & coins** awarded for games, move accuracy, puzzles, the Daily,
-  finishing a game's course, discovering a new game, unlocking achievements, and
-  daily quests (`src/progression/progression.ts`).
-- **Daily and weekly quests** that rotate and pay out on claim (weekly = bigger goals, chunkier rewards); spend coins to **reroll** a daily you don't fancy (a coin sink).
-- **Cosmetic store** (`/shop`) — spend earned coins on wallpapers, titles and avatar
-  frames; equip them on your profile / home hero.
-- **Pro feature flag** (`pro`) with a paywall surface and an "Enable Pro (preview)"
-  toggle. Turning Pro on grants the whole cosmetic catalogue **and** applies a
-  standing **+20% XP/coin bonus** to every earn (`PRO_BONUS`) — a perk, never a
-  gate, exactly as recommended below. Pro state is centralized so any feature can
-  check `useProgression.getState().pro`.
+## Production billing requirements
 
-The **only** thing not wired is taking real money — there is no backend deployed in
-this client-only build, and we deliberately do not fake a charge. The client seam
-(`src/billing/billing.ts`) and ready-to-deploy backend **templates** (`/serverless`)
-already exist; they stay inert until you point `VITE_API_BASE` at a backend.
+Before enabling supporter billing:
 
-## Crossing the payment boundary (integration path)
+1. Add authenticated accounts so entitlements belong to a verified user.
+2. Create checkout sessions only on the server from an allow-listed SKU.
+3. Verify payment-provider webhooks and make the server the source of truth.
+4. Return current entitlement state from `/api/entitlements`, including
+   cancellation or expiration.
+5. Provide a customer portal for cancellation and receipts.
+6. Add purchase, privacy and refund copy appropriate to the deployment region
+   and require the account holder's approval.
+7. Test failed, duplicated, delayed and replayed webhooks before launch.
 
-The client integration point is **`src/billing/billing.ts`**: `startCheckout()`
-redirects to Stripe Checkout when `VITE_API_BASE` is set (else shows an honest
-note), and `hydrateEntitlements()` pulls `pro`/coins from the server on load.
-Ready-to-deploy backend templates live in **`/serverless`** (`checkout`,
-`webhook`, `entitlements`; see its README). Recommended stack:
-
-1. **Stripe** for web (Checkout + Customer Portal + the Billing webhook). For native
-   wrappers later, use **RevenueCat** to unify App Store / Play Store receipts.
-2. Add a thin backend (a few serverless functions are enough):
-   - `POST /api/checkout` → create a Stripe Checkout Session (subscription or a
-     one-time coin-pack price), return its URL; `startCheckout()` redirects to it.
-   - `POST /api/webhook` → on `checkout.session.completed` /
-     `customer.subscription.updated`, mark the account Pro or credit coins.
-   - `GET /api/entitlements` → returns `{ pro, coins }` for the signed-in user.
-3. Introduce lightweight **accounts** (email magic-link or OAuth) so entitlements and
-   the wallet live server-side — client `localStorage` is fine for a single device
-   but can't be trusted for paid state.
-4. On load, hydrate `useProgression` from `/api/entitlements` (server is the source
-   of truth for `pro` and purchased coins; earned coins can stay client-side or be
-   mirrored up).
-
-### Guardrails
-
-- Never grant `pro` or credit coins from the client for a real purchase — only from a
-  verified server-side webhook.
-- Keep the F2P loop genuinely rewarding; Pro should remove *limits*, not gate the
-  core teaching experience, or the funnel that feeds conversion dries up.
+Client storage is suitable for earned local progress, but it must never be the
+authority for a paid entitlement.

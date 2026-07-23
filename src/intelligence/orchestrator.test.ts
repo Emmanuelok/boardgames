@@ -58,7 +58,7 @@ describe('adaptive learning orchestrator', () => {
     expect(mission.focus.id).toBe('chess');
     expect(mission.difficulty).toBe('Easy');
     expect(mission.steps.map((step) => step.id)).toEqual(['observe', 'learn', 'practice', 'play', 'reflect']);
-    expect(mission.steps[0]).toMatchObject({ state: 'recommended', to: '/play/chess' });
+    expect(mission.steps[0]).toMatchObject({ state: 'recommended', to: '/play/chess?difficulty=easy' });
     expect(mission.agents).toHaveLength(5);
     expect(mission.duration).toBeGreaterThan(0);
     expect(mission.confidence).toBeGreaterThanOrEqual(48);
@@ -82,8 +82,28 @@ describe('adaptive learning orchestrator', () => {
     expect(mission.headline).toContain('Ada');
     expect(mission.difficulty).toBe('Hard');
     expect(mission.steps[0]).toMatchObject({ to: '/reviews', title: 'Revisit one key moment' });
-    expect(mission.steps.find((step) => step.id === 'practice')).toMatchObject({ to: '/puzzles?game=hex', state: 'complete' });
+    expect(mission.steps.find((step) => step.id === 'practice')).toMatchObject({ to: '/puzzles?game=hex', state: 'ready' });
     expect(mission.concepts.every((concept) => concept.score >= 0 && concept.score <= 100)).toBe(true);
+  });
+
+  it('keeps an in-progress mission pinned to its exact focus game', () => {
+    const mission = buildLearningMission(snapshot({
+      stats: { chess: tally(9, 1), hex: tally(2, 2) },
+    }), games, 'hex');
+
+    expect(mission.focus.id).toBe('hex');
+  });
+
+  it('uses a coached match when a game has no authored puzzle pack', () => {
+    const withoutPuzzle = games.map((game) => (
+      game.id === 'hex' ? { ...game, practiceAvailable: false } : game
+    ));
+    const mission = buildLearningMission(snapshot(), withoutPuzzle, 'hex');
+
+    expect(mission.steps.find((step) => step.id === 'practice')).toMatchObject({
+      to: '/play/hex?difficulty=easy',
+      title: 'Rehearse in a coached game',
+    });
   });
 
   it.each([

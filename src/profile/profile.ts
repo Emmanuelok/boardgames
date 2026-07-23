@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { useProgression } from '../progression/progression';
+import { useLearningMemory } from '../intelligence/learningMemory';
+import { readMissionContext } from '../intelligence/missionRouting';
 
 /**
- * Self-contained, localStorage-backed player profile + Elo rating system.
+ * LocalStorage-backed player profile + Elo rating system.
  *
- * This module is intentionally standalone: it imports nothing from the rest of
- * the app so it stays importable in Node/SSR without side effects. The only
- * runtime dependency is {@link create} from `zustand` (already a project dep).
+ * Completed results also publish tightly-scoped evidence to the shared learning
+ * memory when a game was launched from an active mission route.
  *
  * Persistence is manual (no `persist` middleware) to keep full control over the
  * shape we read/write and to mirror the plain-store style used elsewhere in the
@@ -317,6 +318,44 @@ function save(s: ProfileState): void {
   }
 }
 
+/** Bind a completed result to the exact mission route that launched it. */
+function recordMissionMatch(gameId: string, result: ResultKind, difficulty: Difficulty, sequence: number): void {
+  if (typeof window === 'undefined') return;
+  try {
+    // HashRouter keeps the route query inside `location.hash`.
+    const routeQuery = window.location.hash.split('?')[1]?.split('#')[0] ?? '';
+    const context = readMissionContext(new URLSearchParams(routeQuery));
+    if (
+      !context
+      || (context.stage !== 'observe' && context.stage !== 'practice' && context.stage !== 'play')
+    ) return;
+    const memory = useLearningMemory.getState();
+    if (
+      memory.activeMission?.id !== context.missionId
+      || memory.activeMission.gameId !== gameId
+      || memory.activeMission.currentStage !== context.stage
+    ) return;
+    const sourceId = `match:${gameId}:${difficulty}`;
+    const activeStep = memory.activeMission.steps.find((step) => step.stage === context.stage);
+    if (activeStep?.target.sourceId !== sourceId) return;
+    const unique = globalThis.crypto?.randomUUID?.()
+      ?? `${Date.now().toString(36)}-${sequence.toString(36)}`;
+    memory.recordEvent({
+      id: `match:${context.missionId}:${context.stage}:${gameId}:${difficulty}:${unique}`,
+      at: Date.now(),
+      kind: 'match_completed',
+      missionId: context.missionId,
+      gameId,
+      stage: context.stage,
+      sourceId,
+      // A completed match is useful evidence regardless of its result.
+      outcome: result === 'win' ? 'success' : 'complete',
+    });
+  } catch {
+    /* mission evidence must never block result persistence */
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Store
 // ─────────────────────────────────────────────────────────────────────────────
@@ -369,6 +408,7 @@ export const useProfile = create<ProfileState>()((set, get) => ({
       return { rating, stats, totals, beatenDifficulties, achievements, lastUnlocked };
     });
     save(get());
+    recordMissionMatch(gameId, result, difficulty, get().totals.played);
     // Feed the progression economy (XP, coins, quests) and pay out any achievement
     // this result unlocked. Decoupled + best-effort.
     try {

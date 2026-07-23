@@ -9,6 +9,10 @@ export interface GameSignal {
   emoji: string;
   category: string;
   depth: number;
+  /** False when the game has no authored puzzle position yet. */
+  practiceAvailable?: boolean;
+  /** Bespoke engines currently expose Easy, Medium and Hard only. */
+  threeTierDifficulty?: boolean;
 }
 
 export interface LearnerSnapshot {
@@ -61,9 +65,17 @@ export interface LearningMission {
 
 const safeRate = (t: Tally | undefined): number => !t?.played ? 0.5 : t.wins / t.played;
 
-function chooseFocus(snapshot: LearnerSnapshot, games: GameSignal[]): GameSignal {
+function chooseFocus(
+  snapshot: LearnerSnapshot,
+  games: GameSignal[],
+  preferredGameId?: string,
+): GameSignal {
   const fallback = games.find((g) => g.id === 'chess') ?? games[0];
   if (!fallback) throw new Error('At least one game is required to build a learning mission.');
+  const preferred = preferredGameId
+    ? games.find((game) => game.id === preferredGameId)
+    : undefined;
+  if (preferred) return preferred;
 
   const played = games.filter((g) => snapshot.stats[g.id]?.played);
   if (!played.length) return fallback;
@@ -110,7 +122,7 @@ function diagnosticAgent(snapshot: LearnerSnapshot, focus: GameSignal): AgentIns
 }
 
 function curriculumAgent(snapshot: LearnerSnapshot, focus: GameSignal): AgentInsight {
-  const newGame = !snapshot.seenGames.includes(focus.id);
+  const newGame = !snapshot.seenGames.includes(`lesson:${focus.id}`);
   return {
     id: 'curriculum', name: 'Curriculum Guide', role: 'Sequences the right lesson', icon: '◇', status: 'ready',
     finding: newGame
@@ -163,22 +175,36 @@ function buildConcepts(snapshot: LearnerSnapshot, focus: GameSignal) {
   ];
 }
 
-export function buildLearningMission(snapshot: LearnerSnapshot, games: GameSignal[]): LearningMission {
-  const focus = chooseFocus(snapshot, games);
-  const difficulty = difficultyFor(snapshot.rating);
+export function buildLearningMission(
+  snapshot: LearnerSnapshot,
+  games: GameSignal[],
+  preferredGameId?: string,
+): LearningMission {
+  const focus = chooseFocus(snapshot, games, preferredGameId);
+  const recommendedDifficulty = difficultyFor(snapshot.rating);
+  const difficulty = focus.threeTierDifficulty
+    ? recommendedDifficulty === 'Tutor' || recommendedDifficulty === 'Easy'
+      ? 'Easy'
+      : recommendedDifficulty === 'Medium'
+        ? 'Medium'
+        : 'Hard'
+    : recommendedDifficulty;
+  const difficultyParam = difficulty.toLowerCase();
   const tally = snapshot.stats[focus.id];
   const hasReview = snapshot.reviews.some((r) => r.gameId === focus.id);
-  const playedToday = snapshot.gamesToday.includes(focus.id);
+  const hasPuzzlePractice = focus.practiceAvailable !== false;
   const firstStep: MissionStep = hasReview
     ? { id: 'observe', agent: 'Diagnostician', icon: '◉', title: 'Revisit one key moment', detail: 'See what changed the evaluation and name the idea before moving on.', to: '/reviews', minutes: 3, state: 'recommended' }
-    : { id: 'observe', agent: 'Diagnostician', icon: '◉', title: 'Establish your baseline', detail: 'Play a short coached game so the system can measure real decisions.', to: `/play/${focus.id}`, minutes: 6, state: 'recommended' };
+    : { id: 'observe', agent: 'Diagnostician', icon: '◉', title: 'Establish your baseline', detail: 'Play a short coached game so the system can measure real decisions.', to: `/play/${focus.id}?difficulty=${difficultyParam}`, minutes: 6, state: 'recommended' };
 
   const steps: MissionStep[] = [
     firstStep,
-    { id: 'learn', agent: 'Curriculum Guide', icon: '◇', title: `Study one ${focus.name} idea`, detail: 'A short lesson with an interactive board and a proof position.', to: `/learn/${focus.id}`, minutes: 5, state: snapshot.seenGames.includes(focus.id) ? 'complete' : 'ready' },
-    { id: 'practice', agent: 'Practice Builder', icon: '✦', title: 'Solve with fading support', detail: 'Start guided, then calculate the same pattern independently.', to: `/puzzles?game=${focus.id}`, minutes: 4, state: snapshot.puzzleStreak > 0 ? 'complete' : 'ready' },
-    { id: 'play', agent: 'Sparring Director', icon: '⬡', title: `Test it at ${difficulty} strength`, detail: 'The opponent level is matched to your current rating evidence.', to: `/play/${focus.id}`, minutes: 8, state: playedToday ? 'complete' : 'ready' },
-    { id: 'reflect', agent: 'Review Analyst', icon: '⌁', title: 'Close the learning loop', detail: 'Keep the decisive moments and turn them into tomorrow’s route.', to: '/reviews', minutes: 3, state: hasReview ? 'complete' : 'ready' },
+    { id: 'learn', agent: 'Curriculum Guide', icon: '◇', title: `Study one ${focus.name} idea`, detail: 'A short lesson with an interactive board and a proof position.', to: `/learn/${focus.id}`, minutes: 5, state: 'ready' },
+    hasPuzzlePractice
+      ? { id: 'practice', agent: 'Practice Builder', icon: '✦', title: 'Solve with fading support', detail: 'Start guided, then calculate the same pattern independently.', to: `/puzzles?game=${focus.id}`, minutes: 4, state: 'ready' }
+      : { id: 'practice', agent: 'Practice Builder', icon: '✦', title: 'Rehearse in a coached game', detail: 'Apply the course idea on the full board with explanations switched on.', to: `/play/${focus.id}?difficulty=${difficultyParam}`, minutes: 6, state: 'ready' },
+    { id: 'play', agent: 'Sparring Director', icon: '⬡', title: `Test it at ${difficulty} strength`, detail: 'The opponent level is matched to your current rating evidence.', to: `/play/${focus.id}?difficulty=${difficultyParam}`, minutes: 8, state: 'ready' },
+    { id: 'reflect', agent: 'Review Analyst', icon: '⌁', title: 'Close the learning loop', detail: 'Keep the decisive moments and turn them into tomorrow’s route.', to: '/reviews', minutes: 3, state: 'ready' },
   ];
 
   const confidence = Math.min(96, 48 + Math.min(24, (tally?.played ?? 0) * 4) + Math.min(16, snapshot.reviews.length * 4) + Math.min(8, snapshot.puzzlesSolved));

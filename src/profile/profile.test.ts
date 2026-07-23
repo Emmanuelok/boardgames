@@ -1,9 +1,21 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useProfile, ratingTitle } from './profile';
 import { useProgression } from '../progression/progression';
+import {
+  createLearningMission,
+  useLearningMemory,
+  type LearningEvent,
+  type MissionStage,
+} from '../intelligence/learningMemory';
 
 // The profile store feeds the progression store on every result, so reset both.
-const reset = () => { localStorage.clear(); useProfile.getState().reset(); useProgression.getState().reset(); };
+const reset = () => {
+  localStorage.clear();
+  window.location.hash = '#/';
+  useProfile.getState().reset();
+  useProgression.getState().reset();
+  useLearningMemory.getState().reset();
+};
 
 describe('profile · Elo rating', () => {
   beforeEach(reset);
@@ -84,6 +96,50 @@ describe('profile · progression hook', () => {
     // First-win achievement paid its bonus on top of the game reward.
     expect(prog.coins).toBeGreaterThan(0);
     expect(prog.xp).toBeGreaterThan(0);
+  });
+
+  it('returns a mission match result to the exact active learning stage', () => {
+    const mission = createLearningMission({
+      id: 'mission-profile',
+      gameId: 'chess',
+      createdAt: 100,
+      targets: [
+        { stage: 'observe', kind: 'match_completed', sourceId: 'match:chess' },
+        { stage: 'learn', kind: 'lesson_completed', sourceId: 'course:chess' },
+        { stage: 'practice', kind: 'puzzle_solved', sourceId: 'puzzle:chess' },
+        { stage: 'play', kind: 'match_completed', sourceId: 'match:chess:medium' },
+        { stage: 'reflect', kind: 'reflection_completed', sourceId: 'reflection:chess:after-play' },
+      ],
+    });
+    useLearningMemory.getState().startMission(mission);
+    const preceding: Array<[MissionStage, LearningEvent['kind'], string]> = [
+      ['observe', 'match_completed', 'match:chess'],
+      ['learn', 'lesson_completed', 'course:chess'],
+      ['practice', 'puzzle_solved', 'puzzle:chess'],
+    ];
+    preceding.forEach(([stage, kind, sourceId], index) => {
+      useLearningMemory.getState().recordEvent({
+        id: `prior-${index}`,
+        at: 101 + index,
+        kind,
+        missionId: mission.id,
+        gameId: 'chess',
+        stage,
+        sourceId,
+        outcome: 'complete',
+      });
+    });
+    expect(useLearningMemory.getState().activeMission?.currentStage).toBe('play');
+
+    window.location.hash = '#/play/chess?mission=mission-profile&stage=play';
+    useProfile.getState().recordResult('chess', 'draw', 'medium');
+
+    expect(useLearningMemory.getState().activeMission?.currentStage).toBe('reflect');
+    expect(useLearningMemory.getState().events.at(-1)).toMatchObject({
+      kind: 'match_completed',
+      stage: 'play',
+      sourceId: 'match:chess:medium',
+    });
   });
 });
 

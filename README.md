@@ -60,9 +60,10 @@ Earn **XP, levels and coins** for everything you do — winning (scaled by
 difficulty), clean high-accuracy play, solving puzzles, the **Daily Challenge**,
 finishing a game's course, unlocking achievements, and discovering new games.
 **Daily and weekly quests** rotate and pay out on claim, and a floating reward toast
-celebrates every gain. Spend coins in the **Shop** on living wallpapers, titles and
-avatar frames, reroll a daily quest you don't fancy, or go **Pro** to unlock the lot.
-(Free-to-play; see **[MONETIZATION.md](./MONETIZATION.md)**.)
+celebrates every gain. Spend earned coins in the **Collection** on living wallpapers,
+titles and avatar frames, or freely swap a daily quest for the next available goal.
+Tokens are never sold, quest swaps are deterministic, and supporter status never
+changes XP or access to learning tools. See **[MONETIZATION.md](./MONETIZATION.md)**.
 
 ---
 
@@ -94,7 +95,9 @@ game in the world is just a matter of implementing a single interface.
 ```text
 src/
   intelligence/
-    orchestrator.ts # one adaptive mission assembled from shared learner evidence
+    orchestrator.ts   # one adaptive mission assembled from shared learner evidence
+    learningMemory.ts # persisted, ordered evidence ledger for the five-stage loop
+    missionRouting.ts # validated mission context shared across every route
   engine/
     types.ts        # GameDefinition — the universal interface every game implements
     ai.ts           # generic alpha-beta search shared by the lighter games
@@ -107,7 +110,7 @@ src/
     xiangqi.ts  checkers.ts  draughts.ts  ninemensmorris.ts  reversi.ts
     connectFour.ts  mancala.ts  go.ts  gomoku.ts  pente.ts  hex.ts  ticTacToe.ts
   components/
-    Board2D.tsx  Board3D.tsx  TutorPanel.tsx  ThemePicker.tsx  MiniBoard.tsx
+    Board2D.tsx  Board3D.tsx  JourneyContext.tsx  TutorPanel.tsx  ThemePicker.tsx
   themes/boardThemes.ts   # 200+ templates incl. Liquid Glass
   store/useGameStore.ts   # race-safe session, AI/tutor driver and validated online play
   progression/progression.ts  # XP, levels, coins, daily quests & cosmetic economy

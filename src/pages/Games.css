@@ -1,11 +1,42 @@
 .games-page { max-width: 1200px; margin: 0 auto; padding: 16px 20px 70px; }
 .discover-page { max-width: 1440px; padding: 26px clamp(16px, 2.7vw, 38px) 80px; }
-.discover-head { max-width: 1040px; padding: clamp(10px, 2vw, 24px) 0 36px; }
-.discover-head h1 { max-width: 920px; margin: 9px 0 14px; font-size: clamp(38px, 5.8vw, 76px); line-height: .98; letter-spacing: -.05em; }
-.discover-head > p { max-width: 800px; color: var(--ink-dim); font-size: clamp(15px, 1.6vw, 18px); line-height: 1.65; }
+.discover-head { position: relative; }
+.discover-hero {
+  min-height: 650px; aspect-ratio: 1600 / 854; overflow: hidden; isolation: isolate;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 36px;
+  padding: clamp(30px, 4vw, 62px); margin-bottom: 22px;
+  border: 1px solid var(--line-strong); border-radius: 30px;
+  box-shadow: 0 42px 110px -54px rgba(0,0,0,.96);
+}
+.discover-art { position: absolute; z-index: -3; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.discover-veil {
+  position: absolute; z-index: -2; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(3,7,13,.98) 0%, rgba(3,7,13,.87) 39%, rgba(3,7,13,.25) 70%),
+    linear-gradient(0deg, rgba(3,7,13,.94) 0%, transparent 54%),
+    radial-gradient(circle at 74% 38%, transparent 0, rgba(2,5,10,.16) 46%, rgba(2,5,10,.7) 100%);
+}
+.discover-hero::after { content: ''; position: absolute; z-index: -1; inset: 0; pointer-events: none; box-shadow: inset 0 0 110px rgba(0,0,0,.62); }
+.discover-copy { position: relative; z-index: 1; max-width: 760px; }
+.discover-copy h1 { max-width: 760px; margin: 11px 0 16px; font-size: clamp(43px, 5.9vw, 82px); line-height: .94; letter-spacing: -.058em; }
+.discover-copy > p { max-width: 670px; margin: 0; color: #c4ccde; font-size: clamp(15px, 1.45vw, 18px); line-height: 1.66; }
 .discover-facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 23px 0 0; padding: 0; list-style: none; }
-.discover-facts li { padding: 8px 11px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.035); color: var(--ink-dim); font-size: 11px; }
+.discover-facts li { padding: 8px 11px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12); background: rgba(5,9,16,.42); color: #aeb8ce; font-size: 11px; backdrop-filter: blur(10px); }
 .discover-facts b { color: #fff; }
+.discover-worlds { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.discover-worlds button {
+  min-width: 0; min-height: 112px; display: grid; grid-template-columns: 34px minmax(0, 1fr); grid-template-rows: auto 1fr;
+  gap: 3px 10px; padding: 14px; text-align: left; color: #d5dbea;
+  border: 1px solid rgba(255,255,255,.13); border-radius: 16px;
+  background: rgba(5,9,17,.65); backdrop-filter: blur(16px);
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.discover-worlds button:hover, .discover-worlds button:focus-visible { transform: translateY(-3px); border-color: rgba(112,225,206,.42); background: rgba(11,21,28,.82); }
+.discover-worlds button.on { border-color: rgba(112,225,206,.58); background: linear-gradient(145deg, rgba(75,196,177,.2), rgba(114,86,210,.18)); box-shadow: inset 0 0 0 1px rgba(112,225,206,.1); }
+.discover-worlds button > span { grid-row: 1 / -1; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; color: #8ee4d6; background: rgba(112,225,206,.1); }
+.discover-worlds button strong { align-self: end; font-size: 13px; }
+.discover-worlds button small { min-width: 0; color: #8994ad; font-size: 9.5px; line-height: 1.35; }
+.discover-catalogue { scroll-margin-top: 16px; }
 .game-tools { position: sticky; top: 8px; z-index: 12; display: grid; grid-template-columns: minmax(240px, 1fr) auto auto; align-items: center; gap: 12px; padding: 10px; margin-bottom: 20px; border: 1px solid var(--line-strong); border-radius: 18px; background: rgba(10,12,20,.84); backdrop-filter: blur(18px); box-shadow: 0 16px 38px -30px #000; }
 .game-search { height: 42px; display: flex; align-items: center; gap: 9px; padding: 0 11px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.04); }
 .game-search:focus-within { border-color: #71dfcd; box-shadow: 0 0 0 2px rgba(113,223,205,.2); }
@@ -61,5 +92,30 @@
 .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22,0.7,0.2,1); }
 .reveal.in { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { .reveal { transition: none; opacity: 1; transform: none; } .game-card:hover { transform: none; } }
-@media (max-width: 980px) { .game-tools { grid-template-columns: 1fr; position: static; } .game-result-count { display: none; } }
-@media (max-width: 600px) { .game-categories { width: 100%; } .game-categories button { min-height: 40px; } .discover-page { padding-bottom: 110px; } }
+@media (max-width: 1180px) {
+  .discover-hero { min-height: 740px; }
+  .discover-worlds { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 980px) {
+  .discover-hero { min-height: 760px; }
+  .discover-art { object-position: 67% center; }
+  .discover-veil { background: linear-gradient(0deg, rgba(3,7,13,.98) 0%, rgba(3,7,13,.88) 57%, rgba(3,7,13,.18) 100%), radial-gradient(circle at 70% 28%, transparent, rgba(2,5,10,.58) 82%); }
+  .game-tools { grid-template-columns: 1fr; position: static; }
+  .game-result-count { display: none; }
+}
+@media (max-width: 700px) {
+  .discover-page { padding-top: 12px; }
+  .discover-hero { min-height: 760px; aspect-ratio: auto; padding: 26px 22px; border-radius: 24px; }
+  .discover-copy h1 { font-size: clamp(42px, 12.5vw, 62px); }
+  .discover-worlds { display: flex; gap: 8px; overflow-x: auto; margin-inline: -22px; padding: 2px 22px 8px; scroll-snap-type: x proximity; }
+  .discover-worlds button { flex: 0 0 210px; min-height: 104px; scroll-snap-align: start; }
+}
+@media (max-width: 600px) {
+  .game-categories { width: 100%; }
+  .game-categories button { min-height: 40px; }
+  .discover-page { padding-bottom: 110px; }
+}
+@media (max-width: 430px) {
+  .discover-hero { min-height: 790px; }
+  .discover-facts li { font-size: 10px; }
+}

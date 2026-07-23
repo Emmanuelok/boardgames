@@ -52,7 +52,7 @@ export default function QuartoGame({ aiDifficulty = 'medium' }: { aiDifficulty?:
     if (!over || recorded) return;
     setRecorded(true);
     playSound(w === 0 ? 'win' : w === 1 ? 'lose' : 'draw');
-    if (w === 0 || w === 1) recordResult('quarto', w === 0 ? 'win' : 'loss', aiDifficulty as any);
+    recordResult('quarto', w === 'draw' ? 'draw' : w === 0 ? 'win' : 'loss', aiDifficulty as any);
     if (review.length >= 4) try { saveRecord(summarize(qdef, review, qdef.getStatus(s), 0)); } catch { /* ignore */ }
   }, [over, w, recorded, recordResult, aiDifficulty]);
 

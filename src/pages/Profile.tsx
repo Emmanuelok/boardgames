@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
-import { useProgression, levelFromXp, levelTier, questDef, cosmetic, REROLL_COST, type QuestProgress } from '../progression/progression';
+import { useProgression, levelFromXp, levelTier, questDef, cosmetic, type QuestProgress } from '../progression/progression';
 import { GAMES, getGame } from '../engine/registry';
 import { playSound, resumeAudio } from '../audio/sound';
+import { useLearningMemory } from '../intelligence/learningMemory';
 import './Profile.css';
 
 const readJSON = (k: string): any => { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch { return {}; } };
@@ -104,13 +105,13 @@ export default function Profile() {
           </div>
           <div className="pf-lvl-bar"><div style={{ width: `${xpPct}%` }} /></div>
         </div>
-        <div className="pf-lvl-coins"><span className="pf-coins-n">🪙 {prog.coins.toLocaleString()}</span><Link to="/shop" className="btn sm">🛍 Shop</Link></div>
+        <div className="pf-lvl-coins"><span className="pf-coins-n">🪙 {prog.coins.toLocaleString()}</span><Link to="/shop" className="btn sm">◇ Collection</Link></div>
       </div>
 
       <section className="pf-section">
         <h2>Daily Quests <span className="faint" style={{ fontSize: 14, fontWeight: 400 }}>· resets at midnight</span></h2>
         <div className="pf-quests">
-          {prog.quests.map((q) => <QuestRow key={q.id} q={q} onClaim={prog.claimQuest} onReroll={prog.rerollQuest} canReroll={prog.coins >= REROLL_COST} />)}
+          {prog.quests.map((q) => <QuestRow key={q.id} q={q} onClaim={prog.claimQuest} onReroll={prog.rerollQuest} />)}
         </div>
       </section>
 
@@ -210,7 +211,11 @@ export default function Profile() {
         </div>
       </section>
 
-      <button className="btn ghost sm pf-reset" onClick={() => { if (confirm('Reset all stats and achievements?')) p.reset(); }}>Reset profile</button>
+      <button className="btn ghost sm pf-reset" onClick={() => {
+        if (!confirm('Reset all stats, achievements and the active learning mission?')) return;
+        p.reset();
+        useLearningMemory.getState().reset();
+      }}>Reset profile</button>
     </div>
   );
 }
@@ -232,13 +237,13 @@ function Highlight({ icon, label, value, sub }: { icon: string; label: string; v
   );
 }
 
-function QuestRow({ q, onClaim, onReroll, canReroll }: { q: QuestProgress; onClaim: (id: string) => void; onReroll?: (id: string) => void; canReroll?: boolean }) {
+function QuestRow({ q, onClaim, onReroll }: { q: QuestProgress; onClaim: (id: string) => void; onReroll?: (id: string) => void }) {
   const d = questDef(q.id);
   if (!d) return null;
   const complete = q.progress >= d.goal;
   const qpct = Math.min(100, Math.round((q.progress / d.goal) * 100));
   const claim = () => { resumeAudio(); playSound('coin'); onClaim(q.id); };
-  const reroll = () => { if (!onReroll || !canReroll) return; resumeAudio(); playSound('coin'); onReroll(q.id); };
+  const reroll = () => { if (!onReroll) return; onReroll(q.id); };
   return (
     <div className={`pf-quest glass-soft ${complete ? 'done' : ''}`}>
       <span className="pf-q-ic">{d.icon}</span>
@@ -252,7 +257,7 @@ function QuestRow({ q, onClaim, onReroll, canReroll }: { q: QuestProgress; onCla
       <span className="pf-q-reward">{d.reward.xp > 0 ? `+${d.reward.xp} XP · ` : ''}🪙{d.reward.coins}</span>
       {q.claimed ? <span className="pf-q-claimed">✓ Claimed</span>
         : complete ? <button className="btn sm primary" onClick={claim}>Claim</button>
-        : onReroll ? <button className="btn sm ghost" disabled={!canReroll} title={canReroll ? 'Swap for a new quest' : `Need 🪙${REROLL_COST} to reroll`} onClick={reroll}>🎲 {REROLL_COST}</button>
+        : onReroll ? <button className="btn sm ghost" title="Swap for the next available quest" onClick={reroll}>↻ Swap</button>
         : <span className="pf-q-go faint">In progress</span>}
     </div>
   );
