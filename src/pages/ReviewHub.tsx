@@ -70,8 +70,8 @@ export default function ReviewHub() {
                 <div className="rv-mid">
                   <Spark pts={r.evalPts} accent={r.accent} />
                   <div className="rv-acc">
-                    <span className="rv-acc-chip"><b>{r.acc[0]}%</b> {r.p0}</span>
-                    <span className="rv-acc-chip"><b>{r.acc[1]}%</b> {r.p1}</span>
+                    <span className="rv-acc-chip"><b>{r.graded?.[0] === 0 ? '—' : `${r.acc[0]}%`}</b> {r.p0}</span>
+                    <span className="rv-acc-chip"><b>{r.graded?.[1] === 0 ? '—' : `${r.acc[1]}%`}</b> {r.p1}</span>
                   </div>
                 </div>
 

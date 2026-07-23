@@ -17,6 +17,7 @@ import OrderChaosGame from '../components/OrderChaosGame';
 import UltimateGame from '../components/UltimateGame';
 import SurakartaGame from '../components/SurakartaGame';
 import { isMuted, toggleMuted, resumeAudio } from '../audio/sound';
+import { QUICK_CHAT_PHRASES } from '../net/online';
 import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
 import type { Difficulty, MoveBase, Player } from '../engine/types';
 import './GameScreen.css';
@@ -48,24 +49,36 @@ export default function GameScreen() {
   }, [lastUnlocked, clearLastUnlocked]);
 
   const [params] = useSearchParams();
-  const joinedRef = useRef(false);
+  const routeDef = gameId ? getGame(gameId) : undefined;
+  const joinCode = params.get('join');
+  const hostCode = params.get('host');
 
   useEffect(() => {
-    if (gameId && getGame(gameId)) useGameStore.getState().newGame(gameId);
+    if (gameId && routeDef) useGameStore.getState().newGame(gameId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId]);
+  }, [gameId, routeDef]);
 
   // Auto host/join a room from the URL (?join=GM-XXXXX from an invite link,
   // or ?host=GM-XXXXX when a lobby challenge sends both players to a shared code).
   useEffect(() => {
-    if (joinedRef.current) return;
-    if (gameId && getGame(gameId)?.custom) return; // bespoke games (backgammon) auto-join themselves
-    const join = params.get('join');
-    const host = params.get('host');
-    if (join) { joinedRef.current = true; setTimeout(() => useGameStore.getState().joinOnline(join), 450); }
-    else if (host) { joinedRef.current = true; setTimeout(() => useGameStore.getState().hostOnline(host), 450); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!gameId || !routeDef || routeDef.custom) return; // bespoke games own their session lifecycle
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (joinCode || hostCode) {
+      timer = setTimeout(() => {
+        const current = useGameStore.getState();
+        if (current.gameId !== gameId) return;
+        if (joinCode) current.joinOnline(joinCode);
+        else if (hostCode) current.hostOnline(hostCode);
+      }, 450);
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      const current = useGameStore.getState();
+      if (current.net) current.leaveOnline();
+    };
+  }, [gameId, routeDef, joinCode, hostCode]);
 
   useEffect(() => {
     if (!store.toast) return;
@@ -93,6 +106,18 @@ export default function GameScreen() {
   }, []);
 
   const def = store.def;
+  if (!routeDef) {
+    return (
+      <section className="loading" aria-live="polite">
+        <div className="col" style={{ alignItems: 'center', gap: 12, textAlign: 'center' }}>
+          <span aria-hidden="true" style={{ fontSize: 44 }}>🎲</span>
+          <h1 style={{ margin: 0 }}>Game not found</h1>
+          <p style={{ margin: 0 }}>That game isn’t available in the Grandmaster catalogue.</p>
+          <Link to="/games" className="btn primary">Browse all games</Link>
+        </div>
+      </section>
+    );
+  }
   if (!def || !store.state || def.id !== gameId) {
     return <div className="loading">Loading…</div>;
   }
@@ -252,20 +277,22 @@ function VariantBar({ gameId }: { gameId: string }) {
 }
 
 function Chat({ store }: any) {
-  const [text, setText] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [store.chat.length]);
   return (
     <div className="chat glass-soft">
       <div className="chat-msgs">
-        {store.chat.length === 0 && <div className="faint" style={{ padding: 12, fontSize: 13 }}>Connected — say hello to your opponent 👋</div>}
+        {store.chat.length === 0 && <div className="faint" style={{ padding: 12, fontSize: 13 }}>Connected — choose a friendly quick message below.</div>}
         {store.chat.map((m: any, i: number) => <div key={i} className={`chat-msg ${m.from}`}>{m.text}</div>)}
         <div ref={endRef} />
       </div>
-      <form className="chat-input" onSubmit={(e) => { e.preventDefault(); store.sendChat(text); setText(''); }}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Message…" maxLength={280} />
-        <button className="btn sm primary" type="submit">Send</button>
-      </form>
+      <div className="chat-input" role="group" aria-label="Quick chat messages" style={{ flexWrap: 'wrap' }}>
+        {QUICK_CHAT_PHRASES.map((phrase) => (
+          <button key={phrase} className="btn sm" type="button" onClick={() => store.sendChat(phrase)}>
+            {phrase}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

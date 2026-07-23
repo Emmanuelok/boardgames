@@ -1,18 +1,32 @@
-# ♛ GrandMaster — AI Board Game Center
+# ♛ GrandMaster — Adaptive School of Strategy
 
-**The most intelligent board game center, built for players who want to *understand* the game — not just play it.**
+**One connected learning system for players who want to understand strategy—not merely finish games.**
 
-Play Chess and a growing universe of board games against an AI that grades and
-explains **every single move**, in stunning **2D and 3D**, dressed in any of
-**200+ board themes** — including the signature **Liquid Glass**.
+GrandMaster connects **35 complete game engines**, lessons, adaptive practice,
+fair AI sparring and post-game review through one learner model. The new
+**Strategy Path** turns evidence from every session into a clear next move while
+the underlying engines remain deterministic and rules-verified.
 
-![stack](https://img.shields.io/badge/React-18-61dafb) ![stack](https://img.shields.io/badge/TypeScript-5-3178c6) ![stack](https://img.shields.io/badge/Three.js-3D-000000) ![stack](https://img.shields.io/badge/Vite-5-646cff)
+![stack](https://img.shields.io/badge/React-18-61dafb) ![stack](https://img.shields.io/badge/TypeScript-5-3178c6) ![stack](https://img.shields.io/badge/Three.js-3D-000000) ![stack](https://img.shields.io/badge/Vite-8-646cff)
 
 ---
 
-## ✨ What makes it special
+## ✨ One platform, one learning loop
+
+The experience is organized around five coordinated specialists that share the
+same profile, progression, match, puzzle and review evidence:
+
+1. **Diagnostician** — identifies the most useful current focus.
+2. **Curriculum Guide** — sequences the right lesson and proof position.
+3. **Practice Builder** — moves from guided examples to independent solving.
+4. **Sparring Director** — selects a fair opponent strength for useful evidence.
+5. **Review Analyst** — converts decisive moments into the next session.
+
+This loop is implemented by the pure, tested mission orchestrator in
+`src/intelligence/orchestrator.ts` and surfaced through `/path`.
 
 ### 🧠 A world-class step-by-step tutor
+
 Every move you (or the AI) make is analysed and graded **Brilliant → Blunder**,
 then explained in plain English:
 
@@ -52,23 +66,20 @@ avatar frames, reroll a daily quest you don't fancy, or go **Pro** to unlock the
 
 ---
 
-## 🎲 The games
+## 🎲 The 35-engine library
 
-| Game | Board | Highlights |
-|------|-------|-----------|
-| **Chess** | 8×8 | Full rules, opening book, SEE-based tactical tutor |
-| **Xiangqi (Chinese Chess)** | 9×10 | Cannons, the river & palace, flying-general rule |
-| **Checkers** | 8×8 | Mandatory captures, multi-jumps, kings |
-| **International Draughts** | 10×10 | Flying kings, capture-the-maximum rule |
-| **Nine Men's Morris** | 24 points | Placing/moving/flying phases, mills & removal |
-| **Reversi (Othello)** | 8×8 | Corner strategy, mobility, forced passes |
-| **Connect Four** | 7×6 | Drop mechanics, double-threat tutoring |
-| **Mancala (Kalah)** | 6+6 pits | Sowing, extra turns, captures |
-| **Go** | 9×9 | Liberties, captures, ko, area scoring, passing |
-| **Gomoku** | 15×15 | Five-in-a-row, open-three / four detection |
-| **Pente** | 13×13 | Five-in-a-row + custodial pair captures |
-| **Hex** | 11×11 | Edge-to-edge connection, bridges, never draws |
-| **Tic-Tac-Toe** | 3×3 | Perfect-play AI, fork lessons |
+The discovery experience groups close variants into 29 browsable worlds while
+preserving all 35 full engines:
+
+- **Royal strategy:** Chess, Xiangqi, Shogi and Tafl.
+- **Capture classics:** Checkers, International Draughts, Alquerque, Fox and
+  Hounds, Nine Men's Morris, Three Men's Morris, Backgammon and Surakarta.
+- **Connection and alignment:** Gomoku, Pente, Connect Four, Tic-Tac-Toe, Hex,
+  Pentago, Squava, Teeko and Five Field Kono.
+- **Territory, mobility and placement:** Go, Reversi, Amazons, Lines of Action,
+  Konane, Clobber, Cohesion, Breakthrough and Mancala.
+- **Modern abstract systems:** Dots and Boxes, Quarto, Tally, Order and Chaos
+  and Ultimate Tic-Tac-Toe.
 
 Every game ships with a **classical, in-depth tutorial** (rules → strategy)
 with illustrated positions, and the same move-by-move tutor.
@@ -80,8 +91,10 @@ with illustrated positions, and the same move-by-move tutor.
 The whole center is built on **one universal abstraction**, so adding any board
 game in the world is just a matter of implementing a single interface.
 
-```
+```text
 src/
+  intelligence/
+    orchestrator.ts # one adaptive mission assembled from shared learner evidence
   engine/
     types.ts        # GameDefinition — the universal interface every game implements
     ai.ts           # generic alpha-beta search shared by the lighter games
@@ -96,10 +109,10 @@ src/
   components/
     Board2D.tsx  Board3D.tsx  TutorPanel.tsx  ThemePicker.tsx  MiniBoard.tsx
   themes/boardThemes.ts   # 200+ templates incl. Liquid Glass
-  store/useGameStore.ts   # game session: play, undo/redo, AI driver, passes
+  store/useGameStore.ts   # race-safe session, AI/tutor driver and validated online play
   progression/progression.ts  # XP, levels, coins, daily quests & cosmetic economy
   profile/profile.ts      # player profile, Elo rating & achievements
-  pages/  Home  GameScreen  Learn  Daily  Puzzles  Shop  Profile
+  pages/  Home  Path  Games  GameScreen  Learn  Daily  Puzzles  Reviews  Profile
 ```
 
 Because the UI talks only to `GameDefinition`, the 2D board, 3D board, tutor and
@@ -116,7 +129,7 @@ npm run build      # production build  → dist/
 npm run preview    # preview the build
 ```
 
-Requires Node 18+.
+Requires Node 20.19+ (Vite 8 and Vitest 4).
 
 ### Deploy (Vercel or Netlify)
 
@@ -133,8 +146,10 @@ sub-path with no extra configuration.
 
 ### Developer tests
 ```bash
-node --experimental-strip-types scripts/perft.ts     # verify chess move-gen (perft)
-npx esbuild scripts/gametest.ts --bundle --platform=node --format=esm --outfile=/tmp/gt.mjs && node /tmp/gt.mjs
+npm run typecheck
+npm test
+npm run build
+node --experimental-strip-types scripts/perft.ts     # verify chess move generation
 ```
 
 ---

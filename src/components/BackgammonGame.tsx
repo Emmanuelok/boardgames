@@ -7,6 +7,7 @@ import {
 import { useProfile } from '../profile/profile';
 import { playSound, resumeAudio, isMuted, toggleMuted } from '../audio/sound';
 import { useBgOnline, type BgOnline } from '../net/useBgOnline';
+import { QUICK_CHAT_PHRASES } from '../net/online';
 import CoachPanel, { type CoachMsg } from './CoachPanel';
 import './BackgammonGame.css';
 
@@ -240,7 +241,6 @@ function OnlinePanel({ online, myColor }: { online: BgOnline; myColor: 0 | 1 }) 
 }
 
 function BgChat({ online }: { online: BgOnline }) {
-  const [text, setText] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [online.chat.length]);
   return (
@@ -250,10 +250,11 @@ function BgChat({ online }: { online: BgOnline }) {
         {online.chat.map((m, i) => <div key={i} className={`chat-msg ${m.from}`}>{m.text}</div>)}
         <div ref={endRef} />
       </div>
-      <form className="chat-input" onSubmit={(e) => { e.preventDefault(); online.sendChat(text); setText(''); }}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Message…" maxLength={280} />
-        <button className="btn sm primary" type="submit">Send</button>
-      </form>
+      <div className="bg-quick-chat" aria-label="Quick chat">
+        {QUICK_CHAT_PHRASES.map((phrase) => (
+          <button className="btn sm" type="button" key={phrase} onClick={() => online.sendChat(phrase)}>{phrase}</button>
+        ))}
+      </div>
     </div>
   );
 }

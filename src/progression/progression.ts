@@ -96,13 +96,18 @@ export const QUEST_POOL: QuestDef[] = [
   { id: 'daily1', label: 'Complete the Daily Challenge', icon: '📅', goal: 1, track: 'daily', reward: { xp: 40, coins: 30 } },
 ];
 
-export function todayStr(d = new Date()): string { return d.toISOString().slice(0, 10); }
+/** Calendar key in the player's local timezone. Daily goals must not reset in
+ * the late afternoon for players west of UTC. */
+export function todayStr(d = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
-/** Monday-anchored week key (UTC), e.g. "2026-06-15" — stable for the whole week. */
+/** Monday-anchored local week key, e.g. "2026-06-15". */
 export function weekStr(d = new Date()): string {
-  const dt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-  dt.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7)); // back up to Monday
-  return dt.toISOString().slice(0, 10);
+  const dt = new Date(d);
+  dt.setHours(12, 0, 0, 0); // stable across DST boundaries
+  dt.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+  return todayStr(dt);
 }
 
 /** Deterministic seeded pick of `n` quests from `pool`, stable for a given key. */

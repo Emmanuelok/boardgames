@@ -9,7 +9,10 @@ import { playSound, resumeAudio } from '../audio/sound';
 import './Daily.css';
 
 const DAY = 86400000;
-const dayKey = (d: Date | number) => new Date(d).toISOString().slice(0, 10);
+const dayKey = (d: Date | number) => {
+  const date = new Date(d);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
 
 function hashStr(s: string): number {
   let h = 2166136261 >>> 0;

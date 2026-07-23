@@ -11,9 +11,9 @@ const QUALITY: Record<EvalBand, number> = {
 const GOOD: EvalBand[] = ['brilliant', 'great', 'best', 'good'];
 const BAD: EvalBand[] = ['inaccuracy', 'mistake', 'blunder'];
 
-function accuracy(entries: LogEntry[]): number {
+function accuracy(entries: LogEntry[]): number | null {
   const scored = entries.filter((e) => e.explanation);
-  if (!scored.length) return 100;
+  if (!scored.length) return null;
   const avg = scored.reduce((s, e) => s + (QUALITY[e.explanation!.band] ?? 0.84), 0) / scored.length;
   return Math.round(avg * 100);
 }
@@ -108,13 +108,13 @@ export default function GameReview({ def, log, status }: { def: GameDefinition; 
   );
 }
 
-function AccCard({ def, who, acc, top }: { def: GameDefinition; who: 0 | 1; acc: number; top: boolean }) {
+function AccCard({ def, who, acc, top }: { def: GameDefinition; who: 0 | 1; acc: number | null; top: boolean }) {
   return (
     <div className={`acc-card ${top ? 'win' : ''}`}>
       <span className="acc-dot" style={{ background: def.players[who].color }} />
       <div className="acc-name">{def.players[who].name}</div>
-      <div className="acc-val">{acc}<span className="acc-pct">%</span></div>
-      <div className="acc-label">accuracy</div>
+      <div className="acc-val">{acc ?? '—'}{acc != null && <span className="acc-pct">%</span>}</div>
+      <div className="acc-label">{acc == null ? 'analysis pending' : 'accuracy'}</div>
     </div>
   );
 }
@@ -122,6 +122,7 @@ function AccCard({ def, who, acc, top }: { def: GameDefinition; who: 0 | 1; acc:
 function BreakdownRow({ def, who, c }: { def: GameDefinition; who: 0 | 1; c: Partial<Record<EvalBand, number>> }) {
   const good = GOOD.reduce((s, b) => s + (c[b] ?? 0), 0);
   const bad = BAD.reduce((s, b) => s + (c[b] ?? 0), 0);
+  const graded = Object.values(c).reduce((sum, count) => sum + (count ?? 0), 0);
   return (
     <div className="bd-row">
       <span className="bd-name"><span className="acc-dot sm" style={{ background: def.players[who].color }} />{def.players[who].name}</span>
@@ -129,7 +130,7 @@ function BreakdownRow({ def, who, c }: { def: GameDefinition; who: 0 | 1; c: Par
       {(c.brilliant || c.great) ? <span className="bd-chip brill">!! {(c.brilliant ?? 0) + (c.great ?? 0)}</span> : null}
       {c.mistake ? <span className="bd-chip warn">? {c.mistake}</span> : null}
       {c.blunder ? <span className="bd-chip bad">?? {c.blunder}</span> : null}
-      {bad === 0 && <span className="bd-chip clean">clean</span>}
+      {graded === 0 ? <span className="bd-chip clean">awaiting analysis</span> : bad === 0 && <span className="bd-chip clean">clean</span>}
     </div>
   );
 }

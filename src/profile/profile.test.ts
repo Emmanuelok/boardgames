@@ -48,7 +48,7 @@ describe('profile · tallies', () => {
 describe('profile · achievements', () => {
   beforeEach(reset);
 
-  it('unlocks First Blood on the first win and tracks lastUnlocked', () => {
+  it('unlocks First Victory on the first win and tracks lastUnlocked', () => {
     useProfile.getState().recordResult('chess', 'win', 'easy');
     const s = useProfile.getState();
     expect(s.achievements).toContain('first-win');
@@ -68,8 +68,8 @@ describe('profile · achievements', () => {
   });
 
   it('unlocks All-Rounder after playing every category', () => {
-    // chess=Classic, reversi=Strategy, go=Abstract, connect-four=Family
-    for (const g of ['chess', 'reversi', 'go', 'connect-four']) useProfile.getState().recordResult(g, 'loss', 'easy');
+    // checkers=Classic, chess=Strategy, go=Abstract, connect-four=Family
+    for (const g of ['checkers', 'chess', 'go', 'connect-four']) useProfile.getState().recordResult(g, 'loss', 'easy');
     expect(useProfile.getState().achievements).toContain('all-rounder');
   });
 });
