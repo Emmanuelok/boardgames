@@ -38,39 +38,106 @@ function GameThumb({ def }: { def: GameDefinition }) {
   );
 }
 
-export default function GamesGallery() {
+interface GamesGalleryProps {
+  limit?: number;
+  filters?: boolean;
+  headingLevel?: 'h2' | 'h3';
+}
+
+export default function GamesGallery({ limit, filters = false, headingLevel = 'h3' }: GamesGalleryProps) {
   const nav = useNavigate();
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState('All');
+  const CardHeading = headingLevel;
+  const categories = useMemo(() => ['All', ...Array.from(new Set(CATALOGUE.map((entry) => entry.type === 'family' ? entry.family.category : entry.def.category)))], []);
+  const entries = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const matching = CATALOGUE.filter((entry) => {
+      const fam = entry.type === 'family' ? entry.family : null;
+      const game = entry.type === 'family' ? entry.primary : entry.def;
+      const entryCategory = fam ? fam.category : game.category;
+      if (category !== 'All' && entryCategory !== category) return false;
+      if (!needle) return true;
+      const haystack = [
+        fam?.name, fam?.tagline, game.name, game.tagline, entryCategory,
+        ...(fam?.variants.map((variant) => variant.label) ?? []),
+      ].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(needle);
+    });
+    return typeof limit === 'number' && !filters ? matching.slice(0, limit) : matching;
+  }, [category, filters, limit, query]);
+
   return (
-    <div className="game-grid">
-      {CATALOGUE.map((entry) => {
+    <>
+      {filters && (
+        <div className="game-tools" role="search" aria-label="Search and filter the game catalogue">
+          <div className="game-search">
+            <label className="game-search-label" htmlFor="game-catalogue-search">Search games</label>
+            <span aria-hidden="true">⌕</span>
+            <input
+              id="game-catalogue-search"
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search by game, family or idea…"
+            />
+            {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search">×</button>}
+          </div>
+          <div className="game-categories" role="group" aria-label="Filter by category">
+            {categories.map((item) => (
+              <button
+                type="button"
+                key={item}
+                className={category === item ? 'on' : ''}
+                aria-pressed={category === item}
+                onClick={() => setCategory(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+          <span className="game-result-count" aria-live="polite">{entries.length} world{entries.length === 1 ? '' : 's'}</span>
+        </div>
+      )}
+      {entries.length ? <div className="game-grid">
+      {entries.map((entry) => {
         const fam = entry.type === 'family' ? entry.family : null;
         const g = entry.type === 'family' ? entry.primary : entry.def;
         const name = fam ? fam.name : g.name;
         const category = fam ? fam.category : g.category;
         const tagline = fam ? fam.tagline : g.tagline;
         return (
-          <div className="game-card glass" key={fam ? `fam-${fam.id}` : g.id} style={{ ['--accent' as any]: g.accent }}>
-            <button className="gc-thumb" onClick={() => nav(`/play/${g.id}`)} aria-label={`Play ${name}`}>
+          <article className="game-card glass" key={fam ? `fam-${fam.id}` : g.id} style={{ ['--accent' as any]: g.accent }}>
+            <button type="button" className="gc-thumb" onClick={() => nav(`/play/${g.id}`)} aria-label={`Play ${name}`}>
               <GameThumb def={g} />
               <span className="chip gc-cat">{category}</span>
               {fam && <span className="chip gc-variants">{fam.variants.length} variants</span>}
             </button>
             <div className="gc-body">
-              <h3 className="gc-name">{g.emoji} {name}</h3>
+              <CardHeading className="gc-name">{g.emoji} {name}</CardHeading>
               <p className="gc-tag">{tagline}</p>
               <div className="gc-meta"><Depth depth={g.depth} /><span className="faint">{fam ? fam.variants.map((v) => v.label.split(' · ')[0]).join(' · ') : `${g.players[0].name} v ${g.players[1].name}`}</span></div>
               <div className="gc-actions">
-                <button className="btn primary sm" onClick={() => nav(`/play/${g.id}`)}>Play</button>
-                <button className="btn sm" onClick={() => nav(`/learn/${g.id}`)}>Learn</button>
+                <button type="button" className="btn primary sm" onClick={() => nav(`/play/${g.id}`)}>Play</button>
+                <button type="button" className="btn sm" onClick={() => nav(`/learn/${g.id}`)}>Learn</button>
               </div>
             </div>
-          </div>
+          </article>
         );
       })}
-    </div>
+      </div> : (
+        <div className="game-empty glass-soft">
+          <span>⌕</span>
+          <h2>No game matches that search</h2>
+          <p>Try a family such as chess, connection, territory or classic.</p>
+          <button className="btn" type="button" onClick={() => { setQuery(''); setCategory('All'); }}>Reset filters</button>
+        </div>
+      )}
+    </>
   );
 }
 
 function Depth({ depth }: { depth: number }) {
-  return <span className="depth" title={`Depth ${depth} / 5`}>{[1, 2, 3, 4, 5].map((i) => <i key={i} className={i <= depth ? 'on' : ''} />)}</span>;
+  const label = `Strategy depth ${depth} out of 5`;
+  return <span className="depth" role="img" aria-label={label} title={label}>{[1, 2, 3, 4, 5].map((i) => <i aria-hidden="true" key={i} className={i <= depth ? 'on' : ''} />)}</span>;
 }

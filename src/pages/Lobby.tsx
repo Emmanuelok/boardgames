@@ -17,10 +17,12 @@ export default function LobbyPage() {
   const [status, setStatus] = useState<LobbyStatus>('connecting');
   const [invite, setInvite] = useState<Invite | null>(null);
   const [game, setGame] = useState('chess');
+  const [publicHandle, setPublicHandle] = useState('Strategist GUEST');
 
   useEffect(() => {
     const lobby = new Lobby();
     lobbyRef.current = lobby;
+    setPublicHandle(lobby.name);
     lobby.onPeers = setPeers;
     lobby.onStatus = setStatus;
     lobby.onInvite = (inv) => setInvite(inv);
@@ -47,10 +49,10 @@ export default function LobbyPage() {
       </header>
 
       <div className="lobby-you glass">
-        <div className="pf-avatar sm">{(name || 'Y').charAt(0).toUpperCase()}</div>
+        <div className="pf-avatar sm" aria-hidden="true">{publicHandle.slice(-4, -3)}</div>
         <div className="col" style={{ flex: 1 }}>
-          <strong>{name} <span className="faint" style={{ fontWeight: 400, fontSize: 13 }}>· {ratingTitle(rating)} ({rating})</span></strong>
-          <span className="faint" style={{ fontSize: 12 }}>You appear to others as “{name}”. Edit on your <Link to="/profile" className="link">profile</Link>.</span>
+          <strong>{publicHandle} <span className="faint" style={{ fontWeight: 400, fontSize: 13 }}>· {ratingTitle(rating)} ({rating})</span></strong>
+          <span className="faint" style={{ fontSize: 12 }}>Temporary public handle · your <Link to="/profile" className="link">profile</Link> name and rating stay on this device.</span>
         </div>
         <div className="lobby-game-pick">
           <span className="faint" style={{ fontSize: 12, marginRight: 6 }}>I want to play</span>

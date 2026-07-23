@@ -1,6 +1,6 @@
 /**
  * The puzzle pool for Puzzle Mode: the curated, engine-verified chess tactics
- * dataset plus every interactive "Trainer" challenge from all 13 games' courses
+ * dataset plus every interactive "Trainer" challenge from every available course
  * — so the trainer spans the whole center, not just chess.
  */
 import { GAMES } from '../engine/registry';

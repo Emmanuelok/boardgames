@@ -4,10 +4,12 @@
  * The full registry imports every game's engine, AI and (large) tutorial, so any
  * module that touches it drags all of that into the initial bundle. The landing
  * and the first-run onboarding only need a count, a few emblems and a handful of
- * starter games — so they read this tiny, dependency-free module instead. Keep
- * it roughly in sync with the registry when games are added (it is cosmetic).
+ * starter games — so they read this tiny, dependency-free module instead.
+ * `GAME_COUNT` is the full engine count; `CATALOGUE_WORLD_COUNT` is the number
+ * of cards after closely related variants are grouped into one world.
  */
-export const GAME_COUNT = 29;
+export const GAME_COUNT = 35;
+export const CATALOGUE_WORLD_COUNT = 29;
 
 export interface StarterMeta { id: string; name: string; emoji: string; tagline: string }
 

@@ -113,15 +113,102 @@ function ensureNotation(def: GameDefinition, state: any, move: MoveBase): MoveBa
   return m ?? move;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' ? value as Record<string, unknown> : null;
+}
+
+/** Resolve an untrusted game id to the registry's canonical id. */
+function canonicalGameId(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > 80) return null;
+  const def = getGame(value.trim().toLowerCase());
+  // Bespoke games use their own online runtime and must never enter this store.
+  return def && !def.custom ? def.id : null;
+}
+
+/** Resolve an untrusted/worker move to the exact legal move object for `state`. */
+function canonicalMove(def: GameDefinition, state: unknown, value: unknown): MoveBase | null {
+  const raw = asRecord(value);
+  if (!raw || typeof raw.id !== 'string' || raw.id.length === 0 || raw.id.length > 256) return null;
+  const id = raw.id.trim();
+  if (!id) return null;
+  try {
+    return def.getLegalMoves(state, null).find((move) => move.id === id) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function canonicalChat(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  // Preserve ordinary whitespace/newlines while dropping invisible control
+  // characters that should never enter the rendered chat transcript.
+  const text = value
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
+    .trim()
+    .slice(0, 280);
+  return text || null;
+}
+
+function canonicalRoomCode(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const code = value.trim().toUpperCase();
+  return code.length >= 3 && code.length <= 64 && /^[A-Z0-9-]+$/.test(code) ? code : null;
+}
+
 export const useGameStore = create<State>((set, get) => {
   let recorded = false; // ensure a finished game updates the profile only once
+  let sessionVersion = 0;
+  let positionVersion = 0;
+  let aiSeq = 0;
+  let tutorSeq = 0;
+  let hintSeq = 0;
+  let evalSeq = 0;
+  let threatSeq = 0;
+  let reviewTimer: ReturnType<typeof setTimeout> | null = null;
+  let onlineReady: OnlineSession | null = null;
+
+  const cancelReview = () => {
+    if (reviewTimer !== null) clearTimeout(reviewTimer);
+    reviewTimer = null;
+  };
+
+  /** Invalidate work tied to the current board position, without discarding
+   * tutor results for earlier moves that are still present in this session. */
+  const invalidatePositionWork = () => {
+    positionVersion += 1;
+    aiSeq += 1;
+    hintSeq += 1;
+    evalSeq += 1;
+    threatSeq += 1;
+    cancelReview();
+  };
+
+  /** Invalidate every asynchronous continuation for a game/history/mode. */
+  const invalidateSessionWork = () => {
+    sessionVersion += 1;
+    tutorSeq += 1;
+    invalidatePositionWork();
+  };
+
+  const closeNetwork = (net: OnlineSession | null, notifyPeer = true) => {
+    if (!net) return;
+    if (onlineReady === net) onlineReady = null;
+    if (notifyPeer) {
+      try { net.send({ t: 'bye' }); } catch { /* ignore */ }
+    }
+    // Detach first: OnlineSession.close() synchronously reports "closed", and
+    // an old session must not overwrite the status of its replacement.
+    net.onMsg = () => {};
+    net.onStatus = () => {};
+    try { net.close(); } catch { /* ignore */ }
+  };
 
   /** Can the local human act right now? (vs-AI: my colour; online: my colour; pass: always) */
   const localCanMove = (): boolean => {
-    const { def, state, status, mode, humanColor, onlineColor } = get();
+    const { def, state, status, mode, humanColor, onlineColor, onlineStatus } = get();
     if (!def || status.kind === 'win' || status.kind === 'draw') return false;
     const t = def.getTurn(state);
-    if (mode === 'online') return t === onlineColor;
+    if (mode === 'online') return onlineStatus === 'connected' && t === onlineColor;
     if (mode === 'ai') return t === humanColor;
     return true;
   };
@@ -143,18 +230,42 @@ export const useGameStore = create<State>((set, get) => {
       recorded = true;
       const hc = get().humanColor;
       const result = status.kind === 'draw' ? 'draw' : status.winner === hc ? 'win' : 'loss';
-      try { useProfile.getState().recordResult(get().gameId!, result, get().difficulty); } catch { /* ignore */ }
+      const gameId = get().gameId;
+      if (!gameId) return;
+      try { useProfile.getState().recordResult(gameId, result, get().difficulty); } catch { /* ignore */ }
       // Persist a post-game review record once the final tutor notes have settled.
       const def = get().def;
       if (def && get().log.length >= 4) {
-        setTimeout(() => {
+        const expectedSession = sessionVersion;
+        const expectedPosition = positionVersion;
+        const expectedState = get().state;
+        const expectedStatus = get().status;
+        const expectedMoves = get().log.length;
+        cancelReview();
+        reviewTimer = setTimeout(() => {
+          reviewTimer = null;
+          const current = get();
+          // Restarting, navigating, undoing, or changing mode must never make a
+          // completed game's delayed review read data from the next session.
+          if (
+            expectedSession !== sessionVersion ||
+            expectedPosition !== positionVersion ||
+            current.gameId !== gameId ||
+            current.def !== def ||
+            current.state !== expectedState ||
+            current.status !== expectedStatus ||
+            current.log.length !== expectedMoves ||
+            current.mode !== 'ai'
+          ) return;
           try {
-            const rec = summarize(def, get().log, get().status, hc);
+            const rec = summarize(def, current.log, expectedStatus, hc);
             saveRecord(rec);
-            // Reward clean play (only the engine path knows per-move accuracy).
-            useProgression.getState().awardAccuracy(rec.acc[hc] ?? 0);
-            // Flawless win: a victory with enough graded moves and zero blunders.
-            const humanGraded = get().log.filter((e) => e.player === hc && e.explanation);
+            const humanGraded = current.log.filter((e) => e.player === hc && e.explanation);
+            // Never award an apparent 100% when no engine evidence exists.
+            const gradedCount = rec.graded?.[hc] ?? humanGraded.length;
+            if (gradedCount > 0) useProgression.getState().awardAccuracy(rec.acc[hc] ?? 0);
+            // Flawless win: a victory with enough genuinely graded moves and
+            // zero blunders.
             const blunders = humanGraded.filter((e) => e.explanation!.band === 'blunder').length;
             if (result === 'win' && humanGraded.length >= 6 && blunders === 0) {
               useProfile.getState().recordFlawlessWin();
@@ -168,15 +279,25 @@ export const useGameStore = create<State>((set, get) => {
   /** Apply a move, record it, snapshot for undo, and fetch its tutor note.
    *  `fromNet` = the move arrived from the remote peer (don't echo it back). */
   const commit = (move: MoveBase, before: any, fromNet = false) => {
-    const def = get().def!;
-    if (get().mode === 'online' && !fromNet) get().net?.send({ t: 'move', move });
+    const current = get();
+    const def = current.def;
+    const gameId = current.gameId;
+    // Object identity is intentional: all valid callers operate on the current
+    // immutable position. It is a final guard against stale continuations.
+    if (!def || !gameId || current.state !== before) return null;
+    if (
+      current.mode === 'online' &&
+      !fromNet &&
+      (current.onlineStatus !== 'connected' || !current.net || current.net !== onlineReady)
+    ) return null;
     const after = def.applyMove(before, move);
     const player = def.getTurn(before);
     const status = def.getStatus(after);
-    const idx = get().log.length;
-    const willAnalyze = get().autoTutor && move.to !== -1;
+    const idx = current.log.length;
+    const willAnalyze = current.autoTutor && move.to !== -1;
     const entry: LogEntry = { ply: idx + 1, player, notation: move.notation ?? '…', analyzing: willAnalyze };
 
+    invalidatePositionWork();
     set((s) => ({
       past: [...s.past, { state: s.state, log: s.log, lastMove: s.lastMove }],
       future: [],
@@ -186,12 +307,32 @@ export const useGameStore = create<State>((set, get) => {
       selected: null, targets: [], selectedDrop: null, pendingTo: null, status, promotion: null, hintMove: null, hintText: null,
     }));
 
+    if (current.mode === 'online' && !fromNet && get().net === current.net) {
+      current.net?.send({ t: 'move', move });
+    }
+
     if (willAnalyze) {
-      engine.explain(get().gameId!, before, move, after)
-        .then((exp: MoveExplanation) => set((s) => ({
-          log: s.log.map((e, i) => (i === idx ? { ...e, explanation: exp, analyzing: false } : e)),
-        })))
-        .catch(() => set((s) => ({ log: s.log.map((e, i) => (i === idx ? { ...e, analyzing: false } : e)) })));
+      const expectedSession = sessionVersion;
+      const expectedTutor = tutorSeq;
+      const finishTutor = (exp?: MoveExplanation) => {
+        const s = get();
+        if (
+          expectedSession !== sessionVersion ||
+          expectedTutor !== tutorSeq ||
+          s.gameId !== gameId ||
+          s.def !== def ||
+          s.log[idx] !== entry ||
+          !s.autoTutor
+        ) return;
+        set({
+          log: s.log.map((e, i) => (
+            i === idx ? { ...e, ...(exp ? { explanation: exp } : {}), analyzing: false } : e
+          )),
+        });
+      };
+      engine.explain(gameId, before, move, after)
+        .then((exp: MoveExplanation) => finishTutor(exp))
+        .catch(() => finishTutor());
     }
     afterEffects(move, status);
     requestEval();
@@ -199,8 +340,18 @@ export const useGameStore = create<State>((set, get) => {
     return after;
   };
 
+  /** Run a delayed driver only if no intervening session/position transition
+   * made the timer obsolete. */
+  function scheduleDrive(delay: number) {
+    const expectedSession = sessionVersion;
+    const expectedPosition = positionVersion;
+    setTimeout(() => {
+      if (expectedSession === sessionVersion && expectedPosition === positionVersion) drive();
+    }, delay);
+  }
+
   /** Drive forced passes and the AI's reply until it's the human's move again. */
-  const drive = () => {
+  function drive() {
     const { def, gameId } = get();
     if (!def || !gameId) return;
     const st = get().state;
@@ -210,69 +361,185 @@ export const useGameStore = create<State>((set, get) => {
     // Forced pass (e.g. Reversi): exactly one legal move and it's a pass.
     const legal = def.getLegalMoves(st, null);
     if (legal.length === 1 && legal[0].to === -1) {
-      if (get().mode === 'online' && def.getTurn(st) !== get().onlineColor) return; // remote will pass
+      if (get().mode === 'online') {
+        // The remote side relays its own pass; the local side may pass only
+        // after this exact room completed its handshake.
+        if (
+          def.getTurn(st) !== get().onlineColor ||
+          get().onlineStatus !== 'connected' ||
+          get().net !== onlineReady
+        ) return;
+      }
       const name = def.players[def.getTurn(st)].name;
       set({ toast: `${name} has no legal move and must pass.` });
-      commit(legal[0], st);
-      setTimeout(drive, 450);
+      if (commit(legal[0], st)) scheduleDrive(450);
       return;
     }
 
     // AI's turn?
     if (get().mode === 'ai' && def.getTurn(st) !== get().humanColor && !get().thinking) {
+      const expectedSession = sessionVersion;
+      const expectedPosition = positionVersion;
+      const expectedHuman = get().humanColor;
+      const request = ++aiSeq;
       set({ thinking: true });
       engine.choose(gameId, st, get().difficulty)
         .then((move) => {
+          const current = get();
+          if (
+            request !== aiSeq ||
+            expectedSession !== sessionVersion ||
+            expectedPosition !== positionVersion ||
+            current.gameId !== gameId ||
+            current.def !== def ||
+            current.state !== st ||
+            current.mode !== 'ai' ||
+            current.humanColor !== expectedHuman
+          ) return;
           if (!move) { set({ thinking: false }); return; }
-          const cur = get().state; // unchanged, but read fresh
-          commit(ensureNotation(def, cur, move), cur);
+          const legal = canonicalMove(def, st, move);
+          if (!legal) { set({ thinking: false }); return; }
           set({ thinking: false });
-          setTimeout(drive, 250);
+          if (commit(ensureNotation(def, st, legal), st)) scheduleDrive(250);
         })
-        .catch(() => set({ thinking: false }));
+        .catch(() => {
+          const current = get();
+          if (
+            request === aiSeq &&
+            expectedSession === sessionVersion &&
+            expectedPosition === positionVersion &&
+            current.gameId === gameId &&
+            current.def === def &&
+            current.state === st
+          ) set({ thinking: false });
+        });
     }
-  };
+  }
 
   /** Recompute the live advantage bar for the current position (off-thread, with
    *  a token so a stale result from a previous position is never shown). */
-  let evalSeq = 0;
   const requestEval = () => {
     const { def, gameId, state } = get();
     if (!def || !gameId || def.evalScale == null) { set({ liveEval: null, liveEvalLoading: false }); return; }
     const status = def.getStatus(state);
     if (status.kind === 'win' || status.kind === 'draw') { set({ liveEvalLoading: false }); return; } // bar reads the result
+    const expectedSession = sessionVersion;
+    const expectedPosition = positionVersion;
     const seq = ++evalSeq;
     set({ liveEvalLoading: true });
     engine.analyze(gameId, state)
-      .then((info) => { if (seq === evalSeq) set({ liveEval: info, liveEvalLoading: false }); })
-      .catch(() => { if (seq === evalSeq) set({ liveEvalLoading: false }); });
+      .then((info) => {
+        const current = get();
+        if (
+          seq === evalSeq &&
+          expectedSession === sessionVersion &&
+          expectedPosition === positionVersion &&
+          current.gameId === gameId &&
+          current.def === def &&
+          current.state === state
+        ) set({ liveEval: info, liveEvalLoading: false });
+      })
+      .catch(() => {
+        const current = get();
+        if (
+          seq === evalSeq &&
+          expectedSession === sessionVersion &&
+          expectedPosition === positionVersion &&
+          current.gameId === gameId &&
+          current.state === state
+        ) set({ liveEvalLoading: false });
+      });
   };
 
   /** Warn the human, on their turn, about what the opponent is threatening. */
-  let threatSeq = 0;
   const requestThreats = () => {
     const { def, gameId, state, autoTutor } = get();
     const seq = ++threatSeq;
     if (!def || !gameId || !def.threats || !autoTutor || !localCanMove()) { set({ liveThreats: [] }); return; }
+    const expectedSession = sessionVersion;
+    const expectedPosition = positionVersion;
     engine.threats(gameId, state)
-      .then((t) => { if (seq === threatSeq) set({ liveThreats: t }); })
-      .catch(() => { if (seq === threatSeq) set({ liveThreats: [] }); });
+      .then((threats) => {
+        const current = get();
+        if (
+          seq === threatSeq &&
+          expectedSession === sessionVersion &&
+          expectedPosition === positionVersion &&
+          current.gameId === gameId &&
+          current.def === def &&
+          current.state === state &&
+          current.autoTutor &&
+          localCanMove()
+        ) set({ liveThreats: threats.filter((t): t is string => typeof t === 'string').slice(0, 12) });
+      })
+      .catch(() => {
+        const current = get();
+        if (
+          seq === threatSeq &&
+          expectedSession === sessionVersion &&
+          expectedPosition === positionVersion &&
+          current.gameId === gameId &&
+          current.state === state
+        ) set({ liveThreats: [] });
+      });
   };
 
-  /** Apply an incoming network message from the peer. */
-  const handleMsg = (m: NetMsg) => {
-    if (m.t === 'init') {
-      set({ mode: 'online', onlineColor: 1 });
-      get().newGame(m.gameId);
-    } else if (m.t === 'move') {
-      commit(m.move as MoveBase, get().state, true);
-      setTimeout(drive, 120);
-    } else if (m.t === 'restart') {
-      get().newGame(m.gameId);
-    } else if (m.t === 'chat') {
-      set((s) => ({ chat: [...s.chat, { from: 'them', text: String(m.text).slice(0, 280) }] }));
-    } else if (m.t === 'bye') {
+  /** Validate and apply an incoming message from the currently active peer.
+   * Network objects are data, never trusted commands: moves are resolved back
+   * to a canonical legal move before they reach a game implementation. */
+  const handleMsg = (source: OnlineSession, raw: unknown) => {
+    if (get().net !== source) return;
+    const msg = asRecord(raw);
+    if (!msg || typeof msg.t !== 'string') return;
+
+    if (msg.t === 'init') {
+      if (source.role !== 'guest' || get().mode !== 'online' || onlineReady === source) return;
+      const gameId = canonicalGameId(msg.gameId);
+      if (!gameId) return;
+      // The URL/game screen is the room contract. Silently switching the store
+      // to a different game would leave the router and renderer inconsistent.
+      if (get().gameId && get().gameId !== gameId) {
+        set({ onlineStatus: 'error', toast: 'This room is hosting a different game.' });
+        return;
+      }
+      onlineReady = source;
+      set({ mode: 'online', onlineColor: 1, chat: [] });
+      get().newGame(gameId);
+      return;
+    }
+
+    if (msg.t === 'bye') {
+      if (onlineReady === source) onlineReady = null;
       set({ onlineStatus: 'closed', toast: 'Opponent left the game.' });
+      return;
+    }
+
+    // No gameplay/chat command is accepted until the room handshake completed.
+    if (onlineReady !== source || get().mode !== 'online') return;
+
+    if (msg.t === 'move') {
+      const current = get();
+      const { def, state } = current;
+      if (!def || !state) return;
+      // The peer may move only for the opposite colour and only with a move
+      // legal in our authoritative local position.
+      const remoteColor = (1 - current.onlineColor) as Player;
+      if (def.getTurn(state) !== remoteColor) return;
+      const move = canonicalMove(def, state, msg.move);
+      if (!move) return;
+      try {
+        if (commit(move, state, true)) scheduleDrive(120);
+      } catch {
+        set({ toast: 'The incoming move was rejected; your position is unchanged.' });
+      }
+    } else if (msg.t === 'restart') {
+      const gameId = canonicalGameId(msg.gameId);
+      if (!gameId || gameId !== get().gameId) return;
+      get().newGame(gameId);
+    } else if (msg.t === 'chat') {
+      const text = canonicalChat(msg.text);
+      if (!text) return;
+      set((s) => ({ chat: [...s.chat, { from: 'them' as const, text }].slice(-200) }));
     }
   };
 
@@ -290,6 +557,7 @@ export const useGameStore = create<State>((set, get) => {
     newGame(gameId) {
       const def = getGame(gameId);
       if (!def) return;
+      invalidateSessionWork();
       recorded = false;
       const state = def.createInitialState();
       set({
@@ -297,56 +565,112 @@ export const useGameStore = create<State>((set, get) => {
         selected: null, targets: [], selectedDrop: null, pendingTo: null, lastMove: null, status: def.getStatus(state),
         thinking: false, hintMove: null, hintText: null, promotion: null, toast: null,
         flipped: get().mode === 'online' ? get().onlineColor === 1 : get().mode === 'ai' && get().humanColor === 1,
-        liveEval: null,
+        liveEval: null, liveEvalLoading: false, liveThreats: [],
       });
       requestEval();
       requestThreats();
-      setTimeout(drive, 350);
+      scheduleDrive(350);
     },
 
     hostOnline(code) {
-      if (typeof code !== 'string') code = undefined; // guard: never let a stray event become the room code
+      // Guard against a click event accidentally being passed as `code`.
+      const requestedCode = typeof code === 'string' ? canonicalRoomCode(code) : null;
+      if (typeof code === 'string' && !requestedCode) {
+        set({ toast: 'That room code is not valid.' });
+        return;
+      }
+      closeNetwork(get().net);
+      invalidateSessionWork();
       const net = new OnlineSession();
-      net.onMsg = handleMsg;
+      net.onMsg = (message: NetMsg) => handleMsg(net, message);
       net.onStatus = (st) => {
+        if (get().net !== net) return;
+        if (st === 'closed' || st === 'error') {
+          if (onlineReady === net) onlineReady = null;
+        }
         set({ onlineStatus: st });
-        if (st === 'connected') {
+        if (st === 'connected' && onlineReady !== net) {
+          onlineReady = net;
           set({ onlineColor: 0, mode: 'online' });
-          const gid = get().gameId;
+          const gid = canonicalGameId(get().gameId);
           if (gid) { get().newGame(gid); net.send({ t: 'init', gameId: gid }); }
         }
       };
-      set({ mode: 'online', net, onlineColor: 0, onlineStatus: 'waiting', onlineCode: code ?? '' });
-      net.host(code).then((c) => set({ onlineCode: c }));
+      set({
+        mode: 'online', net, onlineColor: 0, onlineStatus: 'waiting',
+        onlineCode: requestedCode ?? '', chat: [], thinking: false,
+        hintMove: null, hintText: null, liveThreats: [], liveEvalLoading: false,
+      });
+      void net.host(requestedCode ?? undefined)
+        .then((createdCode) => {
+          if (get().net !== net) {
+            closeNetwork(net, false);
+            return;
+          }
+          set({ onlineCode: canonicalRoomCode(createdCode) ?? createdCode.slice(0, 64) });
+        })
+        .catch(() => {
+          if (get().net === net) set({ onlineStatus: 'error' });
+        });
     },
 
     joinOnline(code) {
+      const roomCode = canonicalRoomCode(code);
+      if (!roomCode) {
+        set({ toast: 'Enter a valid room code.' });
+        return;
+      }
+      closeNetwork(get().net);
+      invalidateSessionWork();
       const net = new OnlineSession();
-      net.onMsg = handleMsg;
-      net.onStatus = (st) => set({ onlineStatus: st });
-      set({ mode: 'online', net, onlineColor: 1, onlineStatus: 'waiting', onlineCode: code.trim().toUpperCase() });
-      net.join(code);
+      net.onMsg = (message: NetMsg) => handleMsg(net, message);
+      net.onStatus = (st) => {
+        if (get().net !== net) return;
+        if (st === 'closed' || st === 'error') {
+          if (onlineReady === net) onlineReady = null;
+        }
+        set({ onlineStatus: st });
+      };
+      set({
+        mode: 'online', net, onlineColor: 1, onlineStatus: 'waiting',
+        onlineCode: roomCode, chat: [], thinking: false,
+        hintMove: null, hintText: null, liveThreats: [], liveEvalLoading: false,
+      });
+      void net.join(roomCode)
+        .then(() => {
+          if (get().net !== net) closeNetwork(net, false);
+        })
+        .catch(() => {
+          if (get().net === net) set({ onlineStatus: 'error' });
+        });
     },
 
     leaveOnline() {
-      get().net?.close();
-      set({ net: null, mode: 'ai', onlineStatus: 'idle', onlineCode: '', chat: [] });
       const id = get().gameId;
+      closeNetwork(get().net);
+      invalidateSessionWork();
+      set({
+        net: null, mode: 'ai', onlineStatus: 'idle', onlineCode: '', chat: [],
+        thinking: false, hintMove: null, hintText: null, liveThreats: [], liveEvalLoading: false,
+      });
       if (id) get().newGame(id);
     },
 
     restart() {
       const id = get().gameId;
       if (!id) return;
-      if (get().mode === 'online') get().net?.send({ t: 'restart', gameId: id });
+      if (get().mode === 'online' && get().net && onlineReady === get().net) {
+        get().net?.send({ t: 'restart', gameId: id });
+      }
       get().newGame(id);
     },
 
     sendChat(text) {
-      const t = text.trim();
-      if (!t) return;
-      get().net?.send({ t: 'chat', text: t.slice(0, 280) });
-      set((s) => ({ chat: [...s.chat, { from: 'me', text: t.slice(0, 280) }] }));
+      const message = canonicalChat(text);
+      const net = get().net;
+      if (!message || get().mode !== 'online' || !net || onlineReady !== net) return;
+      net.send({ t: 'chat', text: message });
+      set((s) => ({ chat: [...s.chat, { from: 'me' as const, text: message }].slice(-200) }));
     },
 
     onCellClick(cell) {
@@ -357,7 +681,7 @@ export const useGameStore = create<State>((set, get) => {
       if (def.interaction.type === 'drop') {
         const cols = def.getBoardView(state).cols;
         const m = def.getLegalMoves(state, null).find((mv) => mv.to % cols === cell % cols);
-        if (m) { commit(m, state); setTimeout(drive, 120); }
+        if (m && commit(m, state)) scheduleDrive(120);
         return;
       }
 
@@ -370,7 +694,7 @@ export const useGameStore = create<State>((set, get) => {
         if (pend !== null && sel !== null) {
           // Phase 2: pick the arrow target to complete the move.
           const m = all.find((mv) => mv.from === sel && mv.to === pend && (mv as any).arrow === cell);
-          if (m) { commit(m, state); setTimeout(drive, 120); return; }
+          if (m) { if (commit(m, state)) scheduleDrive(120); return; }
           if (cell === sel || ownAmazon(cell)) { // restart selection on this amazon
             const dests = dedupeTo(all.filter((mv) => mv.from === cell));
             set({ selected: cell, pendingTo: null, targets: dests }); playSound('select'); return;
@@ -395,14 +719,14 @@ export const useGameStore = create<State>((set, get) => {
       if (armed) {
         const m = get().targets.find((mv) => mv.drop === armed && mv.to === cell);
         set({ selectedDrop: null, targets: [], selected: null });
-        if (m) { commit(m, state); setTimeout(drive, 120); }
+        if (m && commit(m, state)) scheduleDrive(120);
         return;
       }
 
       // Unified resolver (shared with interactive lessons).
       const r = resolveClick(def, state, selected, get().targets, cell);
       switch (r.kind) {
-        case 'play': commit(r.move, state); setTimeout(drive, 120); break;
+        case 'play': if (commit(r.move, state)) scheduleDrive(120); break;
         case 'select': set({ selected: r.cell, targets: r.targets }); playSound('select'); break;
         case 'promote': set({ promotion: { from: r.from, to: r.to, options: r.options } }); break;
         case 'clear': set({ selected: null, targets: [] }); break;
@@ -423,17 +747,19 @@ export const useGameStore = create<State>((set, get) => {
       const { def, state, thinking } = get();
       if (!def || thinking || !localCanMove()) return;
       const pass = def.getLegalMoves(state, null).find((m) => m.to === -1);
-      if (pass) { commit(pass, state); setTimeout(drive, 120); }
+      if (pass && commit(pass, state)) scheduleDrive(120);
     },
 
     choosePromotion(m) {
       if (!m) { set({ promotion: null }); return; }
       const before = get().state;
-      commit(m, before);
-      setTimeout(drive, 120);
+      if (commit(m, before)) scheduleDrive(120);
     },
 
     undo() {
+      const current = get();
+      if (!current.def || current.past.length === 0 || current.mode === 'online') return;
+      invalidateSessionWork();
       set((s) => {
         if (!s.def || s.past.length === 0) return {} as any;
         const past = s.past.slice();
@@ -447,16 +773,22 @@ export const useGameStore = create<State>((set, get) => {
           }
         }
         return {
-          past, future, state: snap.state, log: snap.log, lastMove: snap.lastMove,
+          past, future, state: snap.state,
+          log: snap.log.map((entry) => entry.analyzing ? { ...entry, analyzing: false } : entry),
+          lastMove: snap.lastMove,
           status: s.def.getStatus(snap.state), selected: null, targets: [], selectedDrop: null, pendingTo: null,
           promotion: null, hintMove: null, hintText: null, thinking: false,
         };
       });
       requestEval();
       requestThreats();
+      scheduleDrive(0);
     },
 
     redo() {
+      const current = get();
+      if (!current.def || current.future.length === 0 || current.mode === 'online') return;
+      invalidateSessionWork();
       set((s) => {
         if (!s.def || s.future.length === 0) return {} as any;
         const future = s.future.slice();
@@ -464,30 +796,92 @@ export const useGameStore = create<State>((set, get) => {
         past.push({ state: s.state, log: s.log, lastMove: s.lastMove });
         const snap = future.shift()!;
         return {
-          past, future, state: snap.state, log: snap.log, lastMove: snap.lastMove,
+          past, future, state: snap.state,
+          log: snap.log.map((entry) => entry.analyzing ? { ...entry, analyzing: false } : entry),
+          lastMove: snap.lastMove,
           status: s.def.getStatus(snap.state), selected: null, targets: [], selectedDrop: null, pendingTo: null,
-          promotion: null, hintMove: null, hintText: null,
+          promotion: null, hintMove: null, hintText: null, thinking: false,
         };
       });
       requestEval();
       requestThreats();
+      scheduleDrive(0);
     },
 
     requestHint() {
       const { def, gameId, state, status } = get();
       if (!def || !gameId || status.kind === 'win' || status.kind === 'draw') return;
-      engine.hint(gameId, state).then((h) => {
-        if (h) set({ hintMove: h.move, hintText: h.text });
-      });
+      const expectedSession = sessionVersion;
+      const expectedPosition = positionVersion;
+      const request = ++hintSeq;
+      engine.hint(gameId, state)
+        .then((hint) => {
+          const current = get();
+          if (
+            request !== hintSeq ||
+            expectedSession !== sessionVersion ||
+            expectedPosition !== positionVersion ||
+            current.gameId !== gameId ||
+            current.def !== def ||
+            current.state !== state
+          ) return;
+          if (!hint) return;
+          const move = canonicalMove(def, state, hint.move);
+          if (move && typeof hint.text === 'string') {
+            set({ hintMove: move, hintText: hint.text.slice(0, 1000) });
+          }
+        })
+        .catch(() => { /* a failed hint must not disturb the current position */ });
     },
-    clearHint() { set({ hintMove: null, hintText: null }); },
+    clearHint() { hintSeq += 1; set({ hintMove: null, hintText: null }); },
 
-    setDifficulty(d) { set({ difficulty: d }); try { localStorage.setItem('gm-difficulty', d); } catch { /* ignore */ } },
-    setMode(m) { set({ mode: m }); },
-    setHumanColor(c) { set({ humanColor: c }); },
+    setDifficulty(d) {
+      if (get().difficulty !== d) {
+        aiSeq += 1;
+        set({ difficulty: d, thinking: false });
+        scheduleDrive(0);
+      }
+      try { localStorage.setItem('gm-difficulty', d); } catch { /* ignore */ }
+    },
+    setMode(m) {
+      const current = get();
+      if (current.mode === m) return;
+      if (current.mode === 'online' && m !== 'online') closeNetwork(current.net);
+      invalidateSessionWork();
+      set({
+        mode: m,
+        ...(m !== 'online' ? { net: null, onlineStatus: 'idle' as NetStatus, onlineCode: '', chat: [] } : {}),
+        thinking: false, hintMove: null, hintText: null, liveThreats: [], liveEvalLoading: false,
+        log: current.log.map((entry) => entry.analyzing ? { ...entry, analyzing: false } : entry),
+      });
+      requestThreats();
+      if (m === 'ai') scheduleDrive(0);
+    },
+    setHumanColor(c) {
+      if (get().humanColor === c) return;
+      const current = get();
+      invalidateSessionWork();
+      set({
+        humanColor: c, thinking: false, hintMove: null, hintText: null,
+        liveThreats: [], liveEvalLoading: false,
+        log: current.log.map((entry) => entry.analyzing ? { ...entry, analyzing: false } : entry),
+      });
+      requestThreats();
+      scheduleDrive(0);
+    },
     setView(v) { set({ view: v }); },
     setTheme(id) { set({ themeId: id }); },
-    toggleAutoTutor() { set((s) => ({ autoTutor: !s.autoTutor })); },
+    toggleAutoTutor() {
+      tutorSeq += 1;
+      threatSeq += 1;
+      const enabled = !get().autoTutor;
+      set((s) => ({
+        autoTutor: enabled,
+        liveThreats: enabled ? s.liveThreats : [],
+        log: enabled ? s.log : s.log.map((entry) => entry.analyzing ? { ...entry, analyzing: false } : entry),
+      }));
+      if (enabled) requestThreats();
+    },
     toggleFlip() { set((s) => ({ flipped: !s.flipped })); },
     setToast(t) { set({ toast: t }); },
     driveAI() { drive(); },

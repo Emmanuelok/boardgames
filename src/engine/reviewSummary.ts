@@ -20,6 +20,9 @@ export interface GameRecord {
   result: 'win' | 'loss' | 'draw'; winner: Player | null; reason: string;
   p0: string; p1: string;            // player names
   acc: [number, number];             // accuracy %, per player
+  /** Number of engine-graded moves behind each accuracy value. Optional for
+   * reviews created before evidence counts were persisted. */
+  graded?: [number, number];
   moves: number;
   evalPts: number[];                 // evaluation curve, tanh-scaled to [-1, 1], player-0 perspective
   key: KeyMoment[];
@@ -49,7 +52,9 @@ export function summarize(def: GameDefinition, log: LogEntry[], status: GameStat
     gameId: def.id, gameName: def.name, emoji: def.emoji, accent: def.accent,
     result, winner, reason: (status as any).reason ?? '',
     p0: def.players[0].name, p1: def.players[1].name,
-    acc: [accuracy(p0), accuracy(p1)], moves: log.length, evalPts, key,
+    acc: [accuracy(p0), accuracy(p1)],
+    graded: [p0.filter((entry) => entry.explanation).length, p1.filter((entry) => entry.explanation).length],
+    moves: log.length, evalPts, key,
   };
 }
 

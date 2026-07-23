@@ -9,6 +9,8 @@ import { hydrateEntitlements } from './billing/billing';
 // tutorials), so we code-split them: the shell + landing load a tiny bundle and
 // the rest arrives on navigation.
 const GameScreen = lazy(() => import('./pages/GameScreen'));
+const Games = lazy(() => import('./pages/Games'));
+const Path = lazy(() => import('./pages/Path'));
 const Learn = lazy(() => import('./pages/Learn'));
 const Puzzles = lazy(() => import('./pages/Puzzles'));
 const Daily = lazy(() => import('./pages/Daily'));
@@ -38,7 +40,8 @@ export default function App() {
             <div className="route-fade" key={location.pathname}>
               <Routes location={location}>
                 <Route path="/" element={<Home />} />
-                <Route path="/games" element={<Navigate to="/" replace />} />
+                <Route path="/path" element={<Path />} />
+                <Route path="/games" element={<Games />} />
                 <Route path="/play/:gameId" element={<GameScreen />} />
                 <Route path="/learn/:gameId" element={<Learn />} />
                 <Route path="/puzzles" element={<Puzzles />} />

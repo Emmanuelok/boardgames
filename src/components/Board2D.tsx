@@ -43,10 +43,11 @@ export default function Board2D(props: Props) {
   const dRow = (r: number) => (flipped ? rows - 1 - r : r);
   const dCol = (c: number) => (flipped ? cols - 1 - c : c);
 
-  // Drag-to-move: press a piece and drag it onto a destination cell. Works for
-  // pointer + touch; clicking still works exactly as before. Selecting on press
-  // reuses the same logic, so dropping on a legal target plays the move.
-  const dragRef = useRef<{ from: number; x0: number; y0: number; moved: boolean } | null>(null);
+  // Drag-to-move: a normal click is activated only by `onClick`; the source is
+  // selected from pointermove only after the drag threshold is crossed. This
+  // prevents pointerdown + click from activating the same square twice.
+  const dragRef = useRef<{ from: number; cell: CellView; x0: number; y0: number; moved: boolean } | null>(null);
+  const suppressClickRef = useRef(false);
   const onCellRef = useRef(onCell);
   onCellRef.current = onCell;
   const [dragCell, setDragCell] = useState<CellView | null>(null);
@@ -56,7 +57,11 @@ export default function Board2D(props: Props) {
     const move = (e: PointerEvent) => {
       const d = dragRef.current;
       if (!d) return;
-      if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 6) d.moved = true;
+      if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 6) {
+        d.moved = true;
+        onCellRef.current(d.from);
+        setDragCell(d.cell);
+      }
       if (d.moved) setGhost({ x: e.clientX, y: e.clientY });
     };
     const up = (e: PointerEvent) => {
@@ -66,27 +71,31 @@ export default function Board2D(props: Props) {
       setDragCell(null);
       setGhost(null);
       if (d.moved) {
+        suppressClickRef.current = true;
+        window.setTimeout(() => { suppressClickRef.current = false; }, 0);
         const el = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('.cell') as HTMLElement | null;
         const idx = el ? Number(el.getAttribute('data-idx')) : -1;
         if (idx >= 0 && idx !== d.from) onCellRef.current(idx);
       }
     };
+    const cancel = () => {
+      dragRef.current = null;
+      setDragCell(null);
+      setGhost(null);
+    };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
+    window.addEventListener('pointercancel', cancel);
     return () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', up);
+      window.removeEventListener('pointercancel', cancel);
     };
   }, []);
 
   const startDrag = (e: React.PointerEvent, cell: CellView) => {
-    if (!cell.piece || cell.playable === false || cell.piece.player !== turn) return;
-    dragRef.current = { from: cell.index, x0: e.clientX, y0: e.clientY, moved: false };
-    setDragCell(cell);
-    setGhost({ x: e.clientX, y: e.clientY });
-    onCell(cell.index); // select the piece, exactly as a click would
+    if (e.button !== 0 || !cell.piece || cell.playable === false || cell.piece.player !== turn) return;
+    dragRef.current = { from: cell.index, cell, x0: e.clientX, y0: e.clientY, moved: false };
   };
 
   const targetSet = new Map<number, MoveBase>();
@@ -219,7 +228,10 @@ export default function Board2D(props: Props) {
               aria-rowindex={r + 1}
               aria-colindex={c + 1}
               style={{ gridColumn: c + 1, gridRow: r + 1, background: sqColor, touchAction: 'none' }}
-              onClick={() => { if (cell.playable !== false) { setCursor(cell.index); onCell(cell.index); } }}
+              onClick={() => {
+                if (suppressClickRef.current) return;
+                if (cell.playable !== false) { setCursor(cell.index); onCell(cell.index); }
+              }}
               onPointerDown={(e) => startDrag(e, cell)}
               onMouseEnter={() => def.interaction.type === 'drop' && setHoverCol(cell.col)}
             >

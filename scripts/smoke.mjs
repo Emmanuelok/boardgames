@@ -21,7 +21,18 @@ const check = (name, ok) => { if (ok) { pass++; console.log('  ✓', name); } el
 const browser = await puppeteer.launch({ args: [...chromium.args, '--no-sandbox'], executablePath: await chromium.executablePath(), headless: chromium.headless });
 const page = await browser.newPage();
 page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
-page.on('console', (m) => { if (m.type() === 'error') errors.push('CONSOLE: ' + m.text()); });
+page.on('requestfailed', (request) => {
+  const url = request.url();
+  if (/fonts\.(googleapis|gstatic)\.com/.test(url)) return;
+  errors.push(`REQUEST: ${url} — ${request.failure()?.errorText || 'failed'}`);
+});
+page.on('console', (m) => {
+  if (m.type() !== 'error') return;
+  // Chromium's generic resource error omits the URL; requestfailed above
+  // records local failures precisely and filters the permitted font outage.
+  if (/^Failed to load resource:/.test(m.text())) return;
+  errors.push('CONSOLE: ' + m.text());
+});
 await page.setViewport({ width: 1440, height: 1000 });
 const waitSel = async (sel, ms = 12000) => { const end = Date.now() + ms; while (Date.now() < end) { if (await page.evaluate((s) => !!document.querySelector(s), sel)) return true; await sleep(150); } return false; };
 const rectW = (sel) => page.evaluate((s) => { const el = document.querySelector(s); return el ? Math.round(el.getBoundingClientRect().width) : 0; }, sel);
@@ -36,6 +47,10 @@ try {
   check('skip-to-content link present', !!(await page.$('.skip-link')));
   check('hero shader canvas renders', !!(await page.$('canvas.hh-bg')));
   check('sidebar nav present', (await page.$$('.sb-link')).length >= 5);
+  // The redesigned home page deliberately defers the catalogue until its
+  // section approaches the viewport. Exercise that real user journey instead
+  // of assuming the gallery remains close enough to the much taller hero.
+  await page.evaluate(() => document.querySelector('.home-games')?.scrollIntoView({ block: 'center' }));
   check('games gallery lazy-loads cards', await waitSel('.game-card'));
 
   console.log('Game (chess) — 2D and 3D parity');

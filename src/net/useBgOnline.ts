@@ -6,7 +6,7 @@
  * Black (1). Built on the same peer-to-peer transport as the other games.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { OnlineSession, type NetMsg, type NetStatus } from './online';
+import { OnlineSession, QUICK_CHAT_PHRASES, type NetMsg, type NetStatus } from './online';
 import type { BgState } from '../games/backgammon/logic';
 
 export interface BgChatMsg { from: 'me' | 'them'; text: string }
@@ -98,9 +98,9 @@ export function useBgOnline(handlers: BgOnlineHandlers): BgOnline {
   const restart = useCallback(() => sess.current?.send({ t: 'restart', gameId: 'backgammon' }), []);
   const sendChat = useCallback((text: string) => {
     const t = text.trim();
-    if (!t) return;
-    sess.current?.send({ t: 'chat', text: t.slice(0, 280) });
-    setChat((c) => [...c, { from: 'me', text: t.slice(0, 280) }]);
+    if (!(QUICK_CHAT_PHRASES as readonly string[]).includes(t)) return;
+    sess.current?.send({ t: 'chat', text: t });
+    setChat((c) => [...c, { from: 'me', text: t }]);
   }, []);
 
   useEffect(() => () => { sess.current?.close(); }, []);

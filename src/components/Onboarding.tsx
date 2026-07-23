@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { STARTERS, SURPRISE_IDS } from '../engine/catalogueMeta';
+import { GAME_COUNT, STARTERS, SURPRISE_IDS } from '../engine/catalogueMeta';
 import type { Difficulty } from '../engine/types';
 import './Onboarding.css';
 
@@ -40,7 +40,7 @@ export default function Onboarding() {
           <>
             <div className="ob-mark">♞</div>
             <h1 className="ob-title">Welcome to <span className="gradient-text">GrandMaster</span></h1>
-            <p className="ob-sub">The AI game center that doesn’t just beat you — it <strong>teaches you</strong>, move by move, across 26 games. First, how strong an opponent do you want?</p>
+            <p className="ob-sub">An adaptive school of strategy that <strong>teaches every move</strong> across {GAME_COUNT} complete game engines. First, choose a comfortable starting challenge.</p>
             <div className="ob-levels">
               {LEVELS.map((l) => (
                 <button key={l.id} className="ob-level" onClick={() => pickLevel(l.id)}>
@@ -69,7 +69,7 @@ export default function Onboarding() {
               ))}
             </div>
             <div className="ob-actions">
-              <button className="btn" onClick={surprise}>🎲 Surprise me</button>
+              <button className="btn" onClick={surprise}>✦ Choose for me</button>
               <button className="btn ghost" onClick={dismiss}>I’ll explore on my own</button>
             </div>
           </>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useProgression, COSMETICS } from '../progression/progression';
 import type { CosmeticSlot } from '../progression/progression';
+import { GAME_COUNT } from '../engine/catalogueMeta';
 import { startCheckout as billingCheckout, type CheckoutItem } from '../billing/billing';
 import './Shop.css';
 
@@ -13,7 +14,7 @@ const SLOTS: { slot: CosmeticSlot; title: string; hint: string }[] = [
 const PRO_PERKS = [
   '🎨 Every premium wallpaper, title & frame — unlocked',
   '🧠 Unlimited deep analysis & full post-game review',
-  '♟ All 26 games and every difficulty, no limits',
+  `♟ All ${GAME_COUNT} games and every difficulty, no limits`,
   '⚡ Bonus coins & XP on everything you play',
   '💜 Support the project — and no ads, ever',
 ];

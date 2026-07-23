@@ -49,8 +49,11 @@ export default function Profile() {
   // Training data lives in its own localStorage keys.
   const daily = readJSON('gm-daily');
   const puzzles = readJSON('gm-puzzles');
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const dateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const now = new Date();
+  const previous = new Date(now); previous.setDate(previous.getDate() - 1);
+  const today = dateKey(now);
+  const yesterday = dateKey(previous);
   const dailyStreak = daily.lastDate === today || daily.lastDate === yesterday ? (daily.streak || 0) : 0;
 
   const band = BANDS.find(([lo, hi]) => p.rating >= lo && p.rating < hi) ?? BANDS[BANDS.length - 1];

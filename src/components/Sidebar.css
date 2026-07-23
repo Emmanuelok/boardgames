@@ -17,6 +17,7 @@
 .sb-ic { font-size: 18px; width: 22px; text-align: center; }
 .sb-badge { margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px -2px var(--accent); }
 .sb-cta { justify-content: center; margin-top: 6px; }
+.sb-more-toggle, .sb-mobile-more { display: none; }
 
 /* Live progression widget */
 .sb-prog { display: block; padding: 10px 11px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--line); transition: background 0.15s ease; }
@@ -33,12 +34,34 @@
     position: fixed; bottom: 0; left: 0; right: 0; top: auto;
     width: 100%; height: auto; flex-direction: row; align-items: center; gap: 2px;
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); border-right: none; border-top: 1px solid var(--line);
-    overflow-x: auto;
+    overflow: visible;
   }
-  .sb-brand, .sb-group-title, .sb-cta, .sb-label, .sb-prog { display: none; }
+  .sb-brand, .sb-group-title, .sb-cta, .sb-prog, .mobile-secondary { display: none; }
   .sb-nav { flex-direction: row; gap: 2px; overflow: visible; justify-content: space-around; width: 100%; }
   .sb-group { flex-direction: row; gap: 2px; }
-  .sb-link { flex-direction: column; padding: 7px 12px; gap: 2px; font-size: 11px; }
-  .sb-ic { font-size: 20px; }
+  .sb-link { min-width: 58px; min-height: 48px; flex-direction: column; justify-content: center; padding: 5px 8px; gap: 1px; font-size: 10px; }
+  .sb-link .sb-label { display: block; }
+  .sb-ic { font-size: 19px; line-height: 1; }
   .sb-badge { position: absolute; top: 2px; right: calc(50% - 22px); margin: 0; min-width: 16px; height: 16px; font-size: 10px; }
+  .sb-more-toggle { min-width: 58px; min-height: 48px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1px; padding: 5px 8px; border: 0; border-radius: 11px; background: transparent; color: var(--ink-dim); font-size: 10px; font-weight: 600; }
+  .sb-more-toggle.on { color: #fff; background: color-mix(in srgb, var(--accent) 18%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent); }
+  .sb-more-toggle .sb-ic { font-size: 15px; letter-spacing: 2px; }
+  .sb-more-toggle .sb-label { display: block; }
+  .sb-mobile-more { position: absolute; display: block; visibility: hidden; opacity: 0; transform: translateY(16px); left: 10px; right: 10px; bottom: calc(100% + 10px); max-height: min(70vh, 430px); overflow-y: auto; padding: 16px; border: 1px solid var(--line-strong); border-radius: 20px; background: rgba(13,16,26,.97); backdrop-filter: blur(22px); box-shadow: 0 22px 70px rgba(0,0,0,.52); transition: opacity .18s ease, transform .18s ease, visibility .18s; pointer-events: none; }
+  .sb-mobile-more.open { visibility: visible; opacity: 1; transform: none; pointer-events: auto; }
+  .sb-mobile-more-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .sb-mobile-more-head strong { font-size: 13px; }
+  .sb-mobile-more-head button { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--ink); font-size: 20px; }
+  .sb-mobile-more-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .sb-mobile-more-grid a { min-height: 70px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--line); border-radius: 13px; color: var(--ink-dim); background: rgba(255,255,255,.03); font-size: 12px; text-align: center; }
+  .sb-mobile-more-grid a[aria-current='page'] { color: #fff; border-color: rgba(101,228,207,.35); background: rgba(101,228,207,.09); }
+  .sb-mobile-more-grid a span { font-size: 20px; color: #8bdfd2; }
+  .sb-mobile-more-grid a strong { font-size: 10.5px; }
+  .sb-more-toggle:focus-visible, .sb-mobile-more-grid a:focus-visible, .sb-mobile-more-head button:focus-visible { outline-offset: -2px; }
 }
+@media (max-width: 460px) {
+  .sidebar { padding-left: 3px; padding-right: 3px; }
+  .sb-link, .sb-more-toggle { min-width: 52px; padding-inline: 4px; }
+  .sb-mobile-more-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .sb-mobile-more { transition: none; } }

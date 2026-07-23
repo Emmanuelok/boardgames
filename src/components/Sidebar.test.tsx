@@ -10,7 +10,7 @@ describe('<Sidebar>', () => {
   it('renders the grouped nav and the live progression widget', () => {
     render(<MemoryRouter><Sidebar /></MemoryRouter>);
     // Decluttered, grouped navigation is present.
-    for (const label of ['Games', 'Daily', 'Openings', 'Puzzles', 'Reviews', 'Shop', 'Profile']) {
+    for (const label of ['Today', 'My Path', 'Games', 'Daily', 'Openings', 'Puzzles', 'Reviews', 'Collection', 'Profile']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     // Fresh profile starts at level 1.

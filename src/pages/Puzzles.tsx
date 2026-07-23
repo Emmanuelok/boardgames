@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useProgression } from '../progression/progression';
 import { ALL_PUZZLES, PUZZLE_GAME_IDS, shuffle } from '../puzzles/allPuzzles';
 import { getGame } from '../engine/registry';
@@ -8,37 +9,44 @@ import { playSound, resumeAudio } from '../audio/sound';
 import './Puzzles.css';
 
 const KEY = 'gm-puzzles';
-function load(): { solved: number; best: number } {
-  try { return { solved: 0, best: 0, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; }
-  catch { return { solved: 0, best: 0 }; }
+function load(): { solved: number; best: number; streak: number } {
+  try { return { solved: 0, best: 0, streak: 0, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; }
+  catch { return { solved: 0, best: 0, streak: 0 }; }
 }
 
 export default function Puzzles() {
-  const [filter, setFilter] = useState('all');
+  const [searchParams] = useSearchParams();
+  const requestedGame = searchParams.get('game') || '';
+  const [filter, setFilter] = useState(() => PUZZLE_GAME_IDS.includes(requestedGame) ? requestedGame : 'all');
   const queue = useMemo(() => shuffle(filter === 'all' ? ALL_PUZZLES : ALL_PUZZLES.filter((p) => p.gameId === filter)), [filter]);
   const [idx, setIdx] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [result, setResult] = useState<'idle' | 'solved' | 'failed'>('idle');
   const [stats, setStats] = useState(load);
+  const [streak, setStreak] = useState(stats.streak);
+  const [result, setResult] = useState<'idle' | 'solved' | 'failed'>('idle');
   const theme = getTheme('tournament-green');
 
   const puzzle = queue[idx % queue.length];
   const def = getGame(puzzle.gameId)!;
 
+  useEffect(() => {
+    setFilter(PUZZLE_GAME_IDS.includes(requestedGame) ? requestedGame : 'all');
+    setIdx(0);
+  }, [requestedGame]);
   useEffect(() => { setResult('idle'); }, [idx, filter]);
 
-  const save = (s: { solved: number; best: number }) => { setStats(s); try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } };
+  const save = (s: { solved: number; best: number; streak: number }) => { setStats(s); try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } };
   const onSolved = () => {
     if (result !== 'idle') return;
     playSound('win');
     const ns = streak + 1;
     setStreak(ns); setResult('solved');
-    save({ solved: stats.solved + 1, best: Math.max(stats.best, ns) });
+    save({ solved: stats.solved + 1, best: Math.max(stats.best, ns), streak: ns });
     try { useProgression.getState().recordPuzzle(ns); } catch { /* ignore */ }
   };
   const onFailed = () => {
     if (result !== 'idle') return;
     playSound('illegal'); setStreak(0); setResult('failed');
+    save({ ...stats, streak: 0 });
   };
   const next = () => { resumeAudio(); setIdx((i) => i + 1); };
 
@@ -54,9 +62,9 @@ export default function Puzzles() {
       </header>
 
       <div className="pz-filters">
-        <button className={`chip clickable ${filter === 'all' ? 'active' : ''}`} onClick={() => { setFilter('all'); setIdx(0); }}>All games</button>
+        <button aria-pressed={filter === 'all'} className={`chip clickable ${filter === 'all' ? 'active' : ''}`} onClick={() => { setFilter('all'); setIdx(0); }}>All games</button>
         {PUZZLE_GAME_IDS.map((id) => (
-          <button key={id} className={`chip clickable ${filter === id ? 'active' : ''}`} onClick={() => { setFilter(id); setIdx(0); }}>
+          <button aria-pressed={filter === id} key={id} className={`chip clickable ${filter === id ? 'active' : ''}`} onClick={() => { setFilter(id); setIdx(0); }}>
             {getGame(id)?.emoji} {getGame(id)?.name}
           </button>
         ))}
