@@ -129,7 +129,7 @@ npm run build      # production build  → dist/
 npm run preview    # preview the build
 ```
 
-Requires Node 20.19+ (Vite 8 and Vitest 4).
+Requires Node 22.17+ so the build, test and headless-browser toolchain share one supported runtime.
 
 ### Deploy (Vercel or Netlify)
 
