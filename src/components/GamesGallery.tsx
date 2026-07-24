@@ -7,6 +7,9 @@ import { getTheme } from '../themes/boardThemes';
 import '../pages/Games.css';
 
 const THUMB_THEME = getTheme('tournament-green'); // a bright, high-contrast board reads well at thumbnail size
+export const GAME_CATEGORIES = ['All', ...Array.from(new Set(CATALOGUE.map((entry) => (
+  entry.type === 'family' ? entry.family.category : entry.def.category
+))))];
 
 /** Mount the heavy board preview only once the card nears the viewport. */
 function useInView<T extends HTMLElement>() {
@@ -42,14 +45,41 @@ interface GamesGalleryProps {
   limit?: number;
   filters?: boolean;
   headingLevel?: 'h2' | 'h3';
+  initialCategory?: string;
+  category?: string;
+  onCategoryChange?: (category: string) => void;
 }
 
-export default function GamesGallery({ limit, filters = false, headingLevel = 'h3' }: GamesGalleryProps) {
+export default function GamesGallery({
+  limit,
+  filters = false,
+  headingLevel = 'h3',
+  initialCategory = 'All',
+  category: controlledCategory,
+  onCategoryChange,
+}: GamesGalleryProps) {
   const nav = useNavigate();
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('All');
+  const [internalCategory, setInternalCategory] = useState(() => (
+    GAME_CATEGORIES.includes(initialCategory) ? initialCategory : 'All'
+  ));
+  const category = controlledCategory && GAME_CATEGORIES.includes(controlledCategory)
+    ? controlledCategory
+    : internalCategory;
   const CardHeading = headingLevel;
-  const categories = useMemo(() => ['All', ...Array.from(new Set(CATALOGUE.map((entry) => entry.type === 'family' ? entry.family.category : entry.def.category)))], []);
+
+  useEffect(() => {
+    if (controlledCategory === undefined && GAME_CATEGORIES.includes(initialCategory)) {
+      setInternalCategory(initialCategory);
+    }
+  }, [controlledCategory, initialCategory]);
+
+  const selectCategory = (nextCategory: string) => {
+    if (!GAME_CATEGORIES.includes(nextCategory)) return;
+    if (controlledCategory === undefined) setInternalCategory(nextCategory);
+    onCategoryChange?.(nextCategory);
+  };
+
   const entries = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const matching = CATALOGUE.filter((entry) => {
@@ -84,13 +114,13 @@ export default function GamesGallery({ limit, filters = false, headingLevel = 'h
             {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search">×</button>}
           </div>
           <div className="game-categories" role="group" aria-label="Filter by category">
-            {categories.map((item) => (
+            {GAME_CATEGORIES.map((item) => (
               <button
                 type="button"
                 key={item}
                 className={category === item ? 'on' : ''}
                 aria-pressed={category === item}
-                onClick={() => setCategory(item)}
+                onClick={() => selectCategory(item)}
               >
                 {item}
               </button>
@@ -130,7 +160,7 @@ export default function GamesGallery({ limit, filters = false, headingLevel = 'h
           <span>⌕</span>
           <h2>No game matches that search</h2>
           <p>Try a family such as chess, connection, territory or classic.</p>
-          <button className="btn" type="button" onClick={() => { setQuery(''); setCategory('All'); }}>Reset filters</button>
+          <button className="btn" type="button" onClick={() => { setQuery(''); selectCategory('All'); }}>Reset filters</button>
         </div>
       )}
     </>

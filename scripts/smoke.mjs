@@ -20,7 +20,7 @@ const check = (name, ok) => { if (ok) { pass++; console.log('  ✓', name); } el
 
 const browser = await puppeteer.launch({ args: [...chromium.args, '--no-sandbox'], executablePath: await chromium.executablePath(), headless: chromium.headless });
 const page = await browser.newPage();
-page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
+page.on('pageerror', (e) => errors.push('PAGEERROR: ' + (e.stack || e.message)));
 page.on('requestfailed', (request) => {
   const url = request.url();
   if (/fonts\.(googleapis|gstatic)\.com/.test(url)) return;
@@ -36,6 +36,18 @@ page.on('console', (m) => {
 await page.setViewport({ width: 1440, height: 1000 });
 const waitSel = async (sel, ms = 12000) => { const end = Date.now() + ms; while (Date.now() < end) { if (await page.evaluate((s) => !!document.querySelector(s), sel)) return true; await sleep(150); } return false; };
 const rectW = (sel) => page.evaluate((s) => { const el = document.querySelector(s); return el ? Math.round(el.getBoundingClientRect().width) : 0; }, sel);
+const imageReady = (sel) => page.evaluate((s) => {
+  const image = document.querySelector(s);
+  return image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0;
+}, sel);
+const waitImage = async (sel, ms = 12000) => {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    if (await imageReady(sel)) return true;
+    await sleep(150);
+  }
+  return imageReady(sel);
+};
 // Poll until an element has actually laid out (non-zero width) — the board mounts
 // a frame before CSS sizes it, and the 3D canvas needs a beat after the toggle.
 const waitWidth = async (sel, min = 100, ms = 20000) => { const end = Date.now() + ms; while (Date.now() < end) { const w = await rectW(sel); if (w > min) return w; await sleep(200); } return rectW(sel); };
@@ -53,8 +65,79 @@ try {
   await page.evaluate(() => document.querySelector('.home-games')?.scrollIntoView({ block: 'center' }));
   check('games gallery lazy-loads cards', await waitSel('.game-card'));
 
+  console.log('Strategy library — editorial discovery');
+  await page.goto(BASE + '/#/games?category=strategy', { waitUntil: 'networkidle0', timeout: 60000 });
+  await waitSel('.discover-hero');
+  check('strategy-worlds hero image loads', await waitImage('.discover-art'));
+  check('category query controls the catalogue', await page.evaluate(() => (
+    document.querySelector('.discover-worlds button.on strong')?.textContent === 'Strategy'
+    && document.querySelector('.game-categories button.on')?.textContent === 'Strategy'
+  )));
+
+  console.log('My Path — connected mission context');
+  await page.goto(BASE + '/#/path', { waitUntil: 'networkidle0', timeout: 60000 });
+  await waitSel('.mission-step.recommended');
+  check('five-stage adaptive route renders', (await page.$$('.mission-step')).length === 5);
+  await page.evaluate(() => document.querySelector('.mission-step.recommended')?.click());
+  await waitSel('.journey-context');
+  check('mission identity follows into the recommended tool', !!(await page.$('.journey-context')));
+
+  console.log('Strategy Studio — authored connected session');
+  await page.goto(BASE + '/#/studio', { waitUntil: 'networkidle0', timeout: 60000 });
+  await waitSel('.studio-builder');
+  check('original Strategy Studio hero image loads', await waitImage('.studio-hero-art'));
+  check('five-stage live blueprint renders', (await page.$$('.studio-route li')).length === 5);
+  await page.evaluate(() => {
+    const game = document.querySelector('.studio-select select');
+    if (game instanceof HTMLSelectElement) {
+      game.value = 'hexapawn';
+      game.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    const tactics = [...document.querySelectorAll('.studio-goals button')]
+      .find((button) => /Sharpen tactics/.test(button.textContent || ''));
+    tactics?.click();
+  });
+  await sleep(300);
+  check('Studio controls regenerate the selected game blueprint', await page.evaluate(() => (
+    /Hexapawn: Tactics/.test(document.querySelector('.studio-plan h2')?.textContent || '')
+  )));
+  await page.evaluate(() => {
+    const start = [...document.querySelectorAll('.studio-plan-actions button')]
+      .find((button) => /Start connected session/.test(button.textContent || ''));
+    start?.click();
+  });
+  await waitSel('.journey-context');
+  check('Studio launch activates evidence-tracked route context', await page.evaluate(() => {
+    try {
+      return JSON.parse(localStorage.getItem('gm-learning-v1') || '{}').activeMission?.gameId === 'hexapawn';
+    } catch {
+      return false;
+    }
+  }));
+
+  console.log('Learning surfaces — visual system');
+  await page.goto(BASE + '/#/learn/chess', { waitUntil: 'networkidle0', timeout: 60000 });
+  await waitSel('.learn-hero');
+  check('course-evolution hero image loads', await waitImage('.learn-hero-art'));
+  await page.goto(BASE + '/#/puzzles?game=chess', { waitUntil: 'networkidle0', timeout: 60000 });
+  await waitSel('.pz-hero');
+  check('tactics-observatory hero image loads', await waitImage('.pz-hero-art'));
+  await page.goto(BASE + '/#/reviews', { waitUntil: 'networkidle0', timeout: 60000 });
+  await waitSel('.rv-hero');
+  check('review-laboratory hero image loads', await waitImage('.rv-hero-art'));
+
   console.log('Game (chess) — 2D and 3D parity');
-  await page.goto(BASE + '/#/play/chess', { waitUntil: 'networkidle0', timeout: 60000 });
+  await page.goto(BASE + '/#/play/chess?difficulty=hard', { waitUntil: 'networkidle0', timeout: 60000 });
+  await waitSel('.tabs');
+  await page.evaluate(() => {
+    const setup = [...document.querySelectorAll('.tabs button')]
+      .find((button) => /Setup/.test(button.textContent || ''));
+    setup?.click();
+  });
+  await waitSel('.diff.on');
+  check('route-selected sparring difficulty is applied', await page.evaluate(() => (
+    document.querySelector('.diff.on strong')?.textContent === 'Strong'
+  )));
   const w2d = await waitWidth('.board');
   // The board is a roving-tabindex grid — arrow keys move focus between cells.
   const kbd = await page.evaluate(async () => {
@@ -84,22 +167,21 @@ try {
   check('daily + weekly quest rows render (>=6)', prof.rows >= 6);
   check('Weekly Quests section present', prof.weekly);
 
-  console.log('Shop');
+  console.log('Collection');
   await page.evaluate(() => { location.hash = '#/shop'; });
   await waitSel('.shop');
   const shop = await page.evaluate(() => ({
     packs: document.querySelectorAll('.sh-coin-pack').length,
+    earn: document.querySelectorAll('.sh-earn-card').length,
     items: document.querySelectorAll('.sh-item').length,
     pro: !!document.querySelector('.sh-pro-panel'),
+    heading: document.querySelector('.shop h1')?.textContent || '',
+    access: document.querySelector('.sh-access-note')?.textContent || '',
   }));
-  check('coin packs render', shop.packs === 3);
+  check('collection replaces sold token packs with earned routes', shop.packs === 0 && shop.earn === 3);
   check('cosmetics grid renders (>=14)', shop.items >= 14);
-  check('Pro panel renders', shop.pro);
-  // With no billing backend configured, checkout must be honest — not a fake charge.
-  await page.evaluate(() => { const b = [...document.querySelectorAll('.sh-pro-panel button')].find((x) => /Subscribe/i.test(x.textContent || '')); if (b) b.click(); });
-  await sleep(300);
-  const note = await page.evaluate(() => document.querySelector('.sh-note')?.textContent || '');
-  check('checkout is honest with no backend (no fake charge)', /isn.t connected/i.test(note));
+  check('Collection and access panel render', shop.pro && shop.heading === 'Collection');
+  check('unconfigured billing promises complete learning access', /every game, course, puzzle/i.test(shop.access));
 
   console.log('Teeko (new game) — renders and plays');
   await page.evaluate(() => { location.hash = '#/play/teeko'; });
@@ -145,6 +227,47 @@ try {
   check('Five Field Kono renders its 25-cell board', koCells === 25);
   check('starts with 14 stones', koMen === 14);
   check('select-then-step moves a stone diagonally', koMoved);
+
+  console.log('Mū Tōrere (new game) — graph board and course');
+  await page.evaluate(() => { location.hash = '#/play/mu-torere'; });
+  await waitSel('.gs-toolbar .seg');
+  await page.evaluate(() => { const b = [...document.querySelectorAll('.gs-toolbar .seg button')].find((x) => x.textContent.trim() === '2D'); if (b) b.click(); });
+  await waitSel('.board');
+  await sleep(700);
+  const mt = await page.evaluate(() => ({
+    cells: document.querySelectorAll('.board .cell').length,
+    stones: document.querySelectorAll('.board .pc').length,
+    lines: document.querySelectorAll('.board .grid-lines line').length,
+  }));
+  check('Mū Tōrere renders nine graph points and eight stones', mt.cells === 9 && mt.stones === 8);
+  check('Mū Tōrere renders its ring-and-centre connections', mt.lines === 16);
+
+  console.log('Domineering (new game) — directional placement');
+  await page.evaluate(() => { location.hash = '#/play/domineering'; });
+  await waitSel('.board');
+  await sleep(700);
+  const domCells = await page.evaluate(() => document.querySelectorAll('.board .cell').length);
+  await page.evaluate(() => document.querySelector('.board .cell[data-idx="0"]')?.click());
+  await sleep(1000);
+  const domPieces = await page.evaluate(() => document.querySelectorAll('.board .pc').length);
+  check('Domineering renders its 6×6 board', domCells === 36);
+  check('one anchor covers both cells of a legal domino', domPieces >= 2);
+
+  console.log('Hexapawn (new game) — complete micro-strategy engine');
+  await page.evaluate(() => { location.hash = '#/play/hexapawn'; });
+  await waitSel('.board');
+  await sleep(700);
+  const hpStart = await page.evaluate(() => ({
+    cells: document.querySelectorAll('.board .cell').length,
+    pawns: document.querySelectorAll('.board .pc').length,
+  }));
+  await page.evaluate(() => document.querySelector('.board .cell[data-idx="7"]')?.click());
+  await sleep(180);
+  await page.evaluate(() => document.querySelector('.board .cell[data-idx="4"]')?.click());
+  await sleep(1000);
+  const hpMoved = await page.evaluate(() => !document.querySelector('.board .cell[data-idx="7"] .pc'));
+  check('Hexapawn renders three-by-three with six starting pawns', hpStart.cells === 9 && hpStart.pawns === 6);
+  check('Hexapawn advances a pawn and lets the AI respond', hpMoved);
 } catch (e) {
   fail++; console.log('  ✗ EXCEPTION:', e.message);
 } finally {

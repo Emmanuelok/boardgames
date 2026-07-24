@@ -12,6 +12,7 @@ interface Props {
   theme: BoardTheme;
   onSolved?: () => void;
   onFailed?: () => void;
+  onRetry?: () => void;
 }
 
 const norm = (s: string) => s.replace(/[+#]/g, '').replace(/\s+/g, '').toLowerCase();
@@ -23,7 +24,7 @@ interface LocalState {
   lastMove: { from?: number; to: number; affected?: number[] } | null;
 }
 
-export default function InteractiveLesson({ def, challenge, setup, theme, onSolved, onFailed }: Props) {
+export default function InteractiveLesson({ def, challenge, setup, theme, onSolved, onFailed, onRetry }: Props) {
   const initial = useMemo(() => {
     try { return setup ? def.deserialize(setup) : def.createInitialState(); }
     catch { return def.createInitialState(); }
@@ -35,7 +36,12 @@ export default function InteractiveLesson({ def, challenge, setup, theme, onSolv
   const solutions = useMemo(() => challenge.solution.map(norm), [challenge.solution]);
   const flipped = def.getTurn(initial) === 1;
 
-  const reset = () => { setLs({ state: initial, selected: null, targets: [], lastMove: null }); setResult('idle'); setFeedback(''); };
+  const reset = () => {
+    setLs({ state: initial, selected: null, targets: [], lastMove: null });
+    setResult('idle');
+    setFeedback('');
+    onRetry?.();
+  };
 
   const tryMove = (move: MoveBase, fromState: any) => {
     const after = def.applyMove(fromState, move);

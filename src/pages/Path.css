@@ -43,6 +43,9 @@
 .mission-step:hover::before, .mission-step:focus-visible::before, .mission-step.recommended::before { opacity: 1; }
 .mission-step.recommended { border-color: rgba(101,228,207,.42); box-shadow: 0 24px 58px -42px #64e6d0; }
 .mission-step.complete { opacity: .72; }
+.mission-step.locked { opacity: .48; cursor: not-allowed; }
+.mission-step.locked:hover { transform: none; border-color: var(--line); background: linear-gradient(160deg, rgba(255,255,255,.055), rgba(255,255,255,.018)); }
+.mission-step.locked::before { display: none; }
 .mission-step-top { display: flex; justify-content: space-between; align-items: center; }
 .mission-index { font: 700 10px/1 var(--font-display); letter-spacing: .1em; color: var(--ink-faint); }
 .mission-state { padding: 4px 7px; border-radius: 999px; background: rgba(255,255,255,.06); color: var(--ink-faint); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }

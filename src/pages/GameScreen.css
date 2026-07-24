@@ -3,6 +3,7 @@
 
 .gs-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
 .gs-title { display: flex; align-items: center; gap: 10px; }
+.gs-title h1 { margin: 0; font: inherit; font-weight: 800; color: inherit; }
 .gs-emoji { font-size: 26px; }
 .gs-toolbar .spacer, .gs-toolbar > .row { margin-left: auto; }
 .gs-toolbar { justify-content: space-between; }
@@ -53,7 +54,7 @@
 }
 @media (max-width: 520px) {
   .game-screen { padding: 12px 12px 32px; }
-  .gs-toolbar .gs-title strong { font-size: 15px; }
+  .gs-toolbar .gs-title h1 { font-size: 15px; }
   .controls .btn { min-width: 0; padding: 8px 6px; font-size: 12px; }
 }
 .opening-chip { display: flex; align-items: center; gap: 11px; padding: 10px 14px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--accent-2) 8%, transparent)); }

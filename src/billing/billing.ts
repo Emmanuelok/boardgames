@@ -4,7 +4,7 @@
  * The app is fully playable with no backend. Set `VITE_API_BASE` to a backend
  * exposing the routes in `/serverless` (Stripe Checkout + webhook + entitlements)
  * to turn on real purchases. While it is unset, every call resolves to a
- * "not configured" result and the Shop shows an honest note rather than faking a
+ * "not configured" result and the Collection shows an honest note rather than faking a
  * charge. Importing this module never touches the network or `window`.
  */
 import { useProgression } from '../progression/progression';
@@ -55,13 +55,13 @@ export async function fetchEntitlements(): Promise<Entitlements | null> {
 
 /**
  * Best-effort hydrate of the progression store from server entitlements on load.
- * No-op when unconfigured. Only ever *grants* Pro from the server (never revokes
- * a locally-enabled preview) and never overwrites earned coins — purchased-coin
- * reconciliation is a backend decision (see /serverless/README.md).
+ * No-op when unconfigured or unavailable. When the server responds it is the
+ * authority for both granting and revoking supporter status; earned local tokens
+ * remain untouched.
  */
 export async function hydrateEntitlements(): Promise<void> {
   const e = await fetchEntitlements();
-  if (e?.pro) {
-    try { useProgression.getState().setPro(true); } catch { /* ignore */ }
+  if (e) {
+    try { useProgression.getState().setPro(e.pro); } catch { /* ignore */ }
   }
 }

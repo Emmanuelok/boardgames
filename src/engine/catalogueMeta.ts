@@ -8,8 +8,8 @@
  * `GAME_COUNT` is the full engine count; `CATALOGUE_WORLD_COUNT` is the number
  * of cards after closely related variants are grouped into one world.
  */
-export const GAME_COUNT = 35;
-export const CATALOGUE_WORLD_COUNT = 29;
+export const GAME_COUNT = 38;
+export const CATALOGUE_WORLD_COUNT = 32;
 
 export interface StarterMeta { id: string; name: string; emoji: string; tagline: string }
 

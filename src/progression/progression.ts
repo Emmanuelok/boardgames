@@ -32,16 +32,35 @@ export interface Cosmetic { id: string; slot: CosmeticSlot; name: string; icon: 
 // Level curve (pure)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Defensive ceilings for corrupted or manually edited browser storage. */
+export const MAX_XP = 1_000_000_000;
+export const MAX_COINS = 1_000_000_000;
+
+function boundedCounter(value: unknown, max: number, fallback = 0): number {
+  const parsed = typeof value === 'number' || typeof value === 'string' ? Number(value) : Number.NaN;
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(0, Math.floor(parsed)));
+}
+
 /** XP required to advance *from* `level` to `level + 1`. Gentle linear ramp. */
 export function xpToNext(level: number): number { return 80 + Math.max(0, level - 1) * 45; }
 
+/** Cumulative XP consumed after advancing `count` complete levels. */
+function xpForCompletedLevels(count: number): number {
+  return count * (45 * count + 115) / 2;
+}
+
 /** Resolve a cumulative XP total into a level and progress within that level. */
 export function levelFromXp(total: number): { level: number; into: number; span: number } {
-  let level = 1;
-  let remaining = Math.max(0, Math.floor(total));
-  // Levels are small numbers; a loop is clearer than a closed form here.
-  while (remaining >= xpToNext(level)) { remaining -= xpToNext(level); level += 1; }
-  return { level, into: remaining, span: xpToNext(level) };
+  const safeTotal = boundedCounter(total, MAX_XP);
+  // Sum(80 + 45k, k=0..n-1) = n(45n + 115)/2. Solving that
+  // quadratic avoids an attacker-controlled or corrupted-XP loop.
+  let completed = Math.max(0, Math.floor((-115 + Math.sqrt(13_225 + 360 * safeTotal)) / 90));
+  // Protect exact threshold values from floating-point rounding.
+  while (completed > 0 && xpForCompletedLevels(completed) > safeTotal) completed--;
+  while (xpForCompletedLevels(completed + 1) <= safeTotal) completed++;
+  const level = completed + 1;
+  return { level, into: safeTotal - xpForCompletedLevels(completed), span: xpToNext(level) };
 }
 
 /** Playful tier name for a level, for flair on the profile. */
@@ -60,12 +79,14 @@ export function levelTier(level: number): { name: string; icon: string } {
 
 const DIFF_MULT: Record<Difficulty, number> = { tutor: 0.8, easy: 1, medium: 1.3, hard: 1.7, master: 2.2 };
 
-/** Standing bonus Pro applies to every XP/coin earn — the headline "no-limits"
- *  perk, and deliberately a bonus rather than a gate (see MONETIZATION.md). */
-export const PRO_BONUS = 0.2;
+/** Learning progress never accelerates because of a purchase. */
+export const PRO_BONUS = 0;
 
-/** Coin cost to reroll a single daily quest for a fresh one (a coin sink). */
-export const REROLL_COST = 60;
+/**
+ * Quest swaps are intentionally free. Kept as an exported zero for backwards
+ * compatibility with older UI/tests that displayed a reroll cost.
+ */
+export const REROLL_COST = 0;
 
 export function gameReward(result: ResultKind, difficulty: Difficulty): Reward {
   const baseXp = result === 'win' ? 50 : result === 'draw' ? 25 : 12;
@@ -207,6 +228,23 @@ export interface ProgressionState {
 
 export const STORAGE_KEY = 'gm-progression';
 const FREE_COSMETICS = COSMETICS.filter((c) => c.price === 0).map((c) => c.id);
+const COSMETIC_IDS = new Set(COSMETICS.map((c) => c.id));
+const MAX_STORED_IDS = 512;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function stringList(value: unknown, maxItems = MAX_STORED_IDS): string[] {
+  if (!Array.isArray(value)) return [];
+  const unique = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== 'string' || item.length === 0 || item.length > 96) continue;
+    unique.add(item);
+    if (unique.size >= maxItems) break;
+  }
+  return [...unique];
+}
 
 function freshQuests(date: string): { questDate: string; quests: QuestProgress[]; xpToday: number; gamesToday: string[] } {
   return { questDate: date, quests: pickDailyQuests(date).map((q) => ({ id: q.id, progress: 0, claimed: false })), xpToday: 0, gamesToday: [] };
@@ -216,10 +254,88 @@ function freshWeekly(week: string): { weekKey: string; weekly: QuestProgress[]; 
   return { weekKey: week, weekly: pickWeeklyQuests(week).map((q) => ({ id: q.id, progress: 0, claimed: false })), xpThisWeek: 0, gamesThisWeek: [] };
 }
 
-type PersistShape = Pick<ProgressionState, 'xp' | 'coins' | 'seenGames' | 'owned' | 'equipped' | 'pro' | 'questDate' | 'quests' | 'xpToday' | 'gamesToday' | 'weekKey' | 'weekly' | 'xpThisWeek' | 'gamesThisWeek'>;
+export type PersistShape = Pick<ProgressionState, 'xp' | 'coins' | 'seenGames' | 'owned' | 'equipped' | 'pro' | 'questDate' | 'quests' | 'xpToday' | 'gamesToday' | 'weekKey' | 'weekly' | 'xpThisWeek' | 'gamesThisWeek'>;
 
-function fresh(): PersistShape {
-  return { xp: 0, coins: 0, seenGames: [], owned: [...FREE_COSMETICS], equipped: { wallpaper: 'wp-aurora', title: 'ti-rookie', frame: 'fr-none' }, pro: false, ...freshQuests(todayStr()), ...freshWeekly(weekStr()) };
+function fresh(now = new Date()): PersistShape {
+  return {
+    xp: 0,
+    coins: 0,
+    seenGames: [],
+    owned: [...FREE_COSMETICS],
+    equipped: { wallpaper: 'wp-aurora', title: 'ti-rookie', frame: 'fr-none' },
+    pro: false,
+    ...freshQuests(todayStr(now)),
+    ...freshWeekly(weekStr(now)),
+  };
+}
+
+function normalizeQuestList(value: unknown, pool: QuestDef[], fallback: QuestProgress[]): QuestProgress[] {
+  const definitions = new Map(pool.map((def) => [def.id, def]));
+  const normalized: QuestProgress[] = [];
+  const seen = new Set<string>();
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (!isRecord(item) || typeof item.id !== 'string' || seen.has(item.id)) continue;
+      const def = definitions.get(item.id);
+      if (!def) continue;
+      const progress = boundedCounter(item.progress, def.goal);
+      normalized.push({ id: def.id, progress, claimed: item.claimed === true && progress >= def.goal });
+      seen.add(def.id);
+      if (normalized.length >= 3) break;
+    }
+  }
+  for (const item of fallback) {
+    if (normalized.length >= 3) break;
+    if (!seen.has(item.id)) normalized.push({ ...item });
+  }
+  return normalized;
+}
+
+/**
+ * Normalize persisted progression data without trusting its shape. Existing,
+ * well-formed values are preserved; malformed counters and catalogue ids are
+ * repaired before they can reach UI math.
+ */
+export function normalizeProgressionData(value: unknown, now = new Date()): PersistShape {
+  const base = fresh(now);
+  if (!isRecord(value)) return base;
+  const today = todayStr(now);
+  const week = weekStr(now);
+  const dailyCurrent = value.questDate === today;
+  const weeklyCurrent = value.weekKey === week;
+
+  const owned = Array.from(new Set([
+    ...FREE_COSMETICS,
+    ...stringList(value.owned).filter((id) => COSMETIC_IDS.has(id)),
+  ]));
+  const equippedSource = isRecord(value.equipped) ? value.equipped : {};
+  const equipped: PersistShape['equipped'] = { ...base.equipped };
+  for (const slot of ['wallpaper', 'title', 'frame'] as const) {
+    const id = equippedSource[slot];
+    const item = typeof id === 'string' ? cosmetic(id) : undefined;
+    if (item?.slot === slot && owned.includes(item.id)) equipped[slot] = item.id;
+  }
+
+  return {
+    xp: boundedCounter(value.xp, MAX_XP),
+    coins: boundedCounter(value.coins, MAX_COINS),
+    seenGames: stringList(value.seenGames),
+    owned,
+    equipped,
+    pro: value.pro === true,
+    ...(dailyCurrent ? {
+      questDate: today,
+      quests: normalizeQuestList(value.quests, QUEST_POOL, base.quests),
+      xpToday: boundedCounter(value.xpToday, MAX_XP),
+      gamesToday: stringList(value.gamesToday, 128),
+    } : freshQuests(today)),
+    ...(weeklyCurrent ? {
+      weekKey: week,
+      weekly: normalizeQuestList(value.weekly, WEEKLY_POOL, base.weekly),
+      xpThisWeek: boundedCounter(value.xpThisWeek, MAX_XP),
+      gamesThisWeek: stringList(value.gamesThisWeek, 128),
+    } : freshWeekly(week)),
+  };
 }
 
 function load(): PersistShape {
@@ -227,36 +343,29 @@ function load(): PersistShape {
   if (typeof window === 'undefined' || !window.localStorage) return base;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return base;
-    const p = JSON.parse(raw) as Partial<PersistShape> | null;
-    if (!p || typeof p !== 'object') return base;
-    const merged: PersistShape = {
-      xp: Number(p.xp) || 0,
-      coins: Number(p.coins) || 0,
-      seenGames: Array.isArray(p.seenGames) ? p.seenGames.filter((x): x is string => typeof x === 'string') : [],
-      owned: Array.isArray(p.owned) ? Array.from(new Set([...FREE_COSMETICS, ...p.owned.filter((x): x is string => typeof x === 'string')])) : [...FREE_COSMETICS],
-      equipped: p.equipped && typeof p.equipped === 'object' ? { ...base.equipped, ...p.equipped } : base.equipped,
-      pro: Boolean(p.pro),
-      questDate: typeof p.questDate === 'string' ? p.questDate : base.questDate,
-      quests: Array.isArray(p.quests) ? p.quests.map((q) => ({ id: String(q.id), progress: Number(q.progress) || 0, claimed: Boolean(q.claimed) })) : base.quests,
-      xpToday: Number(p.xpToday) || 0,
-      gamesToday: Array.isArray(p.gamesToday) ? p.gamesToday.filter((x): x is string => typeof x === 'string') : [],
-      weekKey: typeof p.weekKey === 'string' ? p.weekKey : base.weekKey,
-      weekly: Array.isArray(p.weekly) ? p.weekly.map((q) => ({ id: String(q.id), progress: Number(q.progress) || 0, claimed: Boolean(q.claimed) })) : base.weekly,
-      xpThisWeek: Number(p.xpThisWeek) || 0,
-      gamesThisWeek: Array.isArray(p.gamesThisWeek) ? p.gamesThisWeek.filter((x): x is string => typeof x === 'string') : [],
-    };
-    // Roll over quests if the persisted set is from a previous day / week.
-    if (merged.questDate !== todayStr()) Object.assign(merged, freshQuests(todayStr()));
-    if (merged.weekKey !== weekStr()) Object.assign(merged, freshWeekly(weekStr()));
-    return merged;
+    return raw ? normalizeProgressionData(JSON.parse(raw)) : base;
   } catch { return base; }
 }
 
 function save(s: ProgressionState): void {
   if (typeof window === 'undefined' || !window.localStorage) return;
   try {
-    const payload: PersistShape = { xp: s.xp, coins: s.coins, seenGames: s.seenGames, owned: s.owned, equipped: s.equipped, pro: s.pro, questDate: s.questDate, quests: s.quests, xpToday: s.xpToday, gamesToday: s.gamesToday, weekKey: s.weekKey, weekly: s.weekly, xpThisWeek: s.xpThisWeek, gamesThisWeek: s.gamesThisWeek };
+    const payload = normalizeProgressionData({
+      xp: s.xp,
+      coins: s.coins,
+      seenGames: s.seenGames,
+      owned: s.owned,
+      equipped: s.equipped,
+      pro: s.pro,
+      questDate: s.questDate,
+      quests: s.quests,
+      xpToday: s.xpToday,
+      gamesToday: s.gamesToday,
+      weekKey: s.weekKey,
+      weekly: s.weekly,
+      xpThisWeek: s.xpThisWeek,
+      gamesThisWeek: s.gamesThisWeek,
+    });
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch { /* ignore */ }
 }
@@ -298,20 +407,22 @@ export const useProgression = create<ProgressionState>()((set, get) => {
   /** Core mutation: grant a reward, advance the XP quest + daily counter, detect level-ups, raise a flash. */
   const grant = (reward: Reward, label: string, icon: string, countDaily = true) => {
     set((s) => {
-      // Pro pays a standing bonus on every earn (the advertised "no-limits" perk).
+      // Supporter status is cosmetic; learning rewards stay identical for all users.
       const mult = s.pro ? 1 + PRO_BONUS : 1;
-      const gainedXp = Math.round(Math.max(0, reward.xp) * mult);
-      const gainedCoins = Math.round(Math.max(0, reward.coins) * mult);
-      const before = levelFromXp(s.xp).level;
-      const xp = s.xp + gainedXp;
+      const gainedXp = boundedCounter(Math.round(Math.max(0, reward.xp) * mult), MAX_XP);
+      const gainedCoins = boundedCounter(Math.round(Math.max(0, reward.coins) * mult), MAX_COINS);
+      const currentXp = boundedCounter(s.xp, MAX_XP);
+      const currentCoins = boundedCounter(s.coins, MAX_COINS);
+      const before = levelFromXp(currentXp).level;
+      const xp = Math.min(MAX_XP, currentXp + gainedXp);
       const after = levelFromXp(xp).level;
       const levelUp = after > before ? after : undefined;
       // Level-up pays a (flat) coin bonus and is the headline of the flash.
       const levelBonus = levelUp ? 25 * (levelUp - before) : 0;
-      let next: ProgressionState = { ...s, xp, coins: s.coins + gainedCoins + levelBonus };
+      let next: ProgressionState = { ...s, xp, coins: Math.min(MAX_COINS, currentCoins + gainedCoins + levelBonus) };
       if (countDaily && gainedXp > 0) {
-        const xpToday = s.xpToday + gainedXp;
-        const xpThisWeek = s.xpThisWeek + gainedXp;
+        const xpToday = Math.min(MAX_XP, boundedCounter(s.xpToday, MAX_XP) + gainedXp);
+        const xpThisWeek = Math.min(MAX_XP, boundedCounter(s.xpThisWeek, MAX_XP) + gainedXp);
         next = { ...next, xpToday, xpThisWeek, quests: bumpQuests(s.quests, 'xp', xpToday, true), weekly: bumpQuests(s.weekly, 'xp', xpThisWeek, true) };
       }
       next.flash = { id: flashSeq++, xp: gainedXp, coins: gainedCoins + levelBonus, label, icon, levelUp };
@@ -388,13 +499,21 @@ export const useProgression = create<ProgressionState>()((set, get) => {
     rerollQuest(id) {
       const s = get();
       const cur = s.quests.find((x) => x.id === id);
-      if (!cur || cur.claimed || s.coins < REROLL_COST) return false;
-      // Swap it for a random daily quest not already in today's set.
+      if (!cur || cur.claimed) return false;
+      // Choose the next unused definition in catalogue order. A quest swap is a
+      // transparent preference control, never a paid or chance-based mechanic.
       const inUse = new Set(s.quests.map((q) => q.id));
-      const options = QUEST_POOL.filter((d) => !inUse.has(d.id));
-      if (!options.length) return false;
-      const pick = options[Math.floor(Math.random() * options.length)];
-      set({ coins: s.coins - REROLL_COST, quests: s.quests.map((q) => (q.id === id ? { id: pick.id, progress: 0, claimed: false } : q)) });
+      const currentIndex = Math.max(0, QUEST_POOL.findIndex((definition) => definition.id === id));
+      let pick: QuestDef | undefined;
+      for (let offset = 1; offset <= QUEST_POOL.length; offset += 1) {
+        const candidate = QUEST_POOL[(currentIndex + offset) % QUEST_POOL.length];
+        if (!inUse.has(candidate.id)) {
+          pick = candidate;
+          break;
+        }
+      }
+      if (!pick) return false;
+      set({ quests: s.quests.map((q) => (q.id === id ? { id: pick.id, progress: 0, claimed: false } : q)) });
       save(get());
       return true;
     },

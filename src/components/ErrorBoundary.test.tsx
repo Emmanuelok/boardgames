@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import ErrorBoundary from './ErrorBoundary';
 
 const Boom = (): null => { throw new Error('boom'); };
@@ -17,6 +17,26 @@ describe('<ErrorBoundary>', () => {
     render(<ErrorBoundary fallback={<div>3D board unavailable</div>} onError={onError}><Boom /></ErrorBoundary>);
     expect(screen.getByText('3D board unavailable')).toBeInTheDocument();
     expect(onError).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('can retry a failed subtree without reloading the application', () => {
+    let shouldThrow = true;
+    const MaybeBoom = () => {
+      if (shouldThrow) throw new Error('temporary');
+      return <div>recovered child</div>;
+    };
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(
+      <ErrorBoundary fallback={({ reset }) => (
+        <button onClick={() => { shouldThrow = false; reset(); }}>Try again</button>
+      )}>
+        <MaybeBoom />
+      </ErrorBoundary>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(screen.getByText('recovered child')).toBeInTheDocument();
     spy.mockRestore();
   });
 });

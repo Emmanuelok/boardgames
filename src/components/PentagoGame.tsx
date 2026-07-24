@@ -34,7 +34,7 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
     if (!over || recorded) return;
     setRecorded(true);
     playSound(res.winner === 0 ? 'win' : res.winner === 1 ? 'lose' : 'draw');
-    if (res.winner !== null) recordResult('pentago', res.winner === 0 ? 'win' : 'loss', aiDifficulty as any);
+    recordResult('pentago', res.draw ? 'draw' : res.winner === 0 ? 'win' : 'loss', aiDifficulty as any);
     if (review.length >= 4) try { saveRecord(summarize(pdef, review, pdef.getStatus(s), 0)); } catch { /* ignore */ }
   }, [over, res.winner, recorded, recordResult, aiDifficulty]);
 
