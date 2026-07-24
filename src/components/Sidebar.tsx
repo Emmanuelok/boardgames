@@ -15,6 +15,7 @@ const GROUPS: { title: string; items: NavigationItem[] }[] = [
   { title: 'Your journey', items: [
     { to: '/', icon: '⌂', label: 'Today', end: true, mobile: true },
     { to: '/path', icon: '✦', label: 'My Path', mobile: true },
+    { to: '/studio', icon: '⊹', label: 'Studio', mobile: true },
   ] },
   { title: 'Explore', items: [
     { to: '/games', icon: '◫', label: 'Games', mobile: true },

@@ -12,6 +12,7 @@ import { hydrateEntitlements } from './billing/billing';
 const GameScreen = lazy(() => import('./pages/GameScreen'));
 const Games = lazy(() => import('./pages/Games'));
 const Path = lazy(() => import('./pages/Path'));
+const StrategyStudio = lazy(() => import('./pages/StrategyStudio'));
 const Learn = lazy(() => import('./pages/Learn'));
 const Puzzles = lazy(() => import('./pages/Puzzles'));
 const Daily = lazy(() => import('./pages/Daily'));
@@ -64,6 +65,7 @@ export default function App() {
                 <Routes location={location}>
                   <Route path="/" element={<Home />} />
                   <Route path="/path" element={<Path />} />
+                  <Route path="/studio" element={<StrategyStudio />} />
                   <Route path="/games" element={<Games />} />
                   <Route path="/play/:gameId" element={<GameScreen />} />
                   <Route path="/learn/:gameId" element={<Learn />} />

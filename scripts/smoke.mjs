@@ -82,6 +82,39 @@ try {
   await waitSel('.journey-context');
   check('mission identity follows into the recommended tool', !!(await page.$('.journey-context')));
 
+  console.log('Strategy Studio — authored connected session');
+  await page.goto(BASE + '/#/studio', { waitUntil: 'networkidle0', timeout: 60000 });
+  await waitSel('.studio-builder');
+  check('original Strategy Studio hero image loads', await waitImage('.studio-hero-art'));
+  check('five-stage live blueprint renders', (await page.$$('.studio-route li')).length === 5);
+  await page.evaluate(() => {
+    const game = document.querySelector('.studio-select select');
+    if (game instanceof HTMLSelectElement) {
+      game.value = 'hexapawn';
+      game.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    const tactics = [...document.querySelectorAll('.studio-goals button')]
+      .find((button) => /Sharpen tactics/.test(button.textContent || ''));
+    tactics?.click();
+  });
+  await sleep(300);
+  check('Studio controls regenerate the selected game blueprint', await page.evaluate(() => (
+    /Hexapawn: Tactics/.test(document.querySelector('.studio-plan h2')?.textContent || '')
+  )));
+  await page.evaluate(() => {
+    const start = [...document.querySelectorAll('.studio-plan-actions button')]
+      .find((button) => /Start connected session/.test(button.textContent || ''));
+    start?.click();
+  });
+  await waitSel('.journey-context');
+  check('Studio launch activates evidence-tracked route context', await page.evaluate(() => {
+    try {
+      return JSON.parse(localStorage.getItem('gm-learning-v1') || '{}').activeMission?.gameId === 'hexapawn';
+    } catch {
+      return false;
+    }
+  }));
+
   console.log('Learning surfaces — visual system');
   await page.goto(BASE + '/#/learn/chess', { waitUntil: 'networkidle0', timeout: 60000 });
   await waitSel('.learn-hero');
@@ -194,6 +227,47 @@ try {
   check('Five Field Kono renders its 25-cell board', koCells === 25);
   check('starts with 14 stones', koMen === 14);
   check('select-then-step moves a stone diagonally', koMoved);
+
+  console.log('Mū Tōrere (new game) — graph board and course');
+  await page.evaluate(() => { location.hash = '#/play/mu-torere'; });
+  await waitSel('.gs-toolbar .seg');
+  await page.evaluate(() => { const b = [...document.querySelectorAll('.gs-toolbar .seg button')].find((x) => x.textContent.trim() === '2D'); if (b) b.click(); });
+  await waitSel('.board');
+  await sleep(700);
+  const mt = await page.evaluate(() => ({
+    cells: document.querySelectorAll('.board .cell').length,
+    stones: document.querySelectorAll('.board .pc').length,
+    lines: document.querySelectorAll('.board .grid-lines line').length,
+  }));
+  check('Mū Tōrere renders nine graph points and eight stones', mt.cells === 9 && mt.stones === 8);
+  check('Mū Tōrere renders its ring-and-centre connections', mt.lines === 16);
+
+  console.log('Domineering (new game) — directional placement');
+  await page.evaluate(() => { location.hash = '#/play/domineering'; });
+  await waitSel('.board');
+  await sleep(700);
+  const domCells = await page.evaluate(() => document.querySelectorAll('.board .cell').length);
+  await page.evaluate(() => document.querySelector('.board .cell[data-idx="0"]')?.click());
+  await sleep(1000);
+  const domPieces = await page.evaluate(() => document.querySelectorAll('.board .pc').length);
+  check('Domineering renders its 6×6 board', domCells === 36);
+  check('one anchor covers both cells of a legal domino', domPieces >= 2);
+
+  console.log('Hexapawn (new game) — complete micro-strategy engine');
+  await page.evaluate(() => { location.hash = '#/play/hexapawn'; });
+  await waitSel('.board');
+  await sleep(700);
+  const hpStart = await page.evaluate(() => ({
+    cells: document.querySelectorAll('.board .cell').length,
+    pawns: document.querySelectorAll('.board .pc').length,
+  }));
+  await page.evaluate(() => document.querySelector('.board .cell[data-idx="7"]')?.click());
+  await sleep(180);
+  await page.evaluate(() => document.querySelector('.board .cell[data-idx="4"]')?.click());
+  await sleep(1000);
+  const hpMoved = await page.evaluate(() => !document.querySelector('.board .cell[data-idx="7"] .pc'));
+  check('Hexapawn renders three-by-three with six starting pawns', hpStart.cells === 9 && hpStart.pawns === 6);
+  check('Hexapawn advances a pawn and lets the AI respond', hpMoved);
 } catch (e) {
   fail++; console.log('  ✗ EXCEPTION:', e.message);
 } finally {

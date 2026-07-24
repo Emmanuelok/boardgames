@@ -2,7 +2,7 @@
 
 **One connected learning system for players who want to understand strategy—not merely finish games.**
 
-GrandMaster connects **35 complete game engines**, lessons, adaptive practice,
+GrandMaster connects **38 complete game engines**, lessons, adaptive practice,
 fair AI sparring and post-game review through one learner model. The new
 **Strategy Path** turns evidence from every session into a clear next move while
 the underlying engines remain deterministic and rules-verified.
@@ -67,18 +67,19 @@ changes XP or access to learning tools. See **[MONETIZATION.md](./MONETIZATION.m
 
 ---
 
-## 🎲 The 35-engine library
+## 🎲 The 38-engine library
 
-The discovery experience groups close variants into 29 browsable worlds while
-preserving all 35 full engines:
+The discovery experience groups close variants into 32 browsable worlds while
+preserving all 38 full engines:
 
-- **Royal strategy:** Chess, Xiangqi, Shogi and Tafl.
+- **Royal and directional strategy:** Chess, Xiangqi, Shogi, Tafl, Hexapawn and
+  Mū Tōrere.
 - **Capture classics:** Checkers, International Draughts, Alquerque, Fox and
   Hounds, Nine Men's Morris, Three Men's Morris, Backgammon and Surakarta.
 - **Connection and alignment:** Gomoku, Pente, Connect Four, Tic-Tac-Toe, Hex,
   Pentago, Squava, Teeko and Five Field Kono.
 - **Territory, mobility and placement:** Go, Reversi, Amazons, Lines of Action,
-  Konane, Clobber, Cohesion, Breakthrough and Mancala.
+  Konane, Clobber, Cohesion, Breakthrough, Domineering and Mancala.
 - **Modern abstract systems:** Dots and Boxes, Quarto, Tally, Order and Chaos
   and Ultimate Tic-Tac-Toe.
 
