@@ -11,6 +11,42 @@ export const GAME_CATEGORIES = ['All', ...Array.from(new Set(CATALOGUE.map((entr
   entry.type === 'family' ? entry.family.category : entry.def.category
 ))))];
 
+/** Curated, full-bleed photographs for every world in the public catalogue. */
+export const GAME_THUMBNAILS: Record<string, string> = {
+  chess: '/assets/game-thumbnails/chess.webp',
+  tafl: '/assets/game-thumbnails/tafl.webp',
+  draughts: '/assets/game-thumbnails/checkers-draughts.webp',
+  alquerque: '/assets/game-thumbnails/alquerque.webp',
+  breakthrough: '/assets/game-thumbnails/breakthrough.webp',
+  'fox-and-hounds': '/assets/game-thumbnails/fox-and-hounds.webp',
+  'nine-mens-morris': '/assets/game-thumbnails/nine-mens-morris.webp',
+  'three-mens-morris': '/assets/game-thumbnails/three-mens-morris.webp',
+  'mu-torere': '/assets/game-thumbnails/mu-torere.webp',
+  backgammon: '/assets/game-thumbnails/backgammon.webp',
+  'dots-and-boxes': '/assets/game-thumbnails/dots-and-boxes.webp',
+  pentago: '/assets/game-thumbnails/pentago.webp',
+  quarto: '/assets/game-thumbnails/quarto.webp',
+  tally: '/assets/game-thumbnails/tally.webp',
+  squava: '/assets/game-thumbnails/squava.webp',
+  'order-and-chaos': '/assets/game-thumbnails/order-and-chaos.webp',
+  ultimate: '/assets/game-thumbnails/ultimate-tic-tac-toe.webp',
+  surakarta: '/assets/game-thumbnails/surakarta.webp',
+  cohesion: '/assets/game-thumbnails/cohesion.webp',
+  domineering: '/assets/game-thumbnails/domineering.webp',
+  reversi: '/assets/game-thumbnails/reversi.webp',
+  'lines-of-action': '/assets/game-thumbnails/lines-of-action.webp',
+  konane: '/assets/game-thumbnails/konane.webp',
+  clobber: '/assets/game-thumbnails/clobber.webp',
+  teeko: '/assets/game-thumbnails/teeko.webp',
+  'five-field-kono': '/assets/game-thumbnails/five-field-kono.webp',
+  amazons: '/assets/game-thumbnails/amazons.webp',
+  'n-in-a-row': '/assets/game-thumbnails/n-in-a-row.webp',
+  mancala: '/assets/game-thumbnails/mancala.webp',
+  go: '/assets/game-thumbnails/go.webp',
+  hex: '/assets/game-thumbnails/hex.webp',
+  hexapawn: '/assets/game-thumbnails/hexapawn.webp',
+};
+
 /** Mount the heavy board preview only once the card nears the viewport. */
 function useInView<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -26,11 +62,27 @@ function useInView<T extends HTMLElement>() {
   return [ref, seen] as const;
 }
 
-function GameThumb({ def }: { def: GameDefinition }) {
+function GameThumb({ def, thumbnailKey }: { def: GameDefinition; thumbnailKey: string }) {
   const [ref, seen] = useInView<HTMLDivElement>();
+  const thumbnail = GAME_THUMBNAILS[thumbnailKey];
   const renderable = useMemo(() => {
     try { return def.getBoardView(def.createInitialState()).cells.length > 1; } catch { return false; }
   }, [def]);
+  if (thumbnail) {
+    return (
+      <div ref={ref} className="gt-photo-frame">
+        <img
+          className="gt-photo"
+          src={thumbnail}
+          alt=""
+          width="1280"
+          height="853"
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+    );
+  }
   if (!renderable) {
     return <div ref={ref} className="gt-fallback" style={{ ['--accent' as any]: def.accent }}><span className="gt-emoji">{def.emoji}</span></div>;
   }
@@ -136,15 +188,16 @@ export default function GamesGallery({
         const name = fam ? fam.name : g.name;
         const category = fam ? fam.category : g.category;
         const tagline = fam ? fam.tagline : g.tagline;
+        const thumbnailKey = fam?.id ?? g.id;
         return (
           <article className="game-card glass" key={fam ? `fam-${fam.id}` : g.id} style={{ ['--accent' as any]: g.accent }}>
             <button type="button" className="gc-thumb" onClick={() => nav(`/play/${g.id}`)} aria-label={`Play ${name}`}>
-              <GameThumb def={g} />
+              <GameThumb def={g} thumbnailKey={thumbnailKey} />
               <span className="chip gc-cat">{category}</span>
               {fam && <span className="chip gc-variants">{fam.variants.length} variants</span>}
             </button>
             <div className="gc-body">
-              <CardHeading className="gc-name">{g.emoji} {name}</CardHeading>
+              <CardHeading className="gc-name">{name}</CardHeading>
               <p className="gc-tag">{tagline}</p>
               <div className="gc-meta"><Depth depth={g.depth} /><span className="faint">{fam ? fam.variants.map((v) => v.label.split(' · ')[0]).join(' · ') : `${g.players[0].name} v ${g.players[1].name}`}</span></div>
               <div className="gc-actions">

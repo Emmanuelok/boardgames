@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "smoke:thumbnails": "node scripts/verify-thumbnails.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.114.0",

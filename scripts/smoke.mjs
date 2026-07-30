@@ -66,6 +66,32 @@ try {
   check('games gallery lazy-loads cards', await waitSel('.game-card'));
 
   console.log('Strategy library — editorial discovery');
+  await page.goto(BASE + '/#/games', { waitUntil: 'networkidle0', timeout: 60000 });
+  await waitSel('.gt-photo');
+  await page.evaluate(async () => {
+    const images = [...document.querySelectorAll('.gt-photo')];
+    for (const image of images) {
+      image.scrollIntoView({ block: 'center' });
+      await new Promise((resolve) => setTimeout(resolve, 45));
+    }
+    window.scrollTo({ top: 0 });
+  });
+  const thumbnails = await page.evaluate(() => {
+    const images = [...document.querySelectorAll('.gt-photo')];
+    return {
+      cards: document.querySelectorAll('.game-card').length,
+      images: images.length,
+      loaded: images.filter((image) => image.complete && image.naturalWidth > 0).length,
+      placeholders: document.querySelectorAll('.gt-emoji').length,
+    };
+  });
+  check(
+    'all 32 catalogue worlds render a loaded curated thumbnail',
+    thumbnails.cards === 32
+      && thumbnails.images === thumbnails.cards
+      && thumbnails.loaded === thumbnails.cards
+      && thumbnails.placeholders === 0,
+  );
   await page.goto(BASE + '/#/games?category=strategy', { waitUntil: 'networkidle0', timeout: 60000 });
   await waitSel('.discover-hero');
   check('strategy-worlds hero image loads', await waitImage('.discover-art'));
