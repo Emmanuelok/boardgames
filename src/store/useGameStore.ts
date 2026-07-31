@@ -8,7 +8,7 @@ import { useProfile } from '../profile/profile';
 import { useProgression } from '../progression/progression';
 import { OnlineSession, type NetMsg, type NetStatus } from '../net/online';
 import { DEFAULT_THEME_ID } from '../themes/boardThemes';
-import { summarize, saveRecord } from '../engine/reviewSummary';
+import { MAX_REPLAY_STATE_CHARS, summarize, saveRecord } from '../engine/reviewSummary';
 
 export interface LogEntry {
   ply: number;
@@ -16,6 +16,9 @@ export interface LogEntry {
   notation: string;
   explanation?: MoveExplanation;
   analyzing?: boolean;
+  /** Serialized snapshots used by the post-game Replay Lab. Standard games only. */
+  replayStateBefore?: string;
+  replayStateAfter?: string;
 }
 
 /** The player's preferred difficulty, remembered across sessions (set in onboarding / the toolbar). */
@@ -75,6 +78,7 @@ interface State {
 
   // actions
   newGame: (gameId: string) => void;
+  loadPosition: (gameId: string, serialized: string, options?: { humanColor?: Player }) => boolean;
   restart: () => void;
   onCellClick: (cell: number) => void;
   selectHand: (kind: string) => void;
@@ -111,6 +115,19 @@ function ensureNotation(def: GameDefinition, state: any, move: MoveBase): MoveBa
   if (move.notation) return move;
   const m = def.getLegalMoves(state, null).find((x) => x.id === move.id);
   return m ?? move;
+}
+
+function replayState(def: GameDefinition, state: unknown): string | undefined {
+  try {
+    const serialized = def.serialize(state);
+    return typeof serialized === 'string'
+      && serialized.length > 0
+      && serialized.length <= MAX_REPLAY_STATE_CHARS
+      ? serialized
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -290,12 +307,21 @@ export const useGameStore = create<State>((set, get) => {
       !fromNet &&
       (current.onlineStatus !== 'connected' || !current.net || current.net !== onlineReady)
     ) return null;
+    const replayStateBefore = replayState(def, before);
     const after = def.applyMove(before, move);
+    const replayStateAfter = replayState(def, after);
     const player = def.getTurn(before);
     const status = def.getStatus(after);
     const idx = current.log.length;
     const willAnalyze = current.autoTutor && move.to !== -1;
-    const entry: LogEntry = { ply: idx + 1, player, notation: move.notation ?? '…', analyzing: willAnalyze };
+    const entry: LogEntry = {
+      ply: idx + 1,
+      player,
+      notation: move.notation ?? '…',
+      analyzing: willAnalyze,
+      ...(replayStateBefore ? { replayStateBefore } : {}),
+      ...(replayStateAfter ? { replayStateAfter } : {}),
+    };
 
     invalidatePositionWork();
     set((s) => ({
@@ -570,6 +596,68 @@ export const useGameStore = create<State>((set, get) => {
       requestEval();
       requestThreats();
       scheduleDrive(350);
+    },
+
+    loadPosition(gameId, serialized, options) {
+      const def = getGame(gameId);
+      if (!def || def.custom || typeof serialized !== 'string' || serialized.length === 0 || serialized.length > 180_000) return false;
+      const requestedHuman = options?.humanColor;
+      if (requestedHuman !== undefined && requestedHuman !== 0 && requestedHuman !== 1) return false;
+      let state: unknown;
+      try {
+        state = def.deserialize(serialized);
+        const view = def.getBoardView(state);
+        if (
+          !view
+          || !Number.isInteger(view.rows)
+          || !Number.isInteger(view.cols)
+          || view.rows < 1
+          || view.cols < 1
+          || !Array.isArray(view.cells)
+        ) return false;
+        def.getTurn(state);
+        def.getStatus(state);
+      } catch {
+        return false;
+      }
+      const previous = get();
+      if (previous.mode === 'online') closeNetwork(previous.net);
+      const humanColor = requestedHuman ?? previous.humanColor;
+      invalidateSessionWork();
+      recorded = false;
+      set({
+        gameId,
+        def,
+        state,
+        mode: 'ai',
+        humanColor,
+        net: null,
+        onlineStatus: 'idle',
+        onlineCode: '',
+        chat: [],
+        past: [],
+        future: [],
+        log: [],
+        selected: null,
+        targets: [],
+        selectedDrop: null,
+        pendingTo: null,
+        lastMove: null,
+        status: def.getStatus(state),
+        thinking: false,
+        hintMove: null,
+        hintText: null,
+        promotion: null,
+        toast: 'Verified physical-board position loaded.',
+        flipped: humanColor === 1,
+        liveEval: null,
+        liveEvalLoading: false,
+        liveThreats: [],
+      });
+      requestEval();
+      requestThreats();
+      scheduleDrive(350);
+      return true;
     },
 
     hostOnline(code) {

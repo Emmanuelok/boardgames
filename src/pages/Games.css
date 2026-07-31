@@ -62,9 +62,13 @@
 .game-card { position: relative; display: flex; flex-direction: column; overflow: hidden; padding: 0; transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease; }
 .game-card:hover { transform: translateY(-6px); border-color: color-mix(in srgb, var(--accent) 60%, transparent); box-shadow: var(--shadow), 0 0 44px -18px var(--accent); }
 
-/* Thumbnail = the game's real starting board (or an accent tile for non-grid games) */
+/* Curated photography is used for the current catalogue; the live board remains
+   as a resilient fallback for any newly registered game without artwork. */
 .gc-thumb { position: relative; display: block; width: 100%; padding: 0; color: inherit; border: 0; border-bottom: 1px solid var(--line); background: radial-gradient(130% 120% at 50% 0%, color-mix(in srgb, var(--accent) 22%, transparent), rgba(0,0,0,0.28) 70%); }
 .gc-thumb:focus-visible { outline-offset: -3px; }
+.gt-photo-frame { height: 170px; overflow: hidden; background: #0b0e16; }
+.gt-photo { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.012); filter: saturate(.96) contrast(1.02); transition: transform .55s cubic-bezier(.2,.7,.2,1), filter .35s ease; }
+.game-card:hover .gt-photo { transform: scale(1.065); filter: saturate(1.08) contrast(1.04); }
 .gt-fit { height: 170px; display: grid; place-items: center; padding: 12px; }
 .gt-fit .board.mini { width: auto !important; height: 100%; max-width: 100%; border-width: 6px; box-shadow: 0 8px 22px -10px rgba(0,0,0,0.7); }
 .gt-fallback { height: 170px; display: grid; place-items: center; background:

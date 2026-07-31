@@ -25,6 +25,41 @@ same profile, progression, match, puzzle and review evidence:
 This loop is implemented by the pure, tested mission orchestrator in
 `src/intelligence/orchestrator.ts` and surfaced through `/path`.
 
+### 🧭 Strategy OS — ten connected platform systems
+
+`/os` is the platform map for a second, evidence-connected layer built on the
+same 38 engines:
+
+1. **Replay Lab** preserves bounded serialized positions, engine explanations,
+   annotations and drill-worthy turning points from completed games.
+2. **Strategy DNA** measures 12 transferable concepts with separate score,
+   confidence and evidence counts; unseen skills remain explicitly unmeasured.
+3. **Cross-game Training** builds source → bridge → transfer routes from
+   authored concept affinities and the platform's actual puzzle availability.
+4. **Explainable Coach** cites saved reviews and learner evidence instead of
+   inventing variations or pretending an empty profile is fully understood.
+5. **Adventure Campaigns** provide three expeditions and nine chapters, each
+   completed through the real observe → learn → practise → play → reflect loop.
+6. **Clubs, Tournaments & Spectating** add local-first clubs, scheduled tables,
+   deterministic brackets, friendly P2P play and read-only live rooms. There
+   are no stakes, paid entries, odds or randomized rewards.
+7. **Creator Studio** authors engine-validated puzzles, guided courses and
+   bounded challenge variants without executable code, custom HTML or CSS.
+8. **Physical-board Scanner** samples seven board families locally from a
+   photo, exposes confidence per cell and requires human correction before a
+   position can enter the game store. Photographs are never persisted.
+9. **Accessibility Suite** controls theme, contrast, colour differentiation,
+   text scale and spacing, motion, piece patterns and board narration.
+10. **Offline-first PWA** installs an app shell, supports safe update prompts
+    and can crawl the emitted Vite graph on demand so unvisited lazy routes and
+    game artwork remain available without a connection.
+
+The feature domains are intentionally separate (`src/intelligence`,
+`src/adventures`, `src/community`, `src/creator`, `src/scanner`,
+`src/accessibility`, and `src/pwa`) while sharing the existing learner ledger,
+game registry and validated game store. Local payloads are versioned, bounded
+and normalized on read.
+
 ### 🧠 A world-class step-by-step tutor
 
 Every move you (or the AI) make is analysed and graded **Brilliant → Blunder**,
@@ -153,6 +188,8 @@ sub-path with no extra configuration.
 npm run typecheck
 npm test
 npm run build
+npm run smoke:thumbnails  # all 32 realistic catalogue images
+npm run smoke:expansion   # all ten systems, interactions, PWA and mobile shell
 node --experimental-strip-types scripts/perft.ts     # verify chess move generation
 ```
 

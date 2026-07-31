@@ -3,10 +3,15 @@ import {
   loadRecords,
   normalizeGameRecord,
   normalizeGameRecords,
+  normalizeReplayTimeline,
+  replayFromLog,
   REVIEW_RECORDS_CHANGED_EVENT,
   saveRecord,
+  summarize,
   type GameRecord,
 } from './reviewSummary';
+import type { LogEntry } from '../store/useGameStore';
+import type { GameDefinition } from './types';
 
 const valid: GameRecord = {
   id: 'review-1',
@@ -71,5 +76,109 @@ describe('review persistence normalization', () => {
     expect(records[0]).toMatchObject({ gameId: 'go', gameName: 'Go' });
     expect(records[1]).toEqual(valid);
     expect(changeEvents).toBe(1);
+  });
+
+  it('builds a scrub-safe replay timeline from serialized standard-game positions', () => {
+    const log: LogEntry[] = [
+      {
+        ply: 1,
+        player: 0,
+        notation: 'e4',
+        replayStateBefore: 'start',
+        replayStateAfter: 'after-e4',
+        explanation: {
+          summary: 'Claims central space.',
+          band: 'good',
+          evalBefore: 0,
+          evalAfter: 18,
+          insights: [],
+          principles: ['Control the centre.'],
+        },
+      },
+      {
+        ply: 2,
+        player: 1,
+        notation: 'e5',
+        replayStateBefore: 'after-e4',
+        replayStateAfter: 'after-e5',
+      },
+    ];
+
+    expect(replayFromLog(log)).toEqual({
+      version: 1,
+      totalPlies: 2,
+      sampled: false,
+      frames: [
+        { ply: 0, player: null, notation: 'Initial position', state: 'start' },
+        {
+          ply: 1,
+          player: 0,
+          notation: 'e4',
+          state: 'after-e4',
+          band: 'good',
+          summary: 'Claims central space.',
+          principles: ['Control the centre.'],
+        },
+        { ply: 2, player: 1, notation: 'e5', state: 'after-e5' },
+      ],
+    });
+
+    const def = {
+      id: 'chess',
+      name: 'Chess',
+      emoji: '♟',
+      accent: '#7c3aed',
+      players: [{ name: 'White' }, { name: 'Black' }],
+    } as GameDefinition;
+    const summary = summarize(def, log, { kind: 'draw', reason: 'test' }, 0);
+    expect(summary.concepts).toEqual([
+      {
+        id: 'space-control',
+        label: 'Space control',
+        attempts: 1,
+        strong: 1,
+        needsWork: 0,
+        moves: [1],
+      },
+    ]);
+  });
+
+  it('bounds and repairs optional replay and concept evidence without rejecting legacy summaries', () => {
+    const replay = normalizeReplayTimeline({
+      version: 99,
+      totalPlies: 3,
+      sampled: false,
+      frames: [
+        { ply: 0, player: null, notation: 'Initial', state: 's0' },
+        { ply: 1, player: 0, notation: 'a1', state: 's1', principles: ['Plan', '', 42] },
+        { ply: 1, player: 0, notation: 'duplicate', state: 'bad' },
+        { ply: 3, player: 'admin', notation: 'a3', state: 's3', band: 'blunder' },
+      ],
+    });
+    expect(replay).toMatchObject({
+      version: 1,
+      totalPlies: 3,
+      sampled: true,
+      frames: [
+        { ply: 0, player: null, state: 's0' },
+        { ply: 1, player: 0, state: 's1', principles: ['Plan'] },
+        { ply: 3, player: null, state: 's3', band: 'blunder' },
+      ],
+    });
+
+    const repaired = normalizeGameRecord({
+      ...valid,
+      humanColor: 0,
+      replay,
+      concepts: [
+        { id: 'tempo', label: 'Tempo', attempts: 4, strong: 99, needsWork: 2, moves: [1, 1, 3, 'bad'] },
+        { id: '<script>', label: 'Unsafe', attempts: 1, strong: 1, needsWork: 0 },
+      ],
+    });
+    expect(repaired?.humanColor).toBe(0);
+    expect(repaired?.replay?.frames).toHaveLength(3);
+    expect(repaired?.concepts).toEqual([
+      { id: 'tempo', label: 'Tempo', attempts: 4, strong: 4, needsWork: 2, moves: [1, 3] },
+    ]);
   });
 });

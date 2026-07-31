@@ -19,6 +19,12 @@ import UltimateGame from '../components/UltimateGame';
 import SurakartaGame from '../components/SurakartaGame';
 import { isMuted, toggleMuted, resumeAudio } from '../audio/sound';
 import { QUICK_CHAT_PHRASES } from '../net/online';
+import {
+  normalizeWatchRoom,
+  SpectatorHost,
+  type SpectatorHostStatus,
+} from '../community/spectator';
+import { readScanDraft, SCAN_DRAFT_STORAGE_KEY } from '../scanner/positionDraft';
 import { useProfile, ratingTitle, ACHIEVEMENTS } from '../profile/profile';
 import type { Difficulty, MoveBase, Player } from '../engine/types';
 import { readMissionContext } from '../intelligence/missionRouting';
@@ -46,6 +52,8 @@ export default function GameScreen() {
   const [tab, setTab] = useState<'tutor' | 'moves' | 'setup' | 'chat'>('tutor');
   const [themeOpen, setThemeOpen] = useState(false);
   const [muted, setMutedState] = useState(isMuted());
+  const [broadcastStatus, setBroadcastStatus] = useState<SpectatorHostStatus>('offline');
+  const broadcastRef = useRef<SpectatorHost | null>(null);
   const rating = useProfile((s) => s.rating);
   const lastUnlocked = useProfile((s) => s.lastUnlocked);
   const clearLastUnlocked = useProfile((s) => s.clearLastUnlocked);
@@ -60,6 +68,8 @@ export default function GameScreen() {
   const routeDef = gameId ? getGame(gameId) : undefined;
   const joinCode = params.get('join');
   const hostCode = params.get('host');
+  const scanRequested = params.get('scan') === 'latest';
+  const broadcastRoom = normalizeWatchRoom(params.get('broadcast'));
   const requestedDifficulty = routeDifficulty(params.get('difficulty'));
   const missionContext = readMissionContext(params);
   const journeyStage = missionContext?.stage === 'observe'
@@ -69,13 +79,24 @@ export default function GameScreen() {
     : null;
 
   useEffect(() => {
+    let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
     if (gameId && routeDef) {
       const game = useGameStore.getState();
       if (requestedDifficulty) game.setDifficulty(requestedDifficulty);
-      game.newGame(gameId);
+      const scanDraft = scanRequested ? readScanDraft() : null;
+      const loaded = !!scanDraft
+        && scanDraft.gameId === gameId
+        && game.loadPosition(gameId, scanDraft.serialized, { humanColor: scanDraft.turn });
+      if (!loaded) game.newGame(gameId);
+      else {
+        cleanupTimer = setTimeout(() => {
+          try { sessionStorage.removeItem(SCAN_DRAFT_STORAGE_KEY); } catch { /* ignore */ }
+        }, 1_000);
+      }
     }
+    return () => { if (cleanupTimer) clearTimeout(cleanupTimer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameId, routeDef, requestedDifficulty]);
+  }, [gameId, routeDef, requestedDifficulty, scanRequested]);
 
   // Auto host/join a room from the URL (?join=GM-XXXXX from an invite link,
   // or ?host=GM-XXXXX when a lobby challenge sends both players to a shared code).
@@ -98,6 +119,28 @@ export default function GameScreen() {
       if (current.net) current.leaveOnline();
     };
   }, [gameId, routeDef, joinCode, hostCode]);
+
+  useEffect(() => {
+    if (!broadcastRoom || !gameId || !routeDef || routeDef.custom) {
+      setBroadcastStatus('offline');
+      return;
+    }
+    const host = new SpectatorHost();
+    host.onStatus = setBroadcastStatus;
+    broadcastRef.current = host;
+    setBroadcastStatus('connecting');
+    void host.connect(broadcastRoom);
+    return () => {
+      if (broadcastRef.current === host) broadcastRef.current = null;
+      host.onStatus = () => {};
+      host.close();
+    };
+  }, [broadcastRoom, gameId, routeDef]);
+
+  useEffect(() => {
+    if (!broadcastRoom || !gameId || !store.def || store.def.custom || !store.state) return;
+    broadcastRef.current?.publish(gameId, store.state, store.lastMove, store.log.map((entry) => entry.notation).slice(-24));
+  }, [broadcastRoom, gameId, store.def, store.state, store.lastMove, store.log]);
 
   useEffect(() => {
     if (!store.toast) return;
@@ -174,6 +217,18 @@ export default function GameScreen() {
   const over = store.status.kind === 'win' || store.status.kind === 'draw';
   const canDrop = (p: Player) => turn === p && !over && (store.mode === 'pass' || p === store.humanColor);
   const opening = def.identifyOpening?.(store.log.map((e) => e.notation)) ?? null;
+  const saveForCreator = () => {
+    try {
+      sessionStorage.setItem('gm-creator-handoff', JSON.stringify({
+        version: 1,
+        gameId: def.id,
+        setup: def.serialize(store.state),
+        createdAt: Date.now(),
+      }));
+    } catch {
+      store.setToast('This position could not be sent to Creator Studio.');
+    }
+  };
 
   return (
     <div className="game-screen" style={{ ['--accent' as any]: def.accent }}>
@@ -190,6 +245,19 @@ export default function GameScreen() {
           </div>
         </div>
         <div className="row gap-xs">
+          {broadcastRoom && (
+            <span
+              className={`chip broadcast-chip ${broadcastStatus} hide-sm`}
+              title={`Read-only room ${broadcastRoom} · ${broadcastStatus}`}
+              role="status"
+              aria-live="polite"
+            >
+              {broadcastStatus === 'live' ? '◉ Broadcast live'
+                : broadcastStatus === 'connecting' ? '◌ Broadcast connecting'
+                  : broadcastStatus === 'error' ? '⚠ Broadcast unavailable'
+                    : '○ Broadcast offline'}
+            </span>
+          )}
           <span className="chip rating-chip hide-sm" title="Your rating">⚡ {rating} · {ratingTitle(rating)}</span>
           <div className="seg" role="group" aria-label="Board view">
             <button className={store.view === '2d' ? 'on' : ''} aria-pressed={store.view === '2d'} onClick={() => store.setView('2d')}>2D</button>
@@ -197,6 +265,7 @@ export default function GameScreen() {
           </div>
           <button className="btn icon sm" aria-label={muted ? 'Unmute' : 'Mute'} title={muted ? 'Unmute' : 'Mute'} onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
           <button className="btn sm" onClick={() => setThemeOpen(true)}>🎨 Theme</button>
+          <Link className="btn sm ghost hide-sm" to="/creator" onClick={saveForCreator}>◇ Create</Link>
           <Link className="btn sm ghost hide-sm" to={`/learn/${def.id}`}>📖 Learn</Link>
         </div>
       </header>
