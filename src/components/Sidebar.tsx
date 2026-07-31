@@ -15,7 +15,8 @@ const GROUPS: { title: string; items: NavigationItem[] }[] = [
   { title: 'Your journey', items: [
     { to: '/', icon: '⌂', label: 'Today', end: true, mobile: true },
     { to: '/path', icon: '✦', label: 'My Path', mobile: true },
-    { to: '/studio', icon: '⊹', label: 'Studio', mobile: true },
+    { to: '/os', icon: '◈', label: 'Strategy OS', mobile: true },
+    { to: '/studio', icon: '⊹', label: 'Studio' },
   ] },
   { title: 'Explore', items: [
     { to: '/games', icon: '◫', label: 'Games', mobile: true },
@@ -23,6 +24,14 @@ const GROUPS: { title: string; items: NavigationItem[] }[] = [
     { to: '/puzzles', icon: '◇', label: 'Puzzles' },
     { to: '/openings', icon: '📖', label: 'Openings' },
     { to: '/lobby', icon: '◎', label: 'Play Online' },
+  ] },
+  { title: 'Build & connect', items: [
+    { to: '/intelligence', icon: '⌁', label: 'Intelligence Lab' },
+    { to: '/adventures', icon: '⬡', label: 'Adventures' },
+    { to: '/community', icon: '◉', label: 'Community' },
+    { to: '/creator', icon: '◇', label: 'Create' },
+    { to: '/scanner', icon: '▣', label: 'Scan Board' },
+    { to: '/settings', icon: '◐', label: 'Access & Offline' },
   ] },
   { title: 'Progress', items: [
     { to: '/reviews', icon: '⌁', label: 'Reviews' },
@@ -63,7 +72,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <Link to="/" className="sb-brand">
-        <span className="sb-mark">♞</span>
+        <span className="sb-mark" aria-hidden="true">♞</span>
         <span className="sb-name">GrandMaster</span>
       </Link>
 
@@ -73,7 +82,7 @@ export default function Sidebar() {
             <span className="sb-group-title">{g.title}</span>
             {g.items.map((n) => (
               <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => `sb-link ${n.mobile ? 'mobile-primary' : 'mobile-secondary'} ${isActive ? 'on' : ''}`}>
-                <span className="sb-ic">{n.icon}</span>
+                <span className="sb-ic" aria-hidden="true">{n.icon}</span>
                 <span className="sb-label">{n.label}</span>
                 {n.to === '/profile' && claimable > 0 && <span className="sb-badge" role="status" aria-label={`${claimable} reward${claimable === 1 ? '' : 's'} to claim`} title={`${claimable} reward${claimable === 1 ? '' : 's'} to claim`}>{claimable}</span>}
               </NavLink>
@@ -90,7 +99,7 @@ export default function Sidebar() {
         aria-controls="mobile-more"
         onClick={() => setMoreOpen((open) => !open)}
       >
-        <span className="sb-ic">•••</span><span className="sb-label">More</span>
+        <span className="sb-ic" aria-hidden="true">•••</span><span className="sb-label">More</span>
       </button>
 
       <nav className={`sb-mobile-more ${moreOpen ? 'open' : ''}`} id="mobile-more" aria-label="More navigation" aria-hidden={!moreOpen}>
@@ -106,7 +115,7 @@ export default function Sidebar() {
                 }}
                 aria-label="Close more navigation"
               >
-                ×
+                <span aria-hidden="true">×</span>
               </button>
             </div>
             <div className="sb-mobile-more-grid">
@@ -123,12 +132,24 @@ export default function Sidebar() {
       <Link to="/profile" className="sb-prog" title={`Level ${level} · ${into}/${span} XP`}>
         <div className="sb-prog-top">
           <span className="sb-lvl">Lv {level}</span>
-          <span className="sb-coins">🪙 {coins.toLocaleString()}</span>
+          <span className="sb-coins" aria-label={`${coins.toLocaleString()} coins`}>
+            <span aria-hidden="true">🪙</span> {coins.toLocaleString()}
+          </span>
         </div>
-        <div className="sb-xp"><div className="sb-xp-fill" style={{ width: `${pct}%` }} /></div>
+        <div
+          className="sb-xp"
+          role="progressbar"
+          aria-label={`Level ${level} experience`}
+          aria-valuemin={0}
+          aria-valuemax={span}
+          aria-valuenow={into}
+          aria-valuetext={`${into} of ${span} XP`}
+        >
+          <div className="sb-xp-fill" style={{ width: `${pct}%` }} />
+        </div>
       </Link>
 
-      <Link to="/path" className="btn primary sb-cta">✦ Continue my path</Link>
+      <Link to="/path" className="btn primary sb-cta"><span aria-hidden="true">✦</span> Continue my path</Link>
     </aside>
   );
 }

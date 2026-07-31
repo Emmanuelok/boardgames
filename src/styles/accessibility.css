@@ -1,0 +1,148 @@
+:root { --a11y-text-scale: 1; }
+html { font-size: calc(16px * var(--a11y-text-scale)); }
+
+html[data-ui-theme='light'] {
+  color-scheme: light;
+  --bg-0: #f5f7fc;
+  --bg-1: #edf1f8;
+  --bg-2: #ffffff;
+  --ink: #111827;
+  --ink-dim: #3f4a61;
+  --ink-faint: #647087;
+  --line: rgba(15, 23, 42, .12);
+  --line-strong: rgba(15, 23, 42, .24);
+  --glass-bg: rgba(255, 255, 255, .74);
+  --glass-bd: rgba(15, 23, 42, .13);
+  --shadow: 0 24px 60px -24px rgba(42, 52, 75, .35);
+}
+html[data-ui-theme='light'] body { background: var(--bg-0); }
+html[data-ui-theme='light'] .app-bg {
+  background:
+    radial-gradient(70% 55% at 12% 6%, rgba(124, 92, 255, .18), transparent 60%),
+    radial-gradient(60% 60% at 88% 12%, rgba(34, 211, 238, .13), transparent 60%),
+    linear-gradient(180deg, #f9faff, #eef3fb 62%, #f7f9fc);
+}
+html[data-ui-theme='light'] .glass-soft,
+html[data-ui-theme='light'] .btn,
+html[data-ui-theme='light'] input,
+html[data-ui-theme='light'] textarea {
+  color: var(--ink);
+}
+html[data-ui-theme='light'] .gradient-text {
+  background-image: linear-gradient(110deg, #111827 10%, #6d28d9 45%, #0891b2 78%, #111827);
+}
+
+/* These surfaces intentionally remain dark in every theme. Scope dark tokens
+   locally so choosing Light never creates dark-on-dark copy or controls. */
+html[data-ui-theme='light'] :is(
+  .sidebar,
+  .os-hero,
+  .il-hero,
+  .il-tabs,
+  .adv-hero,
+  .community-hero,
+  .community-tabs,
+  .creator-hero,
+  .connectivity-badge
+) {
+  --ink: #f4f7ff;
+  --ink-dim: #b8c2dc;
+  --ink-faint: #8793b2;
+  --line: rgba(255,255,255,.13);
+  --line-strong: rgba(255,255,255,.24);
+  color: var(--ink);
+}
+html[data-ui-theme='light'] :is(
+  .creator-editor input,
+  .creator-editor select,
+  .creator-editor textarea,
+  .creator-import input,
+  .community-panel input,
+  .community-panel select,
+  .community-panel textarea
+) {
+  background: rgba(255,255,255,.92);
+  color: #111827;
+  border-color: rgba(15,23,42,.22);
+}
+
+html[data-contrast='high'] {
+  --ink: #ffffff;
+  --ink-dim: #eef2ff;
+  --ink-faint: #d4daec;
+  --line: rgba(255,255,255,.34);
+  --line-strong: rgba(255,255,255,.72);
+  --glass-bg: rgba(0,0,0,.8);
+  --glass-bd: rgba(255,255,255,.62);
+}
+html[data-ui-theme='light'][data-contrast='high'] {
+  --ink: #000000;
+  --ink-dim: #111111;
+  --ink-faint: #292929;
+  --line: rgba(0,0,0,.35);
+  --line-strong: rgba(0,0,0,.75);
+  --glass-bg: rgba(255,255,255,.96);
+  --glass-bd: rgba(0,0,0,.65);
+}
+html[data-contrast='high'] :focus-visible { outline-width: 4px; outline-color: #facc15; }
+html[data-contrast='high'] .faint,
+html[data-contrast='high'] .muted { opacity: 1; }
+
+html[data-color-vision='deuteranopia'] {
+  --accent: #6366f1; --accent-2: #f59e0b; --good: #38bdf8; --bad: #f97316;
+}
+html[data-color-vision='protanopia'] {
+  --accent: #2563eb; --accent-2: #fbbf24; --good: #06b6d4; --bad: #a855f7;
+}
+html[data-color-vision='tritanopia'] {
+  --accent: #dc2626; --accent-2: #14b8a6; --good: #16a34a; --bad: #db2777;
+}
+html[data-color-vision='monochrome'] {
+  --accent: #e5e7eb; --accent-2: #ffffff; --good: #ffffff; --bad: #a3a3a3; --warn: #d4d4d4;
+}
+html[data-color-vision='monochrome'] .app-bg,
+html[data-color-vision='monochrome'] .blob { filter: grayscale(1); }
+
+html[data-readable-font='true'] {
+  --font: Verdana, Tahoma, 'Segoe UI', Arial, sans-serif;
+  --font-display: Verdana, Tahoma, 'Segoe UI', Arial, sans-serif;
+}
+html[data-readable-font='true'] h1,
+html[data-readable-font='true'] h2,
+html[data-readable-font='true'] h3 { letter-spacing: 0; }
+
+html[data-text-spacing='relaxed'] body { line-height: 1.65; letter-spacing: .025em; word-spacing: .08em; }
+html[data-text-spacing='relaxed'] p,
+html[data-text-spacing='relaxed'] li { line-height: 1.8; }
+
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+  animation-duration: .001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .001ms !important;
+  scroll-behavior: auto !important;
+}
+html[data-motion='full'] .route-fade { animation: route-in .18s ease !important; }
+
+/* Board2D integration: add data-player to the `.pc` element. The patterns keep
+   player identity visible when colours are unavailable or indistinguishable. */
+html[data-player-patterns='true'] .pc[data-player='0']::after {
+  content: ''; position: absolute; inset: 12%; border-radius: inherit; pointer-events: none;
+  background: repeating-linear-gradient(45deg, transparent 0 5px, rgba(0,0,0,.28) 5px 7px);
+}
+html[data-player-patterns='true'] .pc[data-player='1']::after {
+  content: ''; position: absolute; inset: 12%; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(circle, rgba(255,255,255,.55) 1.5px, transparent 2px) 0 0 / 7px 7px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-motion='system'] *,
+  html[data-motion='system'] *::before,
+  html[data-motion='system'] *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -23,6 +23,6 @@ describe('<Sidebar>', () => {
     // 50 (win) + 40 (discovery) = 90 XP ≥ 80 needed for L2 → level 2.
     expect(screen.getByText('Lv 2')).toBeInTheDocument();
     // coins: 20 (win) + 25 (discovery) + 25 (level-up) = 70.
-    expect(screen.getByText('🪙 70')).toBeInTheDocument();
+    expect(screen.getByLabelText('70 coins')).toBeInTheDocument();
   });
 });

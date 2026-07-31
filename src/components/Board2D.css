@@ -59,6 +59,7 @@
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
+.board.readonly .cell { cursor: default; }
 .cell.void { cursor: default; }
 .board.go .cell { background: transparent !important; }
 /* Keyboard focus: a crisp inset ring (the board clips overflow, so an outline would be cut off). */

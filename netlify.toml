@@ -9,7 +9,7 @@
   for = "/*"
   [headers.values]
     Content-Security-Policy = "base-uri 'self'; frame-ancestors 'none'; object-src 'none'"
-    Permissions-Policy = "camera=(), geolocation=(), microphone=()"
+    Permissions-Policy = "camera=(self), geolocation=(), microphone=()"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Strict-Transport-Security = "max-age=31536000"
     X-Content-Type-Options = "nosniff"
@@ -17,6 +17,17 @@
 
 [[headers]]
   for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Service-Worker-Allowed = "/"
+
+[[headers]]
+  for = "/manifest.webmanifest"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
