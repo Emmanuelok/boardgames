@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { OpeningInfo } from '../games/chess/openings';
 import type { BoardTheme } from '../themes/boardThemes';
 import chess from '../games/chess';
@@ -34,8 +34,30 @@ export default function OpeningTrainer({ opening, theme, onExit }: { opening: Op
   const [reply, setReply] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [missedThisStep, setMissedThisStep] = useState(false);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceGeneration = useRef(0);
 
-  const restart = (nextSide: 0 | 1 = side) => { setSide(nextSide); setStepIdx(0); setCorrect(0); setMisses(0); setReply(null); setDone(false); setMissedThisStep(false); };
+  const cancelPendingAdvance = () => {
+    advanceGeneration.current += 1;
+    if (advanceTimer.current !== null) clearTimeout(advanceTimer.current);
+    advanceTimer.current = null;
+  };
+
+  useEffect(() => () => {
+    advanceGeneration.current += 1;
+    if (advanceTimer.current !== null) clearTimeout(advanceTimer.current);
+  }, []);
+
+  const restart = (nextSide: 0 | 1 = side) => {
+    cancelPendingAdvance();
+    setSide(nextSide);
+    setStepIdx(0);
+    setCorrect(0);
+    setMisses(0);
+    setReply(null);
+    setDone(false);
+    setMissedThisStep(false);
+  };
 
   const ply = myPlies[stepIdx];
   // Opening White move shown when you train Black and the first move is the opponent's.
@@ -43,16 +65,23 @@ export default function OpeningTrainer({ opening, theme, onExit }: { opening: Op
 
   const onSolved = () => {
     if (!missedThisStep) setCorrect((c) => c + 1);
-    playSound('move');
+    playSound('objective', { intensity: 0.58, depth: stepIdx + 1 });
     const oppPly = ply + 1;
     const advance = () => {
       setReply(null);
       setMissedThisStep(false);
       if (stepIdx + 1 < myPlies.length) setStepIdx((i) => i + 1);
-      else { setDone(true); playSound('win'); }
+      else { setDone(true); playSound('complete', { intensity: misses === 0 ? 0.94 : 0.74, depth: myPlies.length }); }
     };
-    if (oppPly < opening.moves.length) { setReply(`${side === 0 ? 'Black' : 'White'} replies ${opening.moves[oppPly]}`); setTimeout(advance, 1150); }
-    else setTimeout(advance, 700);
+    const generation = advanceGeneration.current;
+    const delay = oppPly < opening.moves.length ? 1150 : 700;
+    if (oppPly < opening.moves.length) setReply(`${side === 0 ? 'Black' : 'White'} replies ${opening.moves[oppPly]}`);
+    if (advanceTimer.current !== null) clearTimeout(advanceTimer.current);
+    advanceTimer.current = setTimeout(() => {
+      if (generation !== advanceGeneration.current) return;
+      advanceTimer.current = null;
+      advance();
+    }, delay);
   };
   const onFailed = () => { setMisses((m) => m + 1); setMissedThisStep(true); };
 

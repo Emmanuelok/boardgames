@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ACCESSIBILITY_EVENT,
   DEFAULT_ACCESSIBILITY_PREFERENCES,
@@ -11,6 +11,17 @@ import {
   type TextScale,
   type UiTheme,
 } from '../accessibility/preferences';
+import {
+  MUTE_STORAGE_KEY,
+  SOUND_INTENSITY_STORAGE_KEY,
+  getSoundIntensityMode,
+  isMuted,
+  playSound,
+  resumeAudio,
+  setMuted,
+  setSoundIntensityMode,
+  type SoundIntensityMode,
+} from '../audio/sound';
 import PwaStatus from '../pwa/PwaStatus';
 import './Settings.css';
 
@@ -25,6 +36,11 @@ const MOTION: Choice<MotionMode>[] = [
   { value: 'system', label: 'System', description: 'Respect the device setting.' },
   { value: 'reduced', label: 'Reduced', description: 'Remove decorative movement.' },
   { value: 'full', label: 'Full', description: 'Keep all interface motion.' },
+];
+const SOUND_MIXES: Choice<SoundIntensityMode>[] = [
+  { value: 'cinematic', label: 'Cinematic', description: 'Highest impact with the fullest spatial ambience.' },
+  { value: 'balanced', label: 'Balanced', description: 'Rich feedback with moderate impact and ambience.' },
+  { value: 'quiet', label: 'Quiet', description: 'Essential cues at a lower level with restrained ambience.' },
 ];
 const SCALES: Choice<TextScale>[] = [
   { value: 100, label: 'Standard', description: '100% interface text.' },
@@ -41,7 +57,19 @@ const COLOR_MODES: Choice<ColorVisionMode>[] = [
 
 export default function Settings() {
   const [preferences, setPreferences] = useState<AccessibilityPreferences>(() => readAccessibilityPreferences());
+  const [soundEnabled, setSoundEnabled] = useState(() => !isMuted());
+  const [soundMix, setSoundMix] = useState<SoundIntensityMode>(() => getSoundIntensityMode());
   const [saved, setSaved] = useState('');
+  const savedTimer = useRef<number | null>(null);
+
+  const showSaved = useCallback((message: string) => {
+    if (savedTimer.current !== null) window.clearTimeout(savedTimer.current);
+    setSaved(message);
+    savedTimer.current = window.setTimeout(() => {
+      setSaved('');
+      savedTimer.current = null;
+    }, 3000);
+  }, []);
 
   useEffect(() => {
     const persisted = saveAccessibilityPreferences(preferences);
@@ -51,15 +79,70 @@ export default function Settings() {
       applyAccessibilityPreferences(preferences);
       window.dispatchEvent(new CustomEvent(ACCESSIBILITY_EVENT, { detail: preferences }));
     }
-    setSaved(persisted
+    showSaved(persisted
       ? 'Preferences applied and saved on this device.'
       : 'Preferences applied for this session, but this browser could not save them.');
-    const timer = window.setTimeout(() => setSaved(''), 3000);
-    return () => window.clearTimeout(timer);
-  }, [preferences]);
+  }, [preferences, showSaved]);
+
+  useEffect(() => () => {
+    if (savedTimer.current !== null) window.clearTimeout(savedTimer.current);
+  }, []);
 
   const patch = <K extends keyof AccessibilityPreferences>(key: K, value: AccessibilityPreferences[K]) => {
     setPreferences((current) => ({ ...current, [key]: value }));
+  };
+
+  const updateSoundEnabled = (enabled: boolean) => {
+    resumeAudio();
+    setMuted(!enabled);
+    setSoundEnabled(enabled);
+    let persisted = false;
+    try {
+      persisted = localStorage.getItem(MUTE_STORAGE_KEY) === String(!enabled);
+    } catch {
+      // The in-memory preference still applies to the current session.
+    }
+    showSaved(persisted
+      ? `Game sound switched ${enabled ? 'on' : 'off'} and saved on this device.`
+      : `Game sound switched ${enabled ? 'on' : 'off'} for this session; this browser could not save it.`);
+    if (enabled) playSound('select', { intensity: 0.55 });
+  };
+
+  const updateSoundMix = (mode: SoundIntensityMode) => {
+    resumeAudio();
+    setSoundIntensityMode(mode);
+    setSoundMix(mode);
+    let persisted = false;
+    try {
+      persisted = localStorage.getItem(SOUND_INTENSITY_STORAGE_KEY) === mode;
+    } catch {
+      // The in-memory preference still applies to the current session.
+    }
+    const label = SOUND_MIXES.find((choice) => choice.value === mode)?.label ?? 'Sound';
+    showSaved(persisted
+      ? `${label} mix saved on this device.`
+      : `${label} mix applied for this session; this browser could not save it.`);
+    if (soundEnabled) playSound('combo', { intensity: 0.8, depth: 3 });
+  };
+
+  const previewSound = () => {
+    resumeAudio();
+    let enabledWasPersisted = soundEnabled;
+    if (!soundEnabled) {
+      setMuted(false);
+      setSoundEnabled(true);
+      try {
+        enabledWasPersisted = localStorage.getItem(MUTE_STORAGE_KEY) === 'false';
+      } catch {
+        enabledWasPersisted = false;
+      }
+    }
+    playSound('complete', { intensity: 0.9, depth: 4 });
+    showSaved(soundEnabled
+      ? 'Playing the current game-completion mix.'
+      : enabledWasPersisted
+        ? 'Game sound switched on and saved; playing the completion mix.'
+        : 'Game sound switched on for this session; playing the completion mix.');
   };
 
   return (
@@ -95,6 +178,39 @@ export default function Settings() {
             value={preferences.motion}
             onChange={(value) => patch('motion', value)}
           />
+
+          <fieldset className="settings-group settings-sound glass">
+            <legend>Sound & game feedback</legend>
+            <p>Choose how strongly moves, captures, cascades and victories respond. Every cue is an original real-time synthesis made for this platform.</p>
+            <Toggle
+              label="Game sound"
+              description="Play contextual effects for interface actions and every supported game."
+              checked={soundEnabled}
+              onChange={updateSoundEnabled}
+            />
+            <div className="settings-sound-heading">
+              <strong id="settings-sound-mix-label">Sound mix</strong>
+              <span>Intensity changes the presentation, never the rules.</span>
+            </div>
+            <div className="settings-choices" role="radiogroup" aria-labelledby="settings-sound-mix-label">
+              {SOUND_MIXES.map((choice) => (
+                <label className={soundMix === choice.value ? 'on' : ''} key={choice.value}>
+                  <input
+                    type="radio"
+                    name="preference-sound-mix"
+                    value={choice.value}
+                    checked={soundMix === choice.value}
+                    onChange={() => updateSoundMix(choice.value)}
+                  />
+                  <strong>{choice.label}</strong>
+                  <small>{choice.description}</small>
+                </label>
+              ))}
+            </div>
+            <button type="button" className="btn ghost settings-sound-preview" onClick={previewSound}>
+              {soundEnabled ? 'Preview completion mix' : 'Turn on & preview completion mix'}
+            </button>
+          </fieldset>
 
           <PreferenceGroup
             title="Colour differentiation"

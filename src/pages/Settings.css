@@ -33,6 +33,18 @@
 .settings-toggle input:checked { background: var(--accent); }
 .settings-toggle input:checked::before { transform: translateX(20px); background: #fff; }
 
+.settings-sound {
+  background:
+    radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--accent-2) 13%, transparent), transparent 38%),
+    var(--glass-bg);
+}
+.settings-sound-heading {
+  display: flex; align-items: end; justify-content: space-between; gap: 16px;
+  margin: 14px 0 10px; padding-top: 2px;
+}
+.settings-sound-heading > span { color: var(--ink-faint); font-size: 11.5px; text-align: right; }
+.settings-sound-preview { width: 100%; justify-content: center; margin-top: 12px; }
+
 .settings-preview { padding: 20px; display: grid; gap: 11px; }
 .settings-preview h2 { margin: 0; font-size: 24px; }
 .settings-preview p { margin: 0; font-size: 13px; }
@@ -54,6 +66,8 @@
   .settings-choices { grid-template-columns: 1fr; }
   .settings-choices.many { grid-template-columns: repeat(2, 1fr); }
   .settings-side { grid-template-columns: 1fr; }
+  .settings-sound-heading { align-items: start; flex-direction: column; gap: 4px; }
+  .settings-sound-heading > span { text-align: left; }
   .settings-reset, .settings-saved { grid-column: auto; }
 }
 @media (max-width: 390px) { .settings-choices.many { grid-template-columns: 1fr; } }

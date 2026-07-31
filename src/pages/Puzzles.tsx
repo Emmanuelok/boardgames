@@ -46,7 +46,7 @@ export default function Puzzles() {
   const save = (s: { solved: number; best: number; streak: number }) => { setStats(s); try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } };
   const onSolved = () => {
     if (result !== 'idle') return;
-    playSound('win');
+    playSound('objective', { intensity: 0.78, depth: streak + 1 });
     const ns = streak + 1;
     setStreak(ns); setResult('solved');
     save({ solved: stats.solved + 1, best: Math.max(stats.best, ns), streak: ns });
@@ -72,7 +72,7 @@ export default function Puzzles() {
   };
   const onFailed = () => {
     if (result !== 'idle') return;
-    playSound('illegal'); setStreak(0); setResult('failed');
+    playSound('illegal', { intensity: 0.38 }); setStreak(0); setResult('failed');
     save({ ...stats, streak: 0 });
     const memory = useLearningMemory.getState();
     if (

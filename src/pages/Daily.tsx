@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useProgression } from '../progression/progression';
 import { Link } from 'react-router-dom';
 import { ALL_PUZZLES } from '../puzzles/allPuzzles';
 import { getGame } from '../engine/registry';
 import { getTheme } from '../themes/boardThemes';
 import InteractiveLesson from '../components/InteractiveLesson';
-import { playSound, resumeAudio } from '../audio/sound';
+import { playSound } from '../audio/sound';
 import {
   isLocalDateKey,
   localDateKey,
@@ -76,8 +76,6 @@ export default function Daily() {
   const doneToday = store.lastDate === today;
   const liveStreak = store.lastDate === today || store.lastDate === yesterday ? store.streak : 0;
 
-  useEffect(() => { resumeAudio(); }, []);
-
   const save = (value: DailyStore) => {
     const normalized = normalizeDailyStore(value);
     setStore(normalized);
@@ -86,7 +84,7 @@ export default function Daily() {
 
   const onSolved = () => {
     if (result !== 'idle') return;
-    playSound('win');
+    playSound('complete', { intensity: 0.9, depth: liveStreak + 1 });
     setResult('solved');
     if (store.lastDate === today) return; // already counted today
     const streak = store.lastDate === yesterday ? Math.min(MAX_DAILY_COUNTER, store.streak + 1) : 1;
@@ -99,7 +97,7 @@ export default function Daily() {
     });
     try { useProgression.getState().recordDaily(streak); } catch { /* ignore */ }
   };
-  const onFailed = () => { if (result === 'idle') { playSound('illegal'); setResult('failed'); } };
+  const onFailed = () => { if (result === 'idle') { playSound('illegal', { intensity: 0.38 }); setResult('failed'); } };
 
   const share = async () => {
     const text = `🎯 GrandMaster Daily — ${new Date().toLocaleDateString()}\nSolved today’s ${def.name} challenge! 🔥 ${Math.max(liveStreak, 1)}-day streak.`;

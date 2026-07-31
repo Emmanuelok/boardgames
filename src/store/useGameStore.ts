@@ -117,6 +117,31 @@ function ensureNotation(def: GameDefinition, state: any, move: MoveBase): MoveBa
   return m ?? move;
 }
 
+/** Give board sounds a stable left/right position and a little event weight.
+ *  This is deliberately derived from game state rather than randomness, so
+ *  replaying the same move produces the same spatial cue. */
+function moveSoundOptions(def: GameDefinition, state: unknown, move: MoveBase) {
+  let pan = 0;
+  try {
+    const view = def.getBoardView(state);
+    const index = move.to >= 0 ? move.to : move.from;
+    const cell = index === undefined ? undefined : view.cells.find((candidate) => candidate.index === index);
+    if (cell && view.cols > 1) pan = ((cell.col / (view.cols - 1)) * 2 - 1) * 0.65;
+  } catch { /* audio positioning is decorative, never gameplay-critical */ }
+
+  const affected = Math.max(move.capture ? 1 : 0, move.affected?.length ?? 0);
+  const intensity = move.capture
+    ? Math.min(0.92, 0.56 + affected * 0.07)
+    : move.promotion
+      ? 0.9
+      : move.arrow !== undefined
+        ? 0.76
+        : move.from === undefined
+          ? 0.48
+          : 0.42;
+  return { intensity, pan };
+}
+
 function replayState(def: GameDefinition, state: unknown): string | undefined {
   try {
     const serialized = def.serialize(state);
@@ -240,8 +265,18 @@ export const useGameStore = create<State>((set, get) => {
     else if (status.kind === 'check') snd = 'check';
     else if (m.castle) snd = 'castle';
     else if (m.promo || m.promotion) snd = 'promote';
+    else if (move.arrow !== undefined) snd = 'special';
     else if (move.capture) snd = 'capture';
-    playSound(snd);
+    else if (move.drop || move.from === undefined) snd = 'place';
+    const options = moveSoundOptions(get().def!, get().state, move);
+    playSound(snd, {
+      ...options,
+      intensity: status.kind === 'win' || status.kind === 'draw'
+        ? 1
+        : status.kind === 'check'
+          ? 0.86
+          : options.intensity,
+    });
 
     if ((status.kind === 'win' || status.kind === 'draw') && !recorded && get().mode === 'ai') {
       recorded = true;
@@ -770,6 +805,7 @@ export const useGameStore = create<State>((set, get) => {
         const cols = def.getBoardView(state).cols;
         const m = def.getLegalMoves(state, null).find((mv) => mv.to % cols === cell % cols);
         if (m && commit(m, state)) scheduleDrive(120);
+        else playSound('illegal', { intensity: 0.28, pan: moveSoundOptions(def, state, { id: 'invalid', to: cell, notation: '' }).pan });
         return;
       }
 
@@ -785,20 +821,29 @@ export const useGameStore = create<State>((set, get) => {
           if (m) { if (commit(m, state)) scheduleDrive(120); return; }
           if (cell === sel || ownAmazon(cell)) { // restart selection on this amazon
             const dests = dedupeTo(all.filter((mv) => mv.from === cell));
-            set({ selected: cell, pendingTo: null, targets: dests }); playSound('select'); return;
+            set({ selected: cell, pendingTo: null, targets: dests });
+            playSound('select', { intensity: 0.34, pan: moveSoundOptions(def, state, { id: 'select', to: cell, notation: '' }).pan });
+            return;
           }
-          set({ selected: null, pendingTo: null, targets: [] }); return;
+          set({ selected: null, pendingTo: null, targets: [] });
+          playSound('illegal', { intensity: 0.26, pan: moveSoundOptions(def, state, { id: 'invalid', to: cell, notation: '' }).pan });
+          return;
         }
         if (sel !== null && all.some((mv) => mv.from === sel && mv.to === cell)) {
           // Phase 1→2: destination chosen; show arrow targets from there.
           const arrows = all.filter((mv) => mv.from === sel && mv.to === cell)
             .map((mv) => ({ ...mv, to: (mv as any).arrow as number })); // synthetic targets at arrow squares
-          set({ pendingTo: cell, targets: dedupeTo(arrows) }); playSound('select'); return;
+          set({ pendingTo: cell, targets: dedupeTo(arrows) });
+          playSound('move', { intensity: 0.34, pan: moveSoundOptions(def, state, { id: 'stage', to: cell, notation: '' }).pan });
+          return;
         }
         if (ownAmazon(cell)) { // (re)select an amazon
-          set({ selected: cell, pendingTo: null, targets: dedupeTo(all.filter((mv) => mv.from === cell)) }); playSound('select'); return;
+          set({ selected: cell, pendingTo: null, targets: dedupeTo(all.filter((mv) => mv.from === cell)) });
+          playSound('select', { intensity: 0.34, pan: moveSoundOptions(def, state, { id: 'select', to: cell, notation: '' }).pan });
+          return;
         }
         set({ selected: null, pendingTo: null, targets: [] });
+        playSound('illegal', { intensity: 0.26, pan: moveSoundOptions(def, state, { id: 'invalid', to: cell, notation: '' }).pan });
         return;
       }
 
@@ -808,6 +853,7 @@ export const useGameStore = create<State>((set, get) => {
         const m = get().targets.find((mv) => mv.drop === armed && mv.to === cell);
         set({ selectedDrop: null, targets: [], selected: null });
         if (m && commit(m, state)) scheduleDrive(120);
+        else playSound('illegal', { intensity: 0.28, pan: moveSoundOptions(def, state, { id: 'invalid-drop', to: cell, notation: '' }).pan });
         return;
       }
 
@@ -815,10 +861,24 @@ export const useGameStore = create<State>((set, get) => {
       const r = resolveClick(def, state, selected, get().targets, cell);
       switch (r.kind) {
         case 'play': if (commit(r.move, state)) scheduleDrive(120); break;
-        case 'select': set({ selected: r.cell, targets: r.targets }); playSound('select'); break;
-        case 'promote': set({ promotion: { from: r.from, to: r.to, options: r.options } }); break;
-        case 'clear': set({ selected: null, targets: [] }); break;
-        case 'none': break;
+        case 'select':
+          set({ selected: r.cell, targets: r.targets });
+          playSound('select', { intensity: 0.34, pan: moveSoundOptions(def, state, { id: 'select', to: r.cell, notation: '' }).pan });
+          break;
+        case 'promote':
+          set({ promotion: { from: r.from, to: r.to, options: r.options } });
+          playSound('special', { intensity: 0.48, pan: moveSoundOptions(def, state, { id: 'promotion-choice', to: r.to, notation: '' }).pan });
+          break;
+        case 'clear':
+          set({ selected: null, targets: [] });
+          playSound(cell === selected ? 'click' : 'illegal', {
+            intensity: cell === selected ? 0.2 : 0.26,
+            pan: moveSoundOptions(def, state, { id: 'clear', to: cell, notation: '' }).pan,
+          });
+          break;
+        case 'none':
+          playSound('illegal', { intensity: 0.24, pan: moveSoundOptions(def, state, { id: 'invalid', to: cell, notation: '' }).pan });
+          break;
       }
     },
 
@@ -828,7 +888,7 @@ export const useGameStore = create<State>((set, get) => {
       if (selectedDrop === kind) { set({ selectedDrop: null, targets: [] }); return; }
       const drops = def.getLegalMoves(state, null).filter((m) => m.drop === kind);
       set({ selectedDrop: kind, targets: drops, selected: null });
-      playSound('select');
+      playSound('select', { intensity: 0.38 });
     },
 
     passTurn() {
@@ -870,6 +930,7 @@ export const useGameStore = create<State>((set, get) => {
       });
       requestEval();
       requestThreats();
+      playSound('undo', { intensity: 0.46 });
       scheduleDrive(0);
     },
 
@@ -893,6 +954,7 @@ export const useGameStore = create<State>((set, get) => {
       });
       requestEval();
       requestThreats();
+      playSound('move', { intensity: 0.34 });
       scheduleDrive(0);
     },
 

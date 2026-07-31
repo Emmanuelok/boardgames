@@ -26,7 +26,7 @@ export default function DotsAndBoxesGame({ aiDifficulty = 'medium' }: { aiDiffic
   useEffect(() => {
     if (!over || recorded) return;
     setRecorded(true);
-    playSound(win === 0 ? 'win' : 'lose');
+    playSound(win === 0 ? 'win' : 'lose', { intensity: 1 });
     recordResult('dots-and-boxes', win === 0 ? 'win' : 'loss', aiDifficulty as any);
   }, [over, win, recorded, recordResult, aiDifficulty]);
 
@@ -37,7 +37,8 @@ export default function DotsAndBoxesGame({ aiDifficulty = 'medium' }: { aiDiffic
       const before = s.scores[1];
       const e = chooseMove(s, aiDifficulty);
       const ns = applyEdge(s, e);
-      playSound(ns.scores[1] > before ? 'capture' : 'move');
+      const scored = ns.scores[1] - before;
+      playSound(scored > 0 ? 'score' : 'place', { intensity: scored > 0 ? 0.68 + scored * 0.1 : 0.38, depth: scored });
       setLast(e);
       setLog((l) => [...l, moveComment(s, e, ns)]);
       setS(ns);
@@ -50,7 +51,8 @@ export default function DotsAndBoxesGame({ aiDifficulty = 'medium' }: { aiDiffic
     if (over || s.turn !== 0 || s.edges[edge]) return;
     const before = s.scores[0];
     const ns = applyEdge(s, edge);
-    playSound(ns.scores[0] > before ? 'capture' : 'move');
+    const scored = ns.scores[0] - before;
+    playSound(scored > 0 ? 'score' : 'place', { intensity: scored > 0 ? 0.7 + scored * 0.1 : 0.4, depth: scored });
     setLast(edge);
     setLog((l) => [...l, moveComment(s, edge, ns)]);
     setS(ns);
@@ -65,14 +67,32 @@ export default function DotsAndBoxesGame({ aiDifficulty = 'medium' }: { aiDiffic
   const hedges = [];
   for (let r = 0; r <= R; r++) for (let c = 0; c < C; c++) {
     const e = hIdx(r, c);
+    const state = s.edges[e]
+      ? `drawn${last === e ? ', last move' : ''}`
+      : over
+        ? 'not available, game over'
+        : s.turn === 0
+          ? 'draw this line'
+          : 'not available, wait for Red';
     hedges.push(<button key={`h${e}`} className={`db-edge h ${s.edges[e] ? 'on' : ''} ${last === e ? 'last' : ''} ${claimable.has(e) && s.turn === 0 && !over ? 'live' : ''}`}
-      style={{ gridRow: 2 * r + 1, gridColumn: 2 * c + 2 }} onClick={() => drawEdge(e)} aria-label="edge" />);
+      style={{ gridRow: 2 * r + 1, gridColumn: 2 * c + 2 }} onClick={() => drawEdge(e)}
+      aria-label={`Horizontal edge, dot row ${r + 1}, columns ${c + 1} to ${c + 2}: ${state}`}
+      aria-pressed={s.edges[e]} aria-disabled={s.edges[e] || over || s.turn !== 0} />);
   }
   const vedges = [];
   for (let r = 0; r < R; r++) for (let c = 0; c <= C; c++) {
     const e = vIdx(r, c);
+    const state = s.edges[e]
+      ? `drawn${last === e ? ', last move' : ''}`
+      : over
+        ? 'not available, game over'
+        : s.turn === 0
+          ? 'draw this line'
+          : 'not available, wait for Red';
     vedges.push(<button key={`v${e}`} className={`db-edge v ${s.edges[e] ? 'on' : ''} ${last === e ? 'last' : ''} ${claimable.has(e) && s.turn === 0 && !over ? 'live' : ''}`}
-      style={{ gridRow: 2 * r + 2, gridColumn: 2 * c + 1 }} onClick={() => drawEdge(e)} aria-label="edge" />);
+      style={{ gridRow: 2 * r + 2, gridColumn: 2 * c + 1 }} onClick={() => drawEdge(e)}
+      aria-label={`Vertical edge, dot column ${c + 1}, rows ${r + 1} to ${r + 2}: ${state}`}
+      aria-pressed={s.edges[e]} aria-disabled={s.edges[e] || over || s.turn !== 0} />);
   }
   const boxes = [];
   for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) {
@@ -101,7 +121,7 @@ export default function DotsAndBoxesGame({ aiDifficulty = 'medium' }: { aiDiffic
 
         <div className="db-controls">
           <button className="btn sm" onClick={() => { setS(initialState()); setLast(null); setLog([]); setRecorded(false); }}>↻ New game</button>
-          <button className="btn icon sm" onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
+          <button className="btn icon sm" aria-label={muted ? 'Unmute game audio' : 'Mute game audio'} title={muted ? 'Unmute game audio' : 'Mute game audio'} onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
           <Link className="btn sm ghost" to="/learn/dots-and-boxes">📖 Rules</Link>
         </div>
       </div>

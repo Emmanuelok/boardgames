@@ -1,11 +1,13 @@
 import {
   type CSSProperties,
   type KeyboardEvent,
+  useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { playSound } from '../audio/sound';
 import {
   ENGINE_VERSION,
   MIND_GAME_LEVELS,
@@ -18,12 +20,14 @@ import {
   seedFromString,
   stateFingerprint,
   type GameConfig,
+  type CascadeStep,
   type MindGameState,
   type MoveAnalysis,
   type ObjectiveProgress,
   type Position,
   type ReplayBundle,
   type TileKind,
+  type TurnRecord,
 } from '../mindgames/engine';
 import {
   DIFFICULTY_LABELS,
@@ -84,6 +88,20 @@ interface CompletionSummary {
   unlockedAchievementIds: string[];
 }
 
+type GardenEffectPhase = 'swap' | 'cascade' | 'settle' | 'finale' | 'invalid';
+type SpatialPower = 'mirror' | 'orbit';
+
+interface GardenEffect {
+  readonly id: number;
+  readonly phase: GardenEffectPhase;
+  readonly activeDepth: number;
+  readonly reducedMotion: boolean;
+  readonly turn?: TurnRecord;
+  readonly invalidSwap?: readonly [Position, Position];
+  readonly newlyCompletedObjectives: ReadonlyArray<number>;
+  readonly markedPositions: ReadonlyArray<Position>;
+}
+
 const DIFFICULTY_OPTIONS: readonly DifficultyOption[] = [
   { difficulty: 1, levelId: 'pattern-garden', focus: 'Learn the visual grammar with a generous allowance.' },
   { difficulty: 2, levelId: 'pattern-garden', focus: 'Prioritise two collections and marked coordinates.' },
@@ -140,6 +158,116 @@ function positionLabel(position: Position): string {
 
 function samePosition(first: Position | null, second: Position): boolean {
   return Boolean(first && first.row === second.row && first.column === second.column);
+}
+
+function effectPositionKey(position: Position): string {
+  return `${position.row}:${position.column}`;
+}
+
+function hasPosition(positions: ReadonlyArray<Position>, position: Position): boolean {
+  const key = effectPositionKey(position);
+  return positions.some((candidate) => effectPositionKey(candidate) === key);
+}
+
+interface PowerPositionGroup {
+  readonly origins: ReadonlyArray<Position>;
+  readonly affected: ReadonlyArray<Position>;
+  readonly created: ReadonlyArray<Position>;
+}
+
+export interface CascadePowerVisuals {
+  readonly powers: ReadonlyArray<SpatialPower>;
+  readonly mirror: PowerPositionGroup;
+  readonly orbit: PowerPositionGroup;
+}
+
+export function getCascadePowerVisuals(
+  cascade?: Pick<CascadeStep, 'activatedSpecials' | 'createdSpecials'>,
+): CascadePowerVisuals {
+  const group = (power: SpatialPower): PowerPositionGroup => ({
+    origins: cascade?.activatedSpecials
+      .filter((special) => special.power === power)
+      .map((special) => special.position) ?? [],
+    affected: cascade?.activatedSpecials
+      .filter((special) => special.power === power)
+      .flatMap((special) => special.affected) ?? [],
+    created: cascade?.createdSpecials
+      .filter((special) => special.power === power)
+      .map((special) => special.position) ?? [],
+  });
+  const mirror = group('mirror');
+  const orbit = group('orbit');
+  return {
+    powers: ([
+      mirror.origins.length || mirror.created.length ? 'mirror' : null,
+      orbit.origins.length || orbit.created.length ? 'orbit' : null,
+    ].filter(Boolean) as SpatialPower[]),
+    mirror,
+    orbit,
+  };
+}
+
+export function getSwapMotion(swap?: {
+  readonly from: Position;
+  readonly to: Position;
+}): {
+  readonly axis: 'horizontal' | 'vertical' | 'none';
+  readonly direction: 'left' | 'right' | 'up' | 'down' | 'none';
+  readonly fromX: string;
+  readonly fromY: string;
+  readonly toX: string;
+  readonly toY: string;
+} {
+  if (!swap) {
+    return {
+      axis: 'none',
+      direction: 'none',
+      fromX: '0%',
+      fromY: '0%',
+      toX: '0%',
+      toY: '0%',
+    };
+  }
+  const columnDelta = Math.sign(swap.to.column - swap.from.column);
+  const rowDelta = Math.sign(swap.to.row - swap.from.row);
+  return {
+    axis: columnDelta === 0 ? 'vertical' : 'horizontal',
+    direction: columnDelta < 0
+      ? 'left'
+      : columnDelta > 0
+        ? 'right'
+        : rowDelta < 0
+          ? 'up'
+          : 'down',
+    fromX: `${columnDelta * 12}%`,
+    fromY: `${rowDelta * 12}%`,
+    toX: `${columnDelta * -12}%`,
+    toY: `${rowDelta * -12}%`,
+  };
+}
+
+function reducedMotionIsActive(): boolean {
+  if (typeof document === 'undefined') return false;
+  const mode = document.documentElement.dataset.motion;
+  if (mode === 'reduced') return true;
+  if (mode === 'full') return false;
+  return typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function effectPositionStyle(
+  position: Position,
+  rows: number,
+  columns: number,
+  index = 0,
+): CSSProperties {
+  return {
+    '--fx-row': position.row,
+    '--fx-column': position.column,
+    '--fx-rows': rows,
+    '--fx-columns': columns,
+    '--fx-index': index,
+  } as CSSProperties;
 }
 
 function objectiveTarget(objective: ObjectiveProgress): number {
@@ -455,9 +583,12 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
     'Select a tile, then choose an adjacent tile to commit a swap.',
   );
   const [messageIsError, setMessageIsError] = useState(false);
+  const [gardenEffect, setGardenEffect] = useState<GardenEffect | null>(null);
   const [completion, setCompletion] = useState<CompletionSummary | null>(null);
   const [replayTurn, setReplayTurn] = useState(bootstrap.runtime.game.turn);
   const decisionStartedAt = useRef<number | null>(Date.now());
+  const effectSequence = useRef(0);
+  const effectTimers = useRef<number[]>([]);
   const tileRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const coachTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const pauseButtonRef = useRef<HTMLButtonElement>(null);
@@ -492,6 +623,161 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
     (maximum, turn) => Math.max(maximum, turn.cascades.length),
     0,
   );
+  const activeCascade = gardenEffect?.phase === 'cascade' && gardenEffect.turn
+    ? gardenEffect.turn.cascades[gardenEffect.activeDepth - 1]
+    : undefined;
+  const powerVisuals = getCascadePowerVisuals(activeCascade);
+  const activePowers = powerVisuals.powers;
+  const activeSwap = gardenEffect?.turn?.swap ?? (gardenEffect?.invalidSwap
+    ? { from: gardenEffect.invalidSwap[0], to: gardenEffect.invalidSwap[1] }
+    : undefined);
+  const swapMotion = getSwapMotion(activeSwap);
+  const activeCleared = activeCascade?.cleared ?? [];
+  const activeMatched = activeCascade?.matched ?? [];
+  const activeCreated = [...powerVisuals.mirror.created, ...powerVisuals.orbit.created];
+  const activeFormationCells = activeCascade?.formations.flatMap((formation) => formation.cells) ?? [];
+
+  const clearEffectTimers = () => {
+    effectTimers.current.forEach((timer) => window.clearTimeout(timer));
+    effectTimers.current = [];
+  };
+
+  const scheduleEffect = (callback: () => void, delay: number) => {
+    effectTimers.current.push(window.setTimeout(callback, delay));
+  };
+
+  const clearGardenEffect = () => {
+    clearEffectTimers();
+    setGardenEffect(null);
+  };
+
+  useEffect(() => () => {
+    effectTimers.current.forEach((timer) => window.clearTimeout(timer));
+    effectTimers.current = [];
+  }, []);
+
+  const beginInvalidEffect = (from: Position, to: Position) => {
+    clearEffectTimers();
+    const id = effectSequence.current + 1;
+    effectSequence.current = id;
+    const reducedMotion = reducedMotionIsActive();
+    setGardenEffect({
+      id,
+      phase: 'invalid',
+      activeDepth: 0,
+      reducedMotion,
+      invalidSwap: [from, to],
+      newlyCompletedObjectives: [],
+      markedPositions: [],
+    });
+    playSound('illegal', {
+      intensity: .55,
+      pan: (to.column / Math.max(1, game.config.columns - 1)) * 2 - 1,
+    });
+    scheduleEffect(() => setGardenEffect((current) => current?.id === id ? null : current), reducedMotion ? 320 : 520);
+  };
+
+  const beginTurnEffect = (
+    turn: TurnRecord,
+    before: MindGameState,
+    after: MindGameState,
+  ) => {
+    clearEffectTimers();
+    const id = effectSequence.current + 1;
+    effectSequence.current = id;
+    const reducedMotion = reducedMotionIsActive();
+    const newlyCompletedObjectives = after.objectives
+      .map((objective, index) => objective.completed && !before.objectives[index]?.completed ? index : -1)
+      .filter((index) => index >= 0);
+    const markedPositions = turn.cascades
+      .flatMap((cascade) => cascade.cleared)
+      .filter((position, index, all) =>
+        before.board[position.row]?.[position.column]?.marked
+        && all.findIndex((candidate) => samePosition(candidate, position)) === index);
+    const base: GardenEffect = {
+      id,
+      phase: reducedMotion ? 'settle' : 'swap',
+      activeDepth: reducedMotion ? turn.cascades.length : 0,
+      reducedMotion,
+      turn,
+      newlyCompletedObjectives,
+      markedPositions,
+    };
+    setGardenEffect(base);
+
+    const pan = (turn.swap.to.column / Math.max(1, before.config.columns - 1)) * 2 - 1;
+    playSound('place', { intensity: .48, pan });
+
+    if (reducedMotion) {
+      playSound('cascade', {
+        intensity: Math.min(1, .45 + turn.cascades.length * .12),
+        depth: turn.cascades.length,
+        pan,
+      });
+      if (turn.cascades.some((cascade) =>
+        cascade.createdSpecials.length > 0 || cascade.activatedSpecials.length > 0)) {
+        playSound('special', { intensity: .7, depth: turn.cascades.length, pan });
+      }
+      if (newlyCompletedObjectives.length > 0) {
+        scheduleEffect(() => playSound('objective', { intensity: .76, pan }), 80);
+      }
+      if (turn.status === 'won') {
+        scheduleEffect(() => {
+          setGardenEffect((current) => current?.id === id ? { ...current, phase: 'finale' } : current);
+          playSound('complete', { intensity: 1, depth: turn.cascades.length, pan });
+        }, 170);
+      }
+      scheduleEffect(() => setGardenEffect((current) => current?.id === id ? null : current), turn.status === 'won' ? 1050 : 760);
+      return;
+    }
+
+    const cascadeStart = 105;
+    const cascadeInterval = 285;
+    turn.cascades.forEach((cascade, index) => {
+      scheduleEffect(() => {
+        setGardenEffect((current) => current?.id === id
+          ? { ...current, phase: 'cascade', activeDepth: index + 1 }
+          : current);
+        playSound('cascade', {
+          intensity: Math.min(1, .5 + index * .13),
+          depth: cascade.depth,
+          pan,
+        });
+        if (cascade.activatedSpecials.length > 0) {
+          playSound('power', { intensity: .82, depth: cascade.depth, pan });
+        } else if (cascade.createdSpecials.length > 0 || cascade.formations.length > 0) {
+          playSound('special', { intensity: .7, depth: cascade.depth, pan });
+        }
+      }, cascadeStart + index * cascadeInterval);
+    });
+
+    const settleAt = cascadeStart + turn.cascades.length * cascadeInterval;
+    scheduleEffect(() => {
+      setGardenEffect((current) => current?.id === id
+        ? { ...current, phase: 'settle', activeDepth: turn.cascades.length }
+        : current);
+      playSound(turn.cascades.length > 1 ? 'combo' : 'score', {
+        intensity: Math.min(1, .45 + turn.scoreDelta / 600),
+        depth: turn.cascades.length,
+        pan,
+      });
+    }, settleAt);
+    if (newlyCompletedObjectives.length > 0) {
+      scheduleEffect(() => playSound('objective', { intensity: .82, pan }), settleAt + 120);
+    }
+    if (turn.status === 'won') {
+      scheduleEffect(() => {
+        setGardenEffect((current) => current?.id === id
+          ? { ...current, phase: 'finale' }
+          : current);
+        playSound('complete', { intensity: 1, depth: turn.cascades.length, pan });
+      }, settleAt + 260);
+    }
+    scheduleEffect(
+      () => setGardenEffect((current) => current?.id === id ? null : current),
+      settleAt + (turn.status === 'won' ? 1660 : 920),
+    );
+  };
 
   const persistResume = (nextSession: RuntimeSession) => {
     try {
@@ -585,6 +871,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
           seedFromString(`mind-cascade:session:${now}:${progress.totalCompletedSessions}:${difficulty}`),
           now,
         );
+    clearGardenEffect();
     setSession(next);
     setSelected(null);
     setFocusIndex(0);
@@ -607,6 +894,10 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
     if (paused || reviewing || game.status !== 'playing') return;
     if (!selected) {
       setSelected(position);
+      playSound('select', {
+        intensity: .34,
+        pan: (position.column / Math.max(1, game.config.columns - 1)) * 2 - 1,
+      });
       setLiveMessage(`${positionLabel(position)} selected. Choose one orthogonally adjacent tile.`);
       setMessageIsError(false);
       return;
@@ -619,6 +910,10 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
     }
     if (!isAdjacent(selected, position)) {
       setSelected(position);
+      playSound('select', {
+        intensity: .3,
+        pan: (position.column / Math.max(1, game.config.columns - 1)) * 2 - 1,
+      });
       setLiveMessage(`${positionLabel(position)} selected instead. Swaps must be orthogonally adjacent.`);
       setMessageIsError(false);
       return;
@@ -632,6 +927,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
       };
       setSession(nextSession);
       if (game.turn > 0) persistResume(nextSession);
+      beginInvalidEffect(selected, position);
       setSelected(null);
       setLiveMessage('That adjacent swap creates no match. The move allowance was not spent.');
       setMessageIsError(true);
@@ -651,6 +947,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
       planningTimeMs: session.planningTimeMs + planningInterval,
       planningSamples: session.planningSamples + 1,
     };
+    if (turn) beginTurnEffect(turn, game, nextGame);
     setSession(nextSession);
     setSelected(null);
     setForecast(null);
@@ -658,8 +955,23 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
     decisionStartedAt.current = now;
     const depth = turn?.cascades.length ?? 0;
     const cleared = turn?.cascades.reduce((sum, step) => sum + step.cleared.length, 0) ?? 0;
+    const formations = turn?.cascades.reduce((sum, step) => sum + step.formations.length, 0) ?? 0;
+    const specials = turn?.cascades.reduce(
+      (sum, step) => sum + step.createdSpecials.length + step.activatedSpecials.length,
+      0,
+    ) ?? 0;
+    const newlyCompleted = nextGame.objectives.filter(
+      (objective, index) => objective.completed && !game.objectives[index]?.completed,
+    ).length;
     setLiveMessage(
-      `${positionLabel(selected)} → ${positionLabel(position)} resolved ${depth} cascade step${depth === 1 ? '' : 's'} and cleared ${cleared} tiles.`,
+      [
+        `${positionLabel(selected)} → ${positionLabel(position)} resolved ${depth} cascade step${depth === 1 ? '' : 's'}`,
+        `cleared ${cleared} tiles`,
+        `added ${turn?.scoreDelta ?? 0} points`,
+        formations ? `created ${formations} formation${formations === 1 ? '' : 's'}` : '',
+        specials ? `shaped or activated ${specials} spatial power${specials === 1 ? '' : 's'}` : '',
+        newlyCompleted ? `completed ${newlyCompleted} objective${newlyCompleted === 1 ? '' : 's'}` : '',
+      ].filter(Boolean).join(', ') + '.',
     );
     setMessageIsError(false);
     if (nextGame.status === 'playing') persistResume(nextSession);
@@ -690,6 +1002,10 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
   const chooseForecast = (analysis: MoveAnalysis) => {
     setForecast(analysis);
     setSelected(analysis.swap.from);
+    playSound('select', {
+      intensity: .28,
+      pan: (analysis.swap.from.column / Math.max(1, game.config.columns - 1)) * 2 - 1,
+    });
     const index = analysis.swap.from.row * game.config.columns + analysis.swap.from.column;
     setFocusIndex(index);
     tileRefs.current[index]?.focus();
@@ -700,6 +1016,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
   };
 
   const showReplayTurn = (turn: number) => {
+    clearGardenEffect();
     const nextTurn = Math.max(0, Math.min(game.turn, turn));
     setReplayTurn(nextTurn);
     decisionStartedAt.current = nextTurn < game.turn || paused || game.status !== 'playing'
@@ -748,6 +1065,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
       setMessageIsError(true);
       return;
     }
+    clearGardenEffect();
     setSession({
       id: replay.sessionId,
       mode: replay.mode,
@@ -900,7 +1218,11 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
           <div className="mc-session-bar">
             <div>
               <span className="section-overline">{modeLabel(session.mode)} · seed {game.seed}</span>
-              <h2>{currentLevel.name}</h2>
+              <h2 aria-label={`Mind Cascade, ${currentLevel.name}`}>
+                <span>Mind Cascade</span>
+                <i aria-hidden="true">·</i>
+                <em>{currentLevel.name}</em>
+              </h2>
             </div>
             <div className="mc-session-actions">
               {reviewing ? (
@@ -938,8 +1260,13 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
               const color = OBJECTIVE_COLORS[index % OBJECTIVE_COLORS.length];
               return (
                 <article
-                  className={`mc-objective${objective.completed ? ' done' : ''}`}
+                  className={[
+                    'mc-objective',
+                    objective.completed ? 'done' : '',
+                    gardenEffect?.newlyCompletedObjectives.includes(index) ? 'newly-complete' : '',
+                  ].filter(Boolean).join(' ')}
                   key={`${objective.spec.type}-${index}`}
+                  data-objective-state={gardenEffect?.newlyCompletedObjectives.includes(index) ? 'just-completed' : objective.completed ? 'complete' : 'active'}
                   style={{ '--objective-color': color } as CSSProperties}
                 >
                   <span className="mc-objective-icon" aria-hidden="true">{copy.icon}</span>
@@ -953,9 +1280,35 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
           </div>
 
           <div className="mc-board-stage">
-            <div className="mc-board-frame">
+            <div
+              className={[
+                'mc-board-frame',
+                gardenEffect ? `is-${gardenEffect.phase}` : '',
+                activeSwap ? `is-swap-${swapMotion.axis}` : '',
+                gardenEffect?.turn && gardenEffect.turn.cascades.length >= 3 ? 'is-deep-cascade' : '',
+              ].filter(Boolean).join(' ')}
+              data-effect-phase={gardenEffect?.phase ?? 'idle'}
+              data-effect-id={gardenEffect?.id ?? 0}
+              data-cascade-depth={gardenEffect?.turn?.cascades.length ?? 0}
+              data-active-depth={gardenEffect?.activeDepth ?? 0}
+              data-power-effect={activePowers.length ? activePowers.join('+') : 'none'}
+              data-swap-axis={swapMotion.axis}
+              data-swap-direction={swapMotion.direction}
+              data-feedback-motion={gardenEffect?.reducedMotion ? 'condensed' : 'full'}
+              style={{
+                '--swap-from-x': swapMotion.fromX,
+                '--swap-from-y': swapMotion.fromY,
+                '--swap-to-x': swapMotion.toX,
+                '--swap-to-y': swapMotion.toY,
+              } as CSSProperties}
+            >
+              <div className="mc-board-viewport">
               <div
-                className="mc-board"
+                className={[
+                  'mc-board',
+                  gardenEffect?.phase === 'settle' ? 'is-refilling' : '',
+                  gardenEffect?.phase === 'finale' ? 'is-complete' : '',
+                ].filter(Boolean).join(' ')}
                 role="grid"
                 aria-label={`${displayedGame.config.rows} by ${displayedGame.config.columns} Mind Cascade board${reviewing ? ` at replay turn ${boundedReplayTurn}` : ''}`}
                 aria-rowcount={displayedGame.config.rows}
@@ -980,6 +1333,33 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
                       : tile?.power === 'orbit'
                         ? 'Orbit'
                         : '';
+                    const swapFrom = Boolean(
+                      gardenEffect?.turn && samePosition(gardenEffect.turn.swap.from, position),
+                    );
+                    const swapTo = Boolean(
+                      gardenEffect?.turn && samePosition(gardenEffect.turn.swap.to, position),
+                    );
+                    const invalidFrom = Boolean(
+                      gardenEffect?.invalidSwap && samePosition(gardenEffect.invalidSwap[0], position),
+                    );
+                    const invalidTo = Boolean(
+                      gardenEffect?.invalidSwap && samePosition(gardenEffect.invalidSwap[1], position),
+                    );
+                    const isClearing = hasPosition(activeCleared, position);
+                    const isMatched = hasPosition(activeMatched, position);
+                    const isCreated = hasPosition(activeCreated, position);
+                    const isMirrorOrigin = hasPosition(powerVisuals.mirror.origins, position);
+                    const isOrbitOrigin = hasPosition(powerVisuals.orbit.origins, position);
+                    const isMirrorAffected = hasPosition(powerVisuals.mirror.affected, position);
+                    const isOrbitAffected = hasPosition(powerVisuals.orbit.affected, position);
+                    const positionPowers = ([
+                      isMirrorOrigin ? 'mirror' : null,
+                      isOrbitOrigin ? 'orbit' : null,
+                    ].filter(Boolean) as SpatialPower[]);
+                    const isPowerOrigin = positionPowers.length > 0;
+                    const isPowerAffected = isMirrorAffected || isOrbitAffected;
+                    const isFormation = hasPosition(activeFormationCells, position);
+                    const isMarkedClear = isClearing && hasPosition(gardenEffect?.markedPositions ?? [], position);
                     const label = `${positionLabel(position)}, ${tile ? presentation.label : 'empty'}${power ? `, ${power} power` : ''}${cell.marked ? ', marked objective coordinate' : ''}`;
                     return (
                       <button
@@ -990,6 +1370,21 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
                           samePosition(selected, position) && !reviewing ? 'selected' : '',
                           isForecasted && !reviewing ? 'forecasted' : '',
                           cell.marked ? 'marked' : '',
+                          swapFrom ? 'effect-swap-from' : '',
+                          swapTo ? 'effect-swap-to' : '',
+                          invalidFrom ? 'effect-invalid-from' : '',
+                          invalidTo ? 'effect-invalid-to' : '',
+                          isMatched ? 'effect-matched' : '',
+                          isClearing ? 'effect-clearing' : '',
+                          isCreated ? 'effect-special-created' : '',
+                          isPowerOrigin ? 'effect-power-origin' : '',
+                          isMirrorOrigin ? 'effect-mirror' : '',
+                          isOrbitOrigin ? 'effect-orbit' : '',
+                          isPowerAffected ? 'effect-power-affected' : '',
+                          isMirrorAffected ? 'effect-mirror-affected' : '',
+                          isOrbitAffected ? 'effect-orbit-affected' : '',
+                          isFormation ? 'effect-formation' : '',
+                          isMarkedClear ? 'effect-marked-clear' : '',
                         ].filter(Boolean).join(' ')}
                         type="button"
                         role="gridcell"
@@ -1001,9 +1396,27 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
                         data-pattern={presentation.pattern}
                         data-row={rowIndex}
                         data-column={columnIndex}
+                        data-effect={isMarkedClear
+                          ? 'marked-clear'
+                          : isPowerOrigin
+                            ? `${positionPowers.join('+')}-origin`
+                            : isCreated
+                              ? 'special-created'
+                              : isClearing
+                                ? 'clearing'
+                                : swapFrom || swapTo
+                                  ? 'swapping'
+                                  : invalidFrom || invalidTo
+                                    ? 'invalid'
+                                    : 'idle'}
                         tabIndex={index === focusIndex ? 0 : -1}
                         disabled={!tile || paused || reviewing || game.status !== 'playing'}
-                        style={{ '--tile-hue': presentation.hue } as CSSProperties}
+                        style={{
+                          '--tile-hue': presentation.hue,
+                          '--tile-row': rowIndex,
+                          '--tile-column': columnIndex,
+                          '--tile-index': index,
+                        } as CSSProperties}
                         onFocus={() => setFocusIndex(index)}
                         onClick={() => commitTile(position)}
                         onKeyDown={(event) => onTileKeyDown(event, index, position)}
@@ -1014,6 +1427,129 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
                       </button>
                     );
                   }))}
+              </div>
+              <div className="mc-garden-ambience" aria-hidden="true">
+                {Array.from({ length: 9 }, (_, index) => (
+                  <i key={`ambience-${index}`} style={{ '--fx-index': index } as CSSProperties} />
+                ))}
+              </div>
+              {gardenEffect ? (
+                <div className={`mc-turn-banner is-${gardenEffect.phase}`} aria-hidden="true">
+                  {gardenEffect.phase === 'invalid' ? (
+                    <>
+                      <span>Pattern held</span>
+                      <strong>Try a different connection</strong>
+                      <small>No move was spent</small>
+                    </>
+                  ) : gardenEffect.phase === 'swap' ? (
+                    <>
+                      <span>Patterns in motion</span>
+                      <strong>
+                        {gardenEffect.turn
+                          ? `${positionLabel(gardenEffect.turn.swap.from)} ↔ ${positionLabel(gardenEffect.turn.swap.to)}`
+                          : 'Swap'}
+                      </strong>
+                      <small>Reading the new shape</small>
+                    </>
+                  ) : gardenEffect.phase === 'cascade' ? (
+                    <>
+                      <span>Cascade {gardenEffect.activeDepth} of {gardenEffect.turn?.cascades.length}</span>
+                      <strong>
+                        {gardenEffect.activeDepth >= 3
+                          ? 'Garden symphony'
+                          : gardenEffect.activeDepth === 2
+                            ? 'Beautiful chain'
+                            : activePowers.length
+                              ? `${activePowers.length === 2
+                                ? 'Mirror & Orbit'
+                                : activePowers[0] === 'mirror' ? 'Mirror' : 'Orbit'} awakened`
+                              : 'Pattern connected'}
+                      </strong>
+                      <small>+{activeCascade?.score ?? 0} · {activeCleared.length} tiles</small>
+                    </>
+                  ) : gardenEffect.phase === 'finale' ? (
+                    <>
+                      <span>Garden complete</span>
+                      <strong>Every objective is in bloom</strong>
+                      <small>{gardenEffect.turn?.turn} thoughtful move{gardenEffect.turn?.turn === 1 ? '' : 's'}</small>
+                    </>
+                  ) : (
+                    <>
+                      <span>{(gardenEffect.turn?.cascades.length ?? 0) > 1 ? 'Chain resolved' : 'Pattern resolved'}</span>
+                      <strong>+{gardenEffect.turn?.scoreDelta ?? 0}</strong>
+                      <small>
+                        {gardenEffect.newlyCompletedObjectives.length
+                          ? `${gardenEffect.newlyCompletedObjectives.length} objective${gardenEffect.newlyCompletedObjectives.length === 1 ? '' : 's'} complete`
+                          : `${gardenEffect.turn?.cascades.length ?? 0}-step cascade`}
+                      </small>
+                    </>
+                  )}
+                </div>
+              ) : null}
+              {activeCleared.map((position, index) => {
+                const marked = hasPosition(gardenEffect?.markedPositions ?? [], position);
+                const mirrorPowered = hasPosition(powerVisuals.mirror.affected, position);
+                const orbitPowered = hasPosition(powerVisuals.orbit.affected, position);
+                const powered = mirrorPowered || orbitPowered;
+                const formed = hasPosition(activeFormationCells, position);
+                return (
+                  <div
+                    className={[
+                      'mc-cell-effect',
+                      marked ? 'is-marked' : '',
+                      powered ? 'is-powered' : '',
+                      mirrorPowered ? 'is-mirror' : '',
+                      orbitPowered ? 'is-orbit' : '',
+                      formed ? 'is-formation' : '',
+                    ].filter(Boolean).join(' ')}
+                    key={`effect-${gardenEffect?.id}-${gardenEffect?.activeDepth}-${effectPositionKey(position)}`}
+                    style={effectPositionStyle(position, displayedGame.config.rows, displayedGame.config.columns, index)}
+                    aria-hidden="true"
+                  >
+                    <b />
+                    {Array.from({ length: 6 }, (_, particleIndex) => (
+                      <i
+                        key={`petal-${particleIndex}`}
+                        style={{ '--particle-index': particleIndex } as CSSProperties}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+              {gardenEffect?.turn && ['cascade', 'settle', 'finale'].includes(gardenEffect.phase) ? (
+                <div
+                  className={`mc-score-floater is-${gardenEffect.phase}`}
+                  style={effectPositionStyle(
+                    gardenEffect.turn.swap.to,
+                    displayedGame.config.rows,
+                    displayedGame.config.columns,
+                  )}
+                  aria-hidden="true"
+                >
+                  +{gardenEffect.phase === 'cascade' ? activeCascade?.score ?? 0 : gardenEffect.turn.scoreDelta}
+                  <small>{gardenEffect.phase === 'cascade' ? `chain ${gardenEffect.activeDepth}` : 'pattern points'}</small>
+                </div>
+              ) : null}
+              {activePowers.map((power) => (
+                <div
+                  className={`mc-power-wave is-${power}${activePowers.length > 1 ? ' is-mixed' : ''}`}
+                  data-power={power}
+                  key={`power-${gardenEffect?.id}-${gardenEffect?.activeDepth}-${power}`}
+                  aria-hidden="true"
+                >
+                  <i />
+                  <i />
+                  <b>{power === 'mirror' ? '↔' : '◎'}</b>
+                </div>
+              ))}
+              {gardenEffect?.phase === 'finale' ? (
+                <div className="mc-finale-bloom" aria-hidden="true">
+                  <b>✦</b>
+                  {Array.from({ length: 14 }, (_, index) => (
+                    <i key={`finale-${index}`} style={{ '--fx-index': index } as CSSProperties} />
+                  ))}
+                </div>
+              ) : null}
               </div>
               {paused ? (
                 <div className="mc-pause" role="dialog" aria-labelledby="mc-pause-title">
@@ -1030,7 +1566,14 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
             <span>Pointer: select two adjacent tiles.</span>
             <span>Keyboard: <kbd>Arrows</kbd> move · <kbd>Enter</kbd> select · <kbd>Esc</kbd> cancel.</span>
           </div>
-          <p className={`mc-live-note${messageIsError ? ' error' : ''}`} role="status" aria-live="polite">{liveMessage}</p>
+          <p
+            className={`mc-live-note${messageIsError ? ' error' : ''}`}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {liveMessage}
+          </p>
 
           {game.status !== 'playing' ? (
             <section className="mc-complete" aria-labelledby="mc-complete-title">

@@ -76,6 +76,9 @@ with deliberate planning:
   depth and future setup value, with a plain-language reason.
 - Original **Mirror** and **Orbit** powers reward rotational and spatial
   planning instead of copying candy-themed pieces or level designs.
+- Pattern Garden turns the verified move record into responsive swap,
+  cascade, power, objective and finale choreography. Score bursts, spatial
+  particles and chain callouts always describe the move that actually resolved.
 - Difficulty changes only between sessions. The recommendation cites observed
   precision, objective efficiency, cascade vision, planning rhythm and support
   use, and remains reversible.
@@ -109,6 +112,14 @@ structure, king safety).
 A crisp, animated 2D view with sliding pieces, legal-move dots, last-move and
 check highlights — or swing around a fully interactive **3D board** with real
 lighting, shadows and procedurally-modelled pieces (orbit, zoom, the works).
+
+### 🔊 Adaptive procedural sound
+Moves, placements, captures, checks, rotations, scored structures, spatial
+powers, cascades and victories each have their own layered cue. The shared Web
+Audio engine combines original synthesized transients, tonal bodies, stereo
+placement, restrained ambience and dynamics control without downloading audio
+assets or autoplaying a soundtrack. Players can mute the platform or choose a
+quiet, balanced or cinematic mix in Settings.
 
 ### 💎 200+ board themes, including Liquid Glass
 Curated **Liquid Glass**, Wood, Marble, Neon, Nature and Gemstone collections,

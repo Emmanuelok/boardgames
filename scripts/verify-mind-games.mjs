@@ -16,6 +16,7 @@ import puppeteer from 'puppeteer-core';
 const BASE = (process.env.SMOKE_URL || 'http://127.0.0.1:4173').replace(/\/$/, '');
 const SCREENSHOT_DIR = process.env.MIND_GAMES_SCREENSHOT_DIR || '/tmp/grandmaster-mind-games';
 const PROGRESS_KEY = 'gm-mind-cascade-progress-v2';
+const SOUND_INTENSITY_KEY = 'gm-sound-intensity';
 const results = [];
 const browserErrors = [];
 
@@ -258,6 +259,33 @@ try {
     )
   )));
 
+  console.log('Player-controlled cinematic audio');
+  await inspectRoute(
+    'sound-settings',
+    '/settings',
+    '.settings-page',
+    /Accessibility & device settings/i,
+  );
+  const soundControls = await page.evaluate(() => ({
+    hasSoundSwitch: Boolean(document.querySelector('.settings-sound input[role="switch"]')),
+    modes: [...document.querySelectorAll('.settings-sound input[type="radio"]')]
+      .map((input) => input.getAttribute('value')),
+    hasPreview: [...document.querySelectorAll('.settings-sound button')]
+      .some((button) => /preview completion mix/i.test(button.textContent || '')),
+  }));
+  check('Settings exposes a labelled platform sound switch', soundControls.hasSoundSwitch);
+  check('Settings offers quiet, balanced and cinematic sound profiles', (
+    ['quiet', 'balanced', 'cinematic'].every((mode) => soundControls.modes.includes(mode))
+  ));
+  check('Settings provides an explicit completion-cue preview', soundControls.hasPreview);
+  await page.evaluate(() => {
+    const cinematic = document.querySelector('.settings-sound input[value="cinematic"]');
+    if (cinematic instanceof HTMLInputElement) cinematic.click();
+  });
+  check('The cinematic mix persists on this device', await page.evaluate((key) => (
+    localStorage.getItem(key) === 'cinematic'
+  ), SOUND_INTENSITY_KEY));
+
   console.log('Mind Cascade game');
   await inspectRoute(
     'mind-cascade',
@@ -342,7 +370,36 @@ try {
     { timeout: 20_000 },
     { oldMoves: beforeMove.moves, oldHistory: beforeMove.historyCount },
   );
-  await wait(450);
+  await wait(150);
+  const gameFeel = await page.evaluate(() => {
+    const frame = document.querySelector('.mc-board-frame');
+    const banner = document.querySelector('.mc-turn-banner');
+    return {
+      phase: frame?.getAttribute('data-effect-phase') || 'idle',
+      cascadeDepth: Number(frame?.getAttribute('data-cascade-depth') || 0),
+      activeDepth: Number(frame?.getAttribute('data-active-depth') || 0),
+      motion: frame?.getAttribute('data-feedback-motion') || '',
+      banner: banner?.textContent?.replace(/\s+/g, ' ').trim() || '',
+      clearingCells: document.querySelectorAll('.mc-tile[data-effect="clearing"], .mc-cell-effect').length,
+      hasScoreFloater: Boolean(document.querySelector('.mc-score-floater')),
+      liveStatus: document.querySelector('.mc-live-note')?.textContent?.replace(/\s+/g, ' ').trim() || '',
+    };
+  });
+  check('Accepted play enters a visible turn-record effect phase', (
+    ['cascade', 'settle', 'finale'].includes(gameFeel.phase)
+      && gameFeel.cascadeDepth >= 1
+      && gameFeel.activeDepth >= 1
+  ), JSON.stringify(gameFeel));
+  check('Cascade choreography renders impact cells and a score response', (
+    gameFeel.clearingCells >= 1 && gameFeel.hasScoreFloater
+  ), JSON.stringify(gameFeel));
+  check('Turn feedback describes the achieved pattern instead of generic decoration', (
+    /cascade|pattern|chain|garden/i.test(gameFeel.banner)
+      && /resolved \d+ cascade step.*added \d+ points/i.test(gameFeel.liveStatus)
+  ));
+  check('Default game feedback uses the full player-selected motion profile', gameFeel.motion === 'full');
+  await screenshot('mind-cascade-cascade-impact');
+  await wait(300);
   const afterMove = await readSessionMetrics();
   check('A real keyboard swap consumes exactly one move', (
     Number.isFinite(beforeMove.moves)
@@ -419,14 +476,28 @@ try {
     const tile = document.querySelector('.mc-tile');
     const channels = (value) => value.match(/\d+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0];
     const brightness = (value) => channels(value).reduce((sum, channel) => sum + channel, 0);
+    const luminance = (value) => channels(value)
+      .map((channel) => channel / 255)
+      .map((channel) => channel <= 0.04045
+        ? channel / 12.92
+        : ((channel + 0.055) / 1.055) ** 2.4)
+      .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+    const tileStyle = tile ? getComputedStyle(tile) : null;
+    const foreground = tileStyle ? luminance(tileStyle.color) : 0;
+    const background = tileStyle ? luminance(tileStyle.backgroundColor) : 0;
     return {
       heroTextBrightness: hero ? brightness(getComputedStyle(hero).color) : 0,
-      tileTextBrightness: tile ? brightness(getComputedStyle(tile).color) : 0,
+      tileContrast: (Math.max(foreground, background) + 0.05)
+        / (Math.min(foreground, background) + 0.05),
       overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 2,
     };
   });
   check('Authored dark hero retains bright text in the light theme', lightTheme.heroTextBrightness > 600);
-  check('Strategic board tiles remain legible in the light theme', lightTheme.tileTextBrightness > 420);
+  check(
+    'Strategic board glyphs retain strong contrast in the light theme',
+    lightTheme.tileContrast >= 3,
+    `contrast ${lightTheme.tileContrast.toFixed(2)}:1`,
+  );
   check('Light theme introduces no horizontal overflow', !lightTheme.overflow);
   await screenshot('mind-cascade-light');
   await page.evaluate(() => {
