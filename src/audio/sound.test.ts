@@ -104,6 +104,7 @@ class MockAudioContext {
   readonly panners: MockStereoPannerNode[] = [];
   readonly oscillators: MockOscillatorNode[] = [];
   readonly buffers: MockAudioBuffer[] = [];
+  readonly bufferRequests: Array<{ frames: number; sampleRate: number }> = [];
   readonly bufferSources: MockBufferSourceNode[] = [];
   readonly filters: MockBiquadFilterNode[] = [];
   readonly resume = vi.fn(async () => {
@@ -144,9 +145,14 @@ class MockAudioContext {
     return node;
   }
 
-  createBuffer(_channels: number, frames: number): MockAudioBuffer {
+  createBuffer(
+    _channels: number,
+    frames: number,
+    sampleRate = this.sampleRate,
+  ): MockAudioBuffer {
     const buffer = new MockAudioBuffer(frames);
     this.buffers.push(buffer);
+    this.bufferRequests.push({ frames, sampleRate });
     return buffer;
   }
 
@@ -212,9 +218,11 @@ describe('procedural sound engine', () => {
     const context = MockAudioContext.instances[0];
     expect(MockAudioContext.instances).toHaveLength(1);
     expect(context.resume).toHaveBeenCalled();
-    expect(context.oscillators.length).toBeGreaterThan(originalNames.length);
+    expect(context.bufferSources.length).toBeGreaterThan(originalNames.length);
+    // Oscillators are now an emergency fallback, not the primary palette.
+    expect(context.oscillators).toHaveLength(0);
     expect(context.compressors).toHaveLength(1);
-    expect(context.compressors[0].ratio.value).toBe(12);
+    expect(context.compressors[0].ratio.value).toBe(5);
     expect(context.delays).toHaveLength(1);
   });
 
@@ -243,8 +251,8 @@ describe('procedural sound engine', () => {
     }).not.toThrow();
 
     const context = MockAudioContext.instances[0];
-    expect(context.oscillators.length).toBeGreaterThan(semanticNames.length);
-    expect(context.bufferSources.length).toBeGreaterThan(3);
+    expect(context.bufferSources.length).toBeGreaterThan(semanticNames.length);
+    expect(context.oscillators).toHaveLength(0);
     expect(context.panners.every(({ pan }) => pan.value >= -1 && pan.value <= 1))
       .toBe(true);
     expect(context.panners.some(({ pan }) => pan.value === -1)).toBe(true);
@@ -266,6 +274,35 @@ describe('procedural sound engine', () => {
 
     expect(second).toEqual(first);
     expect(new Set(first.slice(0, 20)).size).toBeGreaterThan(10);
+  });
+
+  it('reuses a bounded three-variant material bank for high-rate move cues', async () => {
+    const sound = await import('./sound');
+
+    for (let index = 0; index < 80; index += 1) {
+      sound.playSound('move', {
+        intensity: index % 2 ? 0.55 : 0.85,
+        pan: index % 3 === 0 ? -0.7 : 0.7,
+      });
+    }
+
+    const context = MockAudioContext.instances[0];
+    const generatedAfterWarmup = context.bufferRequests.length;
+    const reusedBuffers = new Set(
+      context.bufferSources.map(({ buffer }) => buffer),
+    );
+
+    // `move` has one friction texture and one impact. Each receives at most
+    // three deterministic material variants, regardless of play count.
+    expect(context.bufferSources).toHaveLength(160);
+    expect(generatedAfterWarmup).toBeLessThanOrEqual(6);
+    expect(reusedBuffers.size).toBeLessThanOrEqual(6);
+    expect(reusedBuffers.size).toBeLessThan(context.bufferSources.length);
+
+    for (let index = 0; index < 80; index += 1) {
+      sound.playSound('move', { intensity: 0.7, pan: 0 });
+    }
+    expect(context.bufferRequests).toHaveLength(generatedAfterWarmup);
   });
 
   it('persists mute and prevents muted calls from constructing audio', async () => {
@@ -299,9 +336,9 @@ describe('procedural sound engine', () => {
     sound = await import('./sound');
     expect(sound.getSoundIntensityMode()).toBe('cinematic');
     sound.playSound('click');
-    expect(MockAudioContext.instances[0].gains[1].gain.value).toBe(0.9);
+    expect(MockAudioContext.instances[0].gains[1].gain.value).toBe(0.7);
     expect(sound.cycleSoundIntensityMode()).toBe('quiet');
-    expect(MockAudioContext.instances[0].gains[1].gain.value).toBe(0.38);
+    expect(MockAudioContext.instances[0].gains[1].gain.value).toBe(0.32);
 
     expect(sound.setSoundIntensityMode('not-a-mode' as never)).toBe('balanced');
   });
@@ -310,15 +347,15 @@ describe('procedural sound engine', () => {
     const sound = await import('./sound');
     sound.playSound('complete', { intensity: 1 });
     const output = MockAudioContext.instances[0].gains[1];
-    expect(output.gain.value).toBe(0.68);
+    expect(output.gain.value).toBe(0.56);
 
     sound.setMuted(true);
     expect(output.gain.value).toBe(0);
     sound.setMuted(false);
-    expect(output.gain.value).toBe(0.68);
+    expect(output.gain.value).toBe(0.56);
   });
 
-  it('ramps master changes over ten milliseconds with a direct-value fallback', async () => {
+  it('ramps master changes without clicks and has a direct-value fallback', async () => {
     let sound = await import('./sound');
     sound.playSound('click');
     let context = MockAudioContext.instances[0];
@@ -326,14 +363,14 @@ describe('procedural sound engine', () => {
 
     expect(output.values).toContainEqual({
       method: 'linear',
-      value: 0.68,
-      time: 12.01,
+      value: 0.56,
+      time: 12.012,
     });
     sound.setMuted(true);
     expect(output.values.at(-1)).toEqual({
       method: 'linear',
       value: 0,
-      time: 12.01,
+      time: 12.012,
     });
     expect(output.cancelScheduledValues).toHaveBeenCalled();
 
@@ -356,10 +393,10 @@ describe('procedural sound engine', () => {
     sound.playSound('click');
     context = MockAudioContext.instances[0];
     output = context.gains[1].gain;
-    expect(output.value).toBe(0.68);
+    expect(output.value).toBe(0.56);
   });
 
-  it('keeps tonal layers when optional noise buffers or filters fail', async () => {
+  it('uses a subdued fallback only when rendered impact sources fail', async () => {
     class MissingBufferContext extends MockAudioContext {
       override createBuffer(): MockAudioBuffer {
         throw new Error('buffer unavailable');
@@ -370,14 +407,14 @@ describe('procedural sound engine', () => {
     expect(() => sound.playSound('capture')).not.toThrow();
     expect(MockAudioContext.instances[0].oscillators.length).toBeGreaterThan(0);
 
-    class MissingFilterContext extends MockAudioContext {
-      override createBiquadFilter(): MockBiquadFilterNode {
-        throw new Error('filter unavailable');
+    class MissingBufferSourceContext extends MockAudioContext {
+      override createBufferSource(): MockBufferSourceNode {
+        throw new Error('buffer source unavailable');
       }
     }
     vi.resetModules();
     MockAudioContext.instances = [];
-    installAudioContext(MissingFilterContext);
+    installAudioContext(MissingBufferSourceContext);
     sound = await import('./sound');
     expect(() => sound.playSound('power')).not.toThrow();
     expect(MockAudioContext.instances[0].oscillators.length).toBeGreaterThan(0);
@@ -393,7 +430,7 @@ describe('procedural sound engine', () => {
     expect(MockAudioContext.instances).toHaveLength(2);
     expect(first.gains[0].disconnect).toHaveBeenCalled();
     const recovered = MockAudioContext.instances[1];
-    expect(recovered.oscillators.length).toBeGreaterThan(0);
+    expect(recovered.bufferSources.length).toBeGreaterThan(0);
 
     recovered.state = 'interrupted' as AudioContextState;
     recovered.resume.mockClear();
@@ -409,7 +446,7 @@ describe('procedural sound engine', () => {
     const context = MockAudioContext.instances[0];
     const quietGains = context.gains.slice(4);
     const quietPeak = Math.max(...quietGains.flatMap(({ gain }) => gain.values
-      .filter(({ method }) => method === 'exponential')
+      .filter(({ method }) => method === 'set')
       .map(({ value }) => value)));
     const quietAmbience = Math.max(...quietGains
       .filter(({ gain }) => gain.values.length === 0)
@@ -420,7 +457,7 @@ describe('procedural sound engine', () => {
     sound.playSound('special', { intensity: 0.7 });
     const cinematicGains = context.gains.slice(cinematicStart);
     const cinematicPeak = Math.max(...cinematicGains.flatMap(({ gain }) => gain.values
-      .filter(({ method }) => method === 'exponential')
+      .filter(({ method }) => method === 'set')
       .map(({ value }) => value)));
     const cinematicAmbience = Math.max(...cinematicGains
       .filter(({ gain }) => gain.values.length === 0)
@@ -436,17 +473,51 @@ describe('procedural sound engine', () => {
     const context = MockAudioContext.instances[0];
     const completeGains = context.gains.slice(4);
     const completePeak = Math.max(...completeGains.flatMap(({ gain }) => gain.values
-      .filter(({ method }) => method === 'exponential')
+      .filter(({ method }) => method === 'set')
       .map(({ value }) => value)));
 
     const levelupStart = context.gains.length;
     sound.playSound('levelup', { intensity: 0 });
     const levelupPeak = Math.max(...context.gains.slice(levelupStart)
       .flatMap(({ gain }) => gain.values
-        .filter(({ method }) => method === 'exponential')
+        .filter(({ method }) => method === 'set')
         .map(({ value }) => value)));
 
     expect(levelupPeak).toBeGreaterThan(completePeak);
+  });
+
+  it('caps rich voices during dense cascades and cleans up the oldest first', async () => {
+    const sound = await import('./sound');
+
+    for (let index = 0; index < 50; index += 1) {
+      sound.playSound('click', {
+        intensity: 1,
+        pan: index % 2 ? 1 : -1,
+      });
+    }
+
+    const context = MockAudioContext.instances[0];
+    expect(context.bufferSources).toHaveLength(50);
+    expect(context.bufferSources.some(({ stop }) =>
+      stop.mock.calls.some((args) => args.length === 0))).toBe(true);
+    expect(context.bufferSources[0].disconnect).toHaveBeenCalled();
+  });
+
+  it('bounds procedural render work on high-rate mobile audio contexts', async () => {
+    class HighRateAudioContext extends MockAudioContext {
+      override readonly sampleRate = 96_000;
+    }
+    installAudioContext(HighRateAudioContext);
+    const sound = await import('./sound');
+    sound.setSoundIntensityMode('cinematic');
+    sound.playSound('complete', { intensity: 1 });
+
+    const context = MockAudioContext.instances[0];
+    expect(context.bufferRequests.length).toBeGreaterThan(0);
+    expect(context.bufferRequests.every(({ sampleRate }) =>
+      sampleRate <= 24_000)).toBe(true);
+    expect(context.bufferRequests.every(({ frames }) =>
+      frames <= 24_000 * 0.9)).toBe(true);
   });
 
   it('is a no-op during SSR/unsupported audio and for unknown runtime names', async () => {

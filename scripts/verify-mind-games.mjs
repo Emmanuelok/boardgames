@@ -15,6 +15,7 @@ import puppeteer from 'puppeteer-core';
 
 const BASE = (process.env.SMOKE_URL || 'http://127.0.0.1:4173').replace(/\/$/, '');
 const SCREENSHOT_DIR = process.env.MIND_GAMES_SCREENSHOT_DIR || '/tmp/grandmaster-mind-games';
+const MOBILE_ONLY = process.env.MIND_GAMES_MOBILE_ONLY === '1';
 const PROGRESS_KEY = 'gm-mind-cascade-progress-v2';
 const SOUND_INTENSITY_KEY = 'gm-sound-intensity';
 const results = [];
@@ -182,6 +183,105 @@ const findLegalPair = (snapshot) => {
   return null;
 };
 
+const tileCentre = async (index) => page.$eval(
+  `.mc-board .mc-tile:nth-child(${index + 1})`,
+  (tile) => {
+    const bounds = tile.getBoundingClientRect();
+    return {
+      x: bounds.left + bounds.width / 2,
+      y: bounds.top + bounds.height / 2,
+    };
+  },
+);
+
+const dragLegalPair = async ([from, to]) => {
+  const source = await tileCentre(from);
+  const target = await tileCentre(to);
+  const mid = {
+    x: source.x + (target.x - source.x) * 0.62,
+    y: source.y + (target.y - source.y) * 0.62,
+  };
+  await page.mouse.move(source.x, source.y);
+  await page.mouse.down();
+  await page.mouse.move(mid.x, mid.y, { steps: 4 });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => (
+    requestAnimationFrame(resolve)
+  ))));
+  const feedback = await page.evaluate(() => {
+    const frame = document.querySelector('.mc-board-frame');
+    const sourceTile = document.querySelector('.mc-tile.drag-source');
+    const targetTile = document.querySelector('.mc-tile.drag-target');
+    return {
+      dragging: frame?.classList.contains('is-dragging') ?? false,
+      axis: frame?.getAttribute('data-drag-axis') ?? '',
+      x: sourceTile instanceof HTMLElement
+        ? sourceTile.style.getPropertyValue('--mc-drag-x')
+        : '',
+      y: sourceTile instanceof HTMLElement
+        ? sourceTile.style.getPropertyValue('--mc-drag-y')
+        : '',
+      hasTarget: Boolean(targetTile),
+      touchAction: sourceTile ? getComputedStyle(sourceTile).touchAction : '',
+    };
+  });
+  await page.mouse.move(target.x, target.y, { steps: 4 });
+  await page.mouse.up();
+  return feedback;
+};
+
+const touchSwipeLegalPair = async ([from, to]) => {
+  await page.$eval(
+    `.mc-board .mc-tile:nth-child(${from + 1})`,
+    (tile) => tile.scrollIntoView({
+      block: 'center',
+      inline: 'center',
+      behavior: 'instant',
+    }),
+  );
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => (
+    requestAnimationFrame(resolve)
+  ))));
+  const source = await tileCentre(from);
+  const target = await tileCentre(to);
+  const touch = await page.touchscreen.touchStart(source.x, source.y);
+  let feedback = null;
+  try {
+    for (let step = 1; step <= 5; step += 1) {
+      await touch.move(
+        source.x + (target.x - source.x) * step / 5,
+        source.y + (target.y - source.y) * step / 5,
+      );
+      await wait(18);
+    }
+    feedback = await page.evaluate(({ sourcePoint, targetPoint }) => {
+      const frame = document.querySelector('.mc-board-frame');
+      return {
+        dragging: frame?.classList.contains('is-dragging') ?? false,
+        axis: frame?.getAttribute('data-drag-axis') ?? '',
+        hasSource: Boolean(document.querySelector('.mc-tile.drag-source')),
+        hasTarget: Boolean(document.querySelector('.mc-tile.drag-target')),
+        sourceInsideViewport: (
+          sourcePoint.x >= 0
+          && sourcePoint.x <= window.innerWidth
+          && sourcePoint.y >= 0
+          && sourcePoint.y <= window.innerHeight
+        ),
+        targetInsideViewport: (
+          targetPoint.x >= 0
+          && targetPoint.x <= window.innerWidth
+          && targetPoint.y >= 0
+          && targetPoint.y <= window.innerHeight
+        ),
+        sourceHit: document.elementFromPoint(sourcePoint.x, sourcePoint.y)?.className || '',
+        targetHit: document.elementFromPoint(targetPoint.x, targetPoint.y)?.className || '',
+      };
+    }, { sourcePoint: source, targetPoint: target });
+  } finally {
+    await touch.end();
+  }
+  return feedback;
+};
+
 const readSessionMetrics = async () => page.evaluate(() => {
   const entries = [...document.querySelectorAll('.mc-hud > div')].map((entry) => ({
     label: entry.querySelector('span')?.textContent?.trim() || '',
@@ -237,8 +337,9 @@ try {
     }
   });
 
-  console.log('Mind Games hub');
-  await inspectRoute(
+  if (!MOBILE_ONLY) {
+    console.log('Mind Games hub');
+    await inspectRoute(
     'mind-games-hub',
     '/mind-games',
     '.mind-games-page',
@@ -354,11 +455,40 @@ try {
   check('Rendered tile semantics expose at least one legal move', Boolean(pair));
   if (!pair) throw new Error('Could not derive a legal swap from rendered tile semantics.');
 
-  // Exercise the same activation path available to keyboard-only players.
-  await page.focus(`.mc-board .mc-tile:nth-child(${pair[0] + 1})`);
-  await page.keyboard.press('Enter');
-  await page.focus(`.mc-board .mc-tile:nth-child(${pair[1] + 1})`);
-  await page.keyboard.press('Enter');
+  await page.evaluate(() => {
+    const frame = document.querySelector('.mc-board-frame');
+    if (!frame) return;
+    const record = {
+      sawCascade: false,
+      maxImpactCells: 0,
+      sawScoreFloater: false,
+    };
+    const sample = () => {
+      record.sawCascade ||= frame.getAttribute('data-effect-phase') === 'cascade';
+      record.maxImpactCells = Math.max(
+        record.maxImpactCells,
+        document.querySelectorAll('.mc-tile[data-effect="clearing"], .mc-cell-effect').length,
+      );
+      record.sawScoreFloater ||= Boolean(document.querySelector('.mc-score-floater'));
+    };
+    const observer = new MutationObserver(sample);
+    observer.observe(frame, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+    sample();
+    window.__mindCascadeEffectAudit = { observer, record };
+  });
+
+  const dragFeedback = await dragLegalPair(pair);
+  check('Pointer drag visibly tracks the tile toward one adjacent target', (
+    dragFeedback.dragging
+      && ['horizontal', 'vertical'].includes(dragFeedback.axis)
+      && dragFeedback.hasTarget
+      && /px$/.test(`${dragFeedback.x}${dragFeedback.y}`)
+  ), JSON.stringify(dragFeedback));
+  check('Board reserves touch gestures for direct tile swiping', dragFeedback.touchAction === 'none');
   await page.waitForFunction(
     ({ oldMoves, oldHistory }) => {
       const entries = [...document.querySelectorAll('.mc-hud > div')];
@@ -374,6 +504,9 @@ try {
   const gameFeel = await page.evaluate(() => {
     const frame = document.querySelector('.mc-board-frame');
     const banner = document.querySelector('.mc-turn-banner');
+    const effectAudit = window.__mindCascadeEffectAudit;
+    effectAudit?.observer.disconnect();
+    delete window.__mindCascadeEffectAudit;
     return {
       phase: frame?.getAttribute('data-effect-phase') || 'idle',
       cascadeDepth: Number(frame?.getAttribute('data-cascade-depth') || 0),
@@ -382,16 +515,20 @@ try {
       banner: banner?.textContent?.replace(/\s+/g, ' ').trim() || '',
       clearingCells: document.querySelectorAll('.mc-tile[data-effect="clearing"], .mc-cell-effect').length,
       hasScoreFloater: Boolean(document.querySelector('.mc-score-floater')),
+      sawCascade: effectAudit?.record.sawCascade ?? false,
+      maxImpactCells: effectAudit?.record.maxImpactCells ?? 0,
+      sawScoreFloater: effectAudit?.record.sawScoreFloater ?? false,
       liveStatus: document.querySelector('.mc-live-note')?.textContent?.replace(/\s+/g, ' ').trim() || '',
     };
   });
   check('Accepted play enters a visible turn-record effect phase', (
-    ['cascade', 'settle', 'finale'].includes(gameFeel.phase)
+    (gameFeel.sawCascade || ['cascade', 'settle', 'finale'].includes(gameFeel.phase))
       && gameFeel.cascadeDepth >= 1
       && gameFeel.activeDepth >= 1
   ), JSON.stringify(gameFeel));
   check('Cascade choreography renders impact cells and a score response', (
-    gameFeel.clearingCells >= 1 && gameFeel.hasScoreFloater
+    gameFeel.maxImpactCells >= 1
+      && (gameFeel.sawScoreFloater || gameFeel.hasScoreFloater)
   ), JSON.stringify(gameFeel));
   check('Turn feedback describes the achieved pattern instead of generic decoration', (
     /cascade|pattern|chain|garden/i.test(gameFeel.banner)
@@ -401,13 +538,31 @@ try {
   await screenshot('mind-cascade-cascade-impact');
   await wait(300);
   const afterMove = await readSessionMetrics();
-  check('A real keyboard swap consumes exactly one move', (
+  check('A real drag/swipe swap consumes exactly one move', (
     Number.isFinite(beforeMove.moves)
       && Number.isFinite(afterMove.moves)
       && afterMove.moves === beforeMove.moves - 1
   ), `${beforeMove.movesText} → ${afterMove.movesText}`);
-  check('The real move creates a replay/history record', afterMove.historyCount > beforeMove.historyCount);
+  check('The dragged move creates exactly one replay/history record', (
+    afterMove.historyCount === beforeMove.historyCount + 1
+  ));
+  check('Drag state and compositor hints clear immediately on release', await page.evaluate(() => (
+    !document.querySelector('.mc-board-frame.is-dragging')
+      && !document.querySelector('.mc-tile.drag-source, .mc-tile.drag-target')
+  )));
   check('Objectives remain visible after cascade resolution', afterMove.objectiveText.length >= 1);
+
+  await page.click('.mc-board .mc-tile:nth-child(1)');
+  check('Click selection remains available alongside direct manipulation', await page.evaluate(() => (
+    Boolean(document.querySelector('.mc-board .mc-tile.selected'))
+  )));
+  await page.keyboard.press('Escape');
+  await page.focus('.mc-board .mc-tile:nth-child(1)');
+  await page.keyboard.press('Enter');
+  check('Keyboard selection remains available alongside direct manipulation', await page.evaluate(() => (
+    Boolean(document.querySelector('.mc-board .mc-tile.selected'))
+  )));
+  await page.keyboard.press('Escape');
 
   const saved = await storageSnapshot();
   check('Accepted play persists a resumable local session', (
@@ -522,10 +677,21 @@ try {
   check('No pressure countdown is present', !safeguards.pressureTimer);
   check('No paid-life action is present', !safeguards.paidLifeAction);
   check('No loot-box or random-reward action is present', !safeguards.lootAction && !safeguards.randomRewardAction);
-  check('No gambling-oriented action is present', !safeguards.gamblingLanguage);
+    check('No gambling-oriented action is present', !safeguards.gamblingLanguage);
+  }
 
   console.log('Mobile experience');
-  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+  // Changing `isMobile` or `hasTouch` asks Chromium to reload the active page.
+  // Reset first so that reload cannot be held open by the running game/audio
+  // graph and the mobile checks begin from a clean touch-capable document.
+  await page.goto('about:blank', { waitUntil: 'domcontentloaded', timeout: 10_000 });
+  await page.setViewport({
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+    isMobile: true,
+    hasTouch: true,
+  });
   await page.goto(`${BASE}/#/mind-games`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForSelector('.mind-games-page', { visible: true, timeout: 15_000 });
   check('Mind Games hub has no mobile horizontal overflow', await page.evaluate(() => (
@@ -555,6 +721,39 @@ try {
   check('Mind Cascade has no mobile horizontal overflow', !mobile.overflow);
   check('Mobile board stays inside the viewport', mobile.boardInsideViewport);
   check('Mobile retains the complete board and objectives', mobile.tiles >= 25 && mobile.objectives >= 1);
+
+  const mobileBoard = await boardSnapshot();
+  const mobilePair = findLegalPair(mobileBoard);
+  check('Mobile board exposes a legal swipe target', Boolean(mobilePair));
+  if (mobilePair) {
+    const mobileBefore = await readSessionMetrics();
+    const touchFeedback = await touchSwipeLegalPair(mobilePair);
+    check('Touch input visibly tracks a marble toward one adjacent target', (
+      touchFeedback?.dragging
+        && ['horizontal', 'vertical'].includes(touchFeedback.axis)
+        && touchFeedback.hasSource
+        && touchFeedback.hasTarget
+        && touchFeedback.sourceInsideViewport
+        && touchFeedback.targetInsideViewport
+    ), JSON.stringify(touchFeedback));
+    await page.waitForFunction(
+      ({ oldMoves, oldHistory }) => {
+        const entries = [...document.querySelectorAll('.mc-hud > div')];
+        const movesEntry = entries.find((entry) => /move/i.test(entry.querySelector('span')?.textContent || ''));
+        const moves = Number.parseInt(movesEntry?.querySelector('strong')?.textContent || '', 10);
+        const history = document.querySelectorAll('.mc-history-list button, .mc-move-strip button').length;
+        return (Number.isFinite(oldMoves) && moves < oldMoves) || history > oldHistory;
+      },
+      { timeout: 20_000 },
+      { oldMoves: mobileBefore.moves, oldHistory: mobileBefore.historyCount },
+    );
+    const mobileAfter = await readSessionMetrics();
+    check('A real touch swipe commits exactly one legal move', (
+      Number.isFinite(mobileBefore.moves)
+        && mobileAfter.moves === mobileBefore.moves - 1
+        && mobileAfter.historyCount === mobileBefore.historyCount + 1
+    ), `${mobileBefore.movesText} → ${mobileAfter.movesText}`);
+  }
   await screenshot('mind-cascade-mobile');
 
   check(

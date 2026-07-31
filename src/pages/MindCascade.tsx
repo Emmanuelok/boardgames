@@ -1,6 +1,7 @@
 import {
   type CSSProperties,
   type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
   useRef,
@@ -90,6 +91,33 @@ interface CompletionSummary {
 
 type GardenEffectPhase = 'swap' | 'cascade' | 'settle' | 'finale' | 'invalid';
 type SpatialPower = 'mirror' | 'orbit';
+type PointerDragAxis = 'horizontal' | 'vertical' | 'none';
+
+interface PointerDragIntent {
+  readonly axis: PointerDragAxis;
+  readonly crossedThreshold: boolean;
+  readonly target: Position | null;
+}
+
+interface ActivePointerDrag {
+  readonly pointerId: number;
+  readonly source: Position;
+  readonly sourceElement: HTMLButtonElement;
+  readonly startX: number;
+  readonly startY: number;
+  readonly maximumOffsetX: number;
+  readonly maximumOffsetY: number;
+  axis: PointerDragAxis;
+  crossedThreshold: boolean;
+  target: Position | null;
+  targetElement: HTMLButtonElement | null;
+  paintedTargetElement: HTMLButtonElement | null;
+  offsetX: number;
+  offsetY: number;
+  paintFrame: number | null;
+}
+
+const POINTER_DRAG_THRESHOLD = 10;
 
 interface GardenEffect {
   readonly id: number;
@@ -243,6 +271,54 @@ export function getSwapMotion(swap?: {
     fromY: `${rowDelta * 12}%`,
     toX: `${columnDelta * -12}%`,
     toY: `${rowDelta * -12}%`,
+  };
+}
+
+export function getPointerDragIntent(
+  source: Position,
+  deltaX: number,
+  deltaY: number,
+  rows: number,
+  columns: number,
+  threshold = POINTER_DRAG_THRESHOLD,
+  lockedAxis: PointerDragAxis = 'none',
+): PointerDragIntent {
+  const horizontalDistance = Math.abs(deltaX);
+  const verticalDistance = Math.abs(deltaY);
+  if (lockedAxis === 'none' && Math.max(horizontalDistance, verticalDistance) < threshold) {
+    return {
+      axis: 'none',
+      crossedThreshold: false,
+      target: null,
+    };
+  }
+
+  const axis: PointerDragAxis = lockedAxis === 'none'
+    ? horizontalDistance >= verticalDistance
+      ? 'horizontal'
+      : 'vertical'
+    : lockedAxis;
+  const direction = axis === 'horizontal' ? Math.sign(deltaX) : Math.sign(deltaY);
+  if (direction === 0) {
+    return {
+      axis,
+      crossedThreshold: true,
+      target: null,
+    };
+  }
+
+  const target = axis === 'horizontal'
+    ? { row: source.row, column: source.column + direction }
+    : { row: source.row + direction, column: source.column };
+  return {
+    axis,
+    crossedThreshold: true,
+    target: target.row >= 0
+      && target.row < rows
+      && target.column >= 0
+      && target.column < columns
+      ? target
+      : null,
   };
 }
 
@@ -580,7 +656,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
   const [coachTab, setCoachTab] = useState<CoachTab>('objectives');
   const [forecast, setForecast] = useState<MoveAnalysis | null>(null);
   const [liveMessage, setLiveMessage] = useState(
-    'Select a tile, then choose an adjacent tile to commit a swap.',
+    'Drag or swipe a tile toward an adjacent tile, or select two adjacent tiles.',
   );
   const [messageIsError, setMessageIsError] = useState(false);
   const [gardenEffect, setGardenEffect] = useState<GardenEffect | null>(null);
@@ -590,6 +666,10 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
   const effectSequence = useRef(0);
   const effectTimers = useRef<number[]>([]);
   const tileRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const boardFrameRef = useRef<HTMLDivElement>(null);
+  const pointerDrag = useRef<ActivePointerDrag | null>(null);
+  const suppressNextClick = useRef(false);
+  const suppressClickTimer = useRef<number | null>(null);
   const coachTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const pauseButtonRef = useRef<HTMLButtonElement>(null);
   const resumeButtonRef = useRef<HTMLButtonElement>(null);
@@ -637,6 +717,99 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
   const activeCreated = [...powerVisuals.mirror.created, ...powerVisuals.orbit.created];
   const activeFormationCells = activeCascade?.formations.flatMap((formation) => formation.cells) ?? [];
 
+  const clearPointerDrag = (releaseCapture = true) => {
+    const active = pointerDrag.current;
+    if (!active) return;
+    pointerDrag.current = null;
+    if (active.paintFrame !== null) {
+      window.cancelAnimationFrame(active.paintFrame);
+    }
+    active.sourceElement.classList.remove('drag-source');
+    active.sourceElement.style.removeProperty('--mc-drag-x');
+    active.sourceElement.style.removeProperty('--mc-drag-y');
+    active.paintedTargetElement?.classList.remove('drag-target');
+    active.targetElement?.classList.remove('drag-target');
+    const frame = boardFrameRef.current;
+    frame?.classList.remove('is-dragging');
+    frame?.removeAttribute('data-drag-axis');
+    if (
+      releaseCapture
+      && typeof active.sourceElement.hasPointerCapture === 'function'
+      && active.sourceElement.hasPointerCapture(active.pointerId)
+    ) {
+      active.sourceElement.releasePointerCapture(active.pointerId);
+    }
+  };
+
+  const suppressSyntheticClick = () => {
+    suppressNextClick.current = true;
+    if (suppressClickTimer.current !== null) {
+      window.clearTimeout(suppressClickTimer.current);
+    }
+    suppressClickTimer.current = window.setTimeout(() => {
+      suppressNextClick.current = false;
+      suppressClickTimer.current = null;
+    }, 350);
+  };
+
+  const paintPointerDrag = (active: ActivePointerDrag) => {
+    if (active.paintFrame !== null) return;
+    active.paintFrame = window.requestAnimationFrame(() => {
+      active.paintFrame = null;
+      if (pointerDrag.current !== active || !active.crossedThreshold) return;
+      const frame = boardFrameRef.current;
+      const offsetX = Math.max(
+        -active.maximumOffsetX,
+        Math.min(active.maximumOffsetX, active.offsetX),
+      );
+      const offsetY = Math.max(
+        -active.maximumOffsetY,
+        Math.min(active.maximumOffsetY, active.offsetY),
+      );
+
+      frame?.classList.add('is-dragging');
+      frame?.setAttribute('data-drag-axis', active.axis);
+      active.sourceElement.classList.add('drag-source');
+      active.sourceElement.style.setProperty('--mc-drag-x', `${offsetX}px`);
+      active.sourceElement.style.setProperty('--mc-drag-y', `${offsetY}px`);
+      if (active.paintedTargetElement !== active.targetElement) {
+        active.paintedTargetElement?.classList.remove('drag-target');
+        active.targetElement?.classList.add('drag-target');
+        active.paintedTargetElement = active.targetElement;
+      }
+    });
+  };
+
+  const updatePointerDrag = (
+    pointerId: number,
+    clientX: number,
+    clientY: number,
+  ): ActivePointerDrag | null => {
+    const active = pointerDrag.current;
+    if (!active || active.pointerId !== pointerId) return null;
+    const deltaX = clientX - active.startX;
+    const deltaY = clientY - active.startY;
+    const intent = getPointerDragIntent(
+      active.source,
+      deltaX,
+      deltaY,
+      displayedGame.config.rows,
+      displayedGame.config.columns,
+      POINTER_DRAG_THRESHOLD,
+      active.crossedThreshold ? active.axis : 'none',
+    );
+    active.crossedThreshold = intent.crossedThreshold;
+    active.axis = intent.axis;
+    active.target = intent.target;
+    active.targetElement = intent.target
+      ? tileRefs.current[intent.target.row * displayedGame.config.columns + intent.target.column] ?? null
+      : null;
+    active.offsetX = intent.axis === 'horizontal' ? deltaX : 0;
+    active.offsetY = intent.axis === 'vertical' ? deltaY : 0;
+    if (active.crossedThreshold) paintPointerDrag(active);
+    return active;
+  };
+
   const clearEffectTimers = () => {
     effectTimers.current.forEach((timer) => window.clearTimeout(timer));
     effectTimers.current = [];
@@ -654,6 +827,11 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
   useEffect(() => () => {
     effectTimers.current.forEach((timer) => window.clearTimeout(timer));
     effectTimers.current = [];
+    clearPointerDrag();
+    if (suppressClickTimer.current !== null) {
+      window.clearTimeout(suppressClickTimer.current);
+      suppressClickTimer.current = null;
+    }
   }, []);
 
   const beginInvalidEffect = (from: Position, to: Position) => {
@@ -861,6 +1039,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
       && typeof window !== 'undefined'
       && !window.confirm('Start a fresh board? Your current verified resume will be replaced, while completed replays remain in the archive.')
     ) return;
+    clearPointerDrag();
     const now = Date.now();
     const isDaily = mode === 'daily';
     const next = isDaily
@@ -890,36 +1069,14 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
     setStorageWarning(saved.warning ?? '');
   };
 
-  const commitTile = (position: Position) => {
-    if (paused || reviewing || game.status !== 'playing') return;
-    if (!selected) {
-      setSelected(position);
-      playSound('select', {
-        intensity: .34,
-        pan: (position.column / Math.max(1, game.config.columns - 1)) * 2 - 1,
-      });
-      setLiveMessage(`${positionLabel(position)} selected. Choose one orthogonally adjacent tile.`);
-      setMessageIsError(false);
-      return;
-    }
-    if (samePosition(selected, position)) {
-      setSelected(null);
-      setLiveMessage('Selection cleared.');
-      setMessageIsError(false);
-      return;
-    }
-    if (!isAdjacent(selected, position)) {
-      setSelected(position);
-      playSound('select', {
-        intensity: .3,
-        pan: (position.column / Math.max(1, game.config.columns - 1)) * 2 - 1,
-      });
-      setLiveMessage(`${positionLabel(position)} selected instead. Swaps must be orthogonally adjacent.`);
-      setMessageIsError(false);
-      return;
-    }
-
-    const nextGame = applyMove(game, { from: selected, to: position });
+  const commitSwap = (from: Position, to: Position) => {
+    if (
+      paused
+      || reviewing
+      || game.status !== 'playing'
+      || !isAdjacent(from, to)
+    ) return;
+    const nextGame = applyMove(game, { from, to });
     if (nextGame === game) {
       const nextSession = {
         ...session,
@@ -927,7 +1084,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
       };
       setSession(nextSession);
       if (game.turn > 0) persistResume(nextSession);
-      beginInvalidEffect(selected, position);
+      beginInvalidEffect(from, to);
       setSelected(null);
       setLiveMessage('That adjacent swap creates no match. The move allowance was not spent.');
       setMessageIsError(true);
@@ -965,7 +1122,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
     ).length;
     setLiveMessage(
       [
-        `${positionLabel(selected)} → ${positionLabel(position)} resolved ${depth} cascade step${depth === 1 ? '' : 's'}`,
+        `${positionLabel(from)} → ${positionLabel(to)} resolved ${depth} cascade step${depth === 1 ? '' : 's'}`,
         `cleared ${cleared} tiles`,
         `added ${turn?.scoreDelta ?? 0} points`,
         formations ? `created ${formations} formation${formations === 1 ? '' : 's'}` : '',
@@ -976,6 +1133,125 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
     setMessageIsError(false);
     if (nextGame.status === 'playing') persistResume(nextSession);
     else archiveCompletion(nextSession);
+  };
+
+  const commitTile = (position: Position) => {
+    if (paused || reviewing || game.status !== 'playing') return;
+    if (!selected) {
+      setSelected(position);
+      playSound('select', {
+        intensity: .34,
+        pan: (position.column / Math.max(1, game.config.columns - 1)) * 2 - 1,
+      });
+      setLiveMessage(`${positionLabel(position)} selected. Choose one orthogonally adjacent tile.`);
+      setMessageIsError(false);
+      return;
+    }
+    if (samePosition(selected, position)) {
+      setSelected(null);
+      setLiveMessage('Selection cleared.');
+      setMessageIsError(false);
+      return;
+    }
+    if (!isAdjacent(selected, position)) {
+      setSelected(position);
+      playSound('select', {
+        intensity: .3,
+        pan: (position.column / Math.max(1, game.config.columns - 1)) * 2 - 1,
+      });
+      setLiveMessage(`${positionLabel(position)} selected instead. Swaps must be orthogonally adjacent.`);
+      setMessageIsError(false);
+      return;
+    }
+    commitSwap(selected, position);
+  };
+
+  const onTilePointerDown = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    index: number,
+    position: Position,
+  ) => {
+    if (
+      event.button !== 0
+      || event.isPrimary === false
+      || paused
+      || reviewing
+      || game.status !== 'playing'
+      || event.currentTarget.disabled
+    ) return;
+    clearPointerDrag();
+    const sourceElement = event.currentTarget;
+    const sourceBounds = sourceElement.getBoundingClientRect();
+    pointerDrag.current = {
+      pointerId: event.pointerId,
+      source: position,
+      sourceElement,
+      startX: event.clientX,
+      startY: event.clientY,
+      maximumOffsetX: Math.max(28, sourceBounds.width * .96),
+      maximumOffsetY: Math.max(28, sourceBounds.height * .96),
+      axis: 'none',
+      crossedThreshold: false,
+      target: null,
+      targetElement: null,
+      paintedTargetElement: null,
+      offsetX: 0,
+      offsetY: 0,
+      paintFrame: null,
+    };
+    setFocusIndex(index);
+    sourceElement.focus({ preventScroll: true });
+    try {
+      sourceElement.setPointerCapture(event.pointerId);
+    } catch {
+      // A browser can decline capture if the pointer ended between dispatch and capture.
+    }
+  };
+
+  const onTilePointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const active = updatePointerDrag(event.pointerId, event.clientX, event.clientY);
+    if (active?.crossedThreshold) event.preventDefault();
+  };
+
+  const onTilePointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const active = updatePointerDrag(event.pointerId, event.clientX, event.clientY);
+    if (!active) return;
+    const wasDrag = active.crossedThreshold;
+    const { source, target } = active;
+    clearPointerDrag();
+    if (!wasDrag) return;
+
+    event.preventDefault();
+    suppressSyntheticClick();
+    setSelected(null);
+    if (!target) {
+      setLiveMessage('Swipe stayed at the board edge. Drag toward an available adjacent tile.');
+      setMessageIsError(false);
+      return;
+    }
+    commitSwap(source, target);
+  };
+
+  const onTilePointerCancel = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (pointerDrag.current?.pointerId !== event.pointerId) return;
+    clearPointerDrag(false);
+  };
+
+  const onTileLostPointerCapture = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (pointerDrag.current?.pointerId !== event.pointerId) return;
+    clearPointerDrag(false);
+  };
+
+  const onTileClick = (position: Position) => {
+    if (suppressNextClick.current) {
+      suppressNextClick.current = false;
+      if (suppressClickTimer.current !== null) {
+        window.clearTimeout(suppressClickTimer.current);
+        suppressClickTimer.current = null;
+      }
+      return;
+    }
+    commitTile(position);
   };
 
   const openCoachTab = (tab: CoachTab) => {
@@ -1000,6 +1276,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
   };
 
   const chooseForecast = (analysis: MoveAnalysis) => {
+    clearPointerDrag();
     setForecast(analysis);
     setSelected(analysis.swap.from);
     playSound('select', {
@@ -1016,6 +1293,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
   };
 
   const showReplayTurn = (turn: number) => {
+    clearPointerDrag();
     clearGardenEffect();
     const nextTurn = Math.max(0, Math.min(game.turn, turn));
     setReplayTurn(nextTurn);
@@ -1025,6 +1303,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
   };
 
   const togglePause = () => {
+    clearPointerDrag();
     if (paused) {
       setPaused(false);
       decisionStartedAt.current = Date.now();
@@ -1065,6 +1344,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
       setMessageIsError(true);
       return;
     }
+    clearPointerDrag();
     clearGardenEffect();
     setSession({
       id: replay.sessionId,
@@ -1281,6 +1561,7 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
 
           <div className="mc-board-stage">
             <div
+              ref={boardFrameRef}
               className={[
                 'mc-board-frame',
                 gardenEffect ? `is-${gardenEffect.phase}` : '',
@@ -1311,8 +1592,10 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
                 ].filter(Boolean).join(' ')}
                 role="grid"
                 aria-label={`${displayedGame.config.rows} by ${displayedGame.config.columns} Mind Cascade board${reviewing ? ` at replay turn ${boundedReplayTurn}` : ''}`}
+                aria-describedby="mc-board-instructions"
                 aria-rowcount={displayedGame.config.rows}
                 aria-colcount={displayedGame.config.columns}
+                data-input-methods="drag swipe click keyboard"
                 style={{
                   '--mc-columns': displayedGame.config.columns,
                   '--mc-rows': displayedGame.config.rows,
@@ -1418,7 +1701,12 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
                           '--tile-index': index,
                         } as CSSProperties}
                         onFocus={() => setFocusIndex(index)}
-                        onClick={() => commitTile(position)}
+                        onPointerDown={(event) => onTilePointerDown(event, index, position)}
+                        onPointerMove={onTilePointerMove}
+                        onPointerUp={onTilePointerUp}
+                        onPointerCancel={onTilePointerCancel}
+                        onLostPointerCapture={onTileLostPointerCapture}
+                        onClick={() => onTileClick(position)}
                         onKeyDown={(event) => onTileKeyDown(event, index, position)}
                       >
                         <span className="mc-glyph" aria-hidden="true">{presentation.glyph}</span>
@@ -1562,8 +1850,8 @@ function MindCascadeExperience({ routeMode }: { routeMode: RouteMode }) {
             </div>
           </div>
 
-          <div className="mc-board-help">
-            <span>Pointer: select two adjacent tiles.</span>
+          <div className="mc-board-help" id="mc-board-instructions">
+            <span>Pointer: drag or swipe toward an adjacent tile · clicking two adjacent tiles also works.</span>
             <span>Keyboard: <kbd>Arrows</kbd> move · <kbd>Enter</kbd> select · <kbd>Esc</kbd> cancel.</span>
           </div>
           <p

@@ -7,8 +7,52 @@ import {
 } from '../mindgames/progress';
 import MindCascade, {
   getCascadePowerVisuals,
+  getPointerDragIntent,
   getSwapMotion,
 } from './MindCascade';
+
+const pointerCaptureDescriptors = {
+  set: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'setPointerCapture'),
+  has: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'hasPointerCapture'),
+  release: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'releasePointerCapture'),
+};
+
+function installPointerCaptureHarness() {
+  const captures = new WeakMap<HTMLElement, Set<number>>();
+  Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', {
+    configurable: true,
+    value: vi.fn(function setPointerCapture(this: HTMLElement, pointerId: number) {
+      const active = captures.get(this) ?? new Set<number>();
+      active.add(pointerId);
+      captures.set(this, active);
+    }),
+  });
+  Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
+    configurable: true,
+    value: vi.fn(function hasPointerCapture(this: HTMLElement, pointerId: number) {
+      return captures.get(this)?.has(pointerId) ?? false;
+    }),
+  });
+  Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', {
+    configurable: true,
+    value: vi.fn(function releasePointerCapture(this: HTMLElement, pointerId: number) {
+      captures.get(this)?.delete(pointerId);
+    }),
+  });
+}
+
+function restorePointerCaptureHarness() {
+  (['setPointerCapture', 'hasPointerCapture', 'releasePointerCapture'] as const)
+    .forEach((property) => {
+      const descriptor = property === 'setPointerCapture'
+        ? pointerCaptureDescriptors.set
+        : property === 'hasPointerCapture'
+          ? pointerCaptureDescriptors.has
+          : pointerCaptureDescriptors.release;
+      if (descriptor) Object.defineProperty(HTMLElement.prototype, property, descriptor);
+      else Reflect.deleteProperty(HTMLElement.prototype, property);
+    });
+}
 
 function renderCascade(entry = '/mind-games/cascade') {
   return render(
@@ -84,18 +128,75 @@ describe('Mind Cascade effect helpers', () => {
       fromY: '0%',
     });
   });
+
+  it('locks pointer gestures to the dominant axis and one adjacent target', () => {
+    expect(getPointerDragIntent(
+      { row: 3, column: 3 },
+      9,
+      4,
+      7,
+      7,
+    )).toEqual({
+      axis: 'none',
+      crossedThreshold: false,
+      target: null,
+    });
+    expect(getPointerDragIntent(
+      { row: 3, column: 3 },
+      -42,
+      13,
+      7,
+      7,
+    )).toEqual({
+      axis: 'horizontal',
+      crossedThreshold: true,
+      target: { row: 3, column: 2 },
+    });
+    expect(getPointerDragIntent(
+      { row: 3, column: 3 },
+      34,
+      -64,
+      7,
+      7,
+    )).toEqual({
+      axis: 'vertical',
+      crossedThreshold: true,
+      target: { row: 2, column: 3 },
+    });
+    expect(getPointerDragIntent(
+      { row: 0, column: 0 },
+      -40,
+      0,
+      7,
+      7,
+    ).target).toBeNull();
+    expect(getPointerDragIntent(
+      { row: 3, column: 3 },
+      18,
+      90,
+      7,
+      7,
+      10,
+      'horizontal',
+    )).toMatchObject({
+      axis: 'horizontal',
+      target: { row: 3, column: 4 },
+    });
+  });
 });
 
 describe('<MindCascade>', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
+    installPointerCaptureHarness();
     vi.spyOn(Date, 'now').mockReturnValue(1_789_000_000_000);
     delete document.documentElement.dataset.motion;
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    restorePointerCaptureHarness();
     delete document.documentElement.dataset.motion;
   });
 
@@ -145,6 +246,177 @@ describe('<MindCascade>', () => {
       state: { turn: 1 },
     });
     expect(saved.resumableSession.steps).toHaveLength(1);
+  });
+
+  it('tracks a dominant-axis touch swipe, commits on release, and suppresses its synthetic click', () => {
+    vi.useFakeTimers();
+    renderCascade();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Forecast' }));
+    const candidate = document.querySelector<HTMLButtonElement>('.mc-forecast');
+    expect(candidate).not.toBeNull();
+    const fromRow = Number(candidate!.dataset.fromRow);
+    const fromColumn = Number(candidate!.dataset.fromColumn);
+    const toRow = Number(candidate!.dataset.toRow);
+    const toColumn = Number(candidate!.dataset.toColumn);
+    const source = document.querySelector<HTMLButtonElement>(
+      `.mc-tile[data-row="${fromRow}"][data-column="${fromColumn}"]`,
+    );
+    const target = document.querySelector<HTMLButtonElement>(
+      `.mc-tile[data-row="${toRow}"][data-column="${toColumn}"]`,
+    );
+    const frame = document.querySelector<HTMLElement>('.mc-board-frame');
+    expect(source).not.toBeNull();
+    expect(target).not.toBeNull();
+    expect(frame).not.toBeNull();
+    const movesBefore = Number(
+      screen.getByText('Moves remaining').parentElement?.querySelector('strong')?.textContent,
+    );
+    const pointerId = 17;
+    const startX = 120;
+    const startY = 140;
+    const horizontal = fromRow === toRow;
+    const endX = startX + (toColumn - fromColumn) * 64 + (horizontal ? 0 : 5);
+    const endY = startY + (toRow - fromRow) * 64 + (horizontal ? 5 : 0);
+    const layoutRead = vi.spyOn(source!, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      width: 40,
+      height: 50,
+      top: 0,
+      right: 40,
+      bottom: 50,
+      left: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    fireEvent.pointerDown(source!, {
+      pointerId,
+      pointerType: 'touch',
+      isPrimary: true,
+      button: 0,
+      clientX: startX,
+      clientY: startY,
+    });
+    expect(HTMLElement.prototype.setPointerCapture).toHaveBeenCalledWith(pointerId);
+
+    fireEvent.pointerMove(source!, {
+      pointerId,
+      pointerType: 'touch',
+      isPrimary: true,
+      clientX: startX + 5,
+      clientY: startY + 3,
+    });
+    act(() => { vi.advanceTimersByTime(20); });
+    expect(frame).not.toHaveClass('is-dragging');
+    expect(source).not.toHaveClass('drag-source');
+
+    fireEvent.pointerMove(source!, {
+      pointerId,
+      pointerType: 'touch',
+      isPrimary: true,
+      clientX: endX,
+      clientY: endY,
+    });
+    act(() => { vi.advanceTimersByTime(20); });
+    expect(frame).toHaveClass('is-dragging');
+    expect(frame).toHaveAttribute('data-drag-axis', horizontal ? 'horizontal' : 'vertical');
+    expect(source).toHaveClass('drag-source');
+    expect(target).toHaveClass('drag-target');
+    expect(source!.style.getPropertyValue(horizontal ? '--mc-drag-x' : '--mc-drag-y'))
+      .not.toBe('0px');
+    fireEvent.pointerMove(source!, {
+      pointerId,
+      pointerType: 'touch',
+      isPrimary: true,
+      clientX: endX + (horizontal ? Math.sign(endX - startX) * 24 : 0),
+      clientY: endY + (horizontal ? 0 : Math.sign(endY - startY) * 24),
+    });
+    act(() => { vi.advanceTimersByTime(20); });
+    expect(layoutRead).toHaveBeenCalledTimes(1);
+
+    fireEvent.pointerUp(source!, {
+      pointerId,
+      pointerType: 'touch',
+      isPrimary: true,
+      button: 0,
+      clientX: endX,
+      clientY: endY,
+    });
+
+    const movesAfter = Number(
+      screen.getByText('Moves remaining').parentElement?.querySelector('strong')?.textContent,
+    );
+    expect(movesAfter).toBe(movesBefore - 1);
+    expect(frame).not.toHaveClass('is-dragging');
+    expect(source).not.toHaveClass('drag-source');
+    expect(target).not.toHaveClass('drag-target');
+    expect(HTMLElement.prototype.releasePointerCapture).toHaveBeenCalledWith(pointerId);
+    expect(layoutRead).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(source!);
+    expect(source).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('status', { name: '' })).toHaveTextContent(/resolved \d+ cascade step/i);
+  });
+
+  it('keeps tap-to-select below the drag threshold and cancels captured drags without a move', () => {
+    vi.useFakeTimers();
+    renderCascade();
+
+    const source = screen.getAllByRole('gridcell')[8] as HTMLButtonElement;
+    const frame = document.querySelector<HTMLElement>('.mc-board-frame');
+    const movesBefore = Number(
+      screen.getByText('Moves remaining').parentElement?.querySelector('strong')?.textContent,
+    );
+
+    fireEvent.pointerDown(source, {
+      pointerId: 21,
+      pointerType: 'mouse',
+      isPrimary: true,
+      button: 0,
+      clientX: 90,
+      clientY: 90,
+    });
+    fireEvent.pointerUp(source, {
+      pointerId: 21,
+      pointerType: 'mouse',
+      isPrimary: true,
+      button: 0,
+      clientX: 96,
+      clientY: 94,
+    });
+    fireEvent.click(source);
+    expect(source).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.pointerDown(source, {
+      pointerId: 22,
+      pointerType: 'touch',
+      isPrimary: true,
+      button: 0,
+      clientX: 90,
+      clientY: 90,
+    });
+    fireEvent.pointerMove(source, {
+      pointerId: 22,
+      pointerType: 'touch',
+      isPrimary: true,
+      clientX: 145,
+      clientY: 94,
+    });
+    act(() => { vi.advanceTimersByTime(20); });
+    expect(frame).toHaveClass('is-dragging');
+
+    fireEvent.pointerCancel(source, {
+      pointerId: 22,
+      pointerType: 'touch',
+      isPrimary: true,
+    });
+    expect(frame).not.toHaveClass('is-dragging');
+    expect(source).not.toHaveClass('drag-source');
+    const movesAfter = Number(
+      screen.getByText('Moves remaining').parentElement?.querySelector('strong')?.textContent,
+    );
+    expect(movesAfter).toBe(movesBefore);
   });
 
   it('choreographs a verified turn through visible cascade state without blocking input', () => {
