@@ -2,7 +2,7 @@
   "id": "./",
   "name": "GrandMaster · Adaptive School of Strategy",
   "short_name": "GrandMaster",
-  "description": "Learn, practice, play and review 38 strategy game engines through one adaptive path.",
+  "description": "Learn, practise, play and review 38 strategy engines and original intelligent games through one adaptive path.",
   "start_url": "./#/",
   "scope": "./",
   "display": "standalone",
@@ -43,6 +43,11 @@
       "name": "Daily challenge",
       "short_name": "Daily",
       "url": "./#/daily"
+    },
+    {
+      "name": "Play Mind Cascade",
+      "short_name": "Mind Cascade",
+      "url": "./#/mind-games/cascade"
     }
   ]
 }

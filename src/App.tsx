@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import Sidebar from './components/Sidebar';
@@ -30,6 +30,8 @@ const CreatorStudio = lazy(() => import('./pages/CreatorStudio'));
 const Scanner = lazy(() => import('./pages/Scanner'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Spectate = lazy(() => import('./pages/Spectate'));
+const MindGames = lazy(() => import('./pages/MindGames'));
+const MindCascade = lazy(() => import('./pages/MindCascade'));
 
 function RouteFailure({ reset }: ErrorBoundaryFallbackProps) {
   return (
@@ -40,7 +42,7 @@ function RouteFailure({ reset }: ErrorBoundaryFallbackProps) {
     >
       <div aria-hidden="true" style={{ fontSize: 38 }}>↻</div>
       <h1 style={{ margin: '8px 0' }}>This view hit a snag</h1>
-      <p className="muted">Your saved progress is still here. Retry the view, or return home and continue elsewhere.</p>
+      <p className="muted">Retry the view, or return home and continue elsewhere.</p>
       <div className="row gap-sm wrap" style={{ justifyContent: 'center', marginTop: 18 }}>
         <button className="btn primary" type="button" onClick={reset}>Try again</button>
         <Link className="btn" to="/" onClick={reset}>Return home</Link>
@@ -51,17 +53,26 @@ function RouteFailure({ reset }: ErrorBoundaryFallbackProps) {
 
 export default function App() {
   const location = useLocation();
+  const previousPath = useRef(location.pathname);
   // If a billing backend is configured (VITE_API_BASE), sync server entitlements
   // (e.g. Pro) on load. No-op otherwise — see src/billing/billing.ts.
   useEffect(() => { void hydrateEntitlements(); }, []);
+  useEffect(() => {
+    if (previousPath.current === location.pathname) return;
+    previousPath.current = location.pathname;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById('main')?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [location.pathname]);
   return (
     <>
       <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); const m = document.getElementById('main'); m?.focus(); m?.scrollIntoView(); }}>Skip to content</a>
-      <div className="app-bg" />
-      <div className="blob a" />
-      <div className="blob b" />
-      <div className="blob c" />
-      <div className="grain" />
+      <div className="app-bg" aria-hidden="true" />
+      <div className="blob a" aria-hidden="true" />
+      <div className="blob b" aria-hidden="true" />
+      <div className="blob c" aria-hidden="true" />
+      <div className="grain" aria-hidden="true" />
       <div className="shell">
         <Sidebar />
         <main id="main" tabIndex={-1} className="shell-main">
@@ -69,13 +80,15 @@ export default function App() {
             fallback={(props) => <RouteFailure {...props} />}
             resetKeys={[location.pathname, location.search]}
           >
-            <Suspense fallback={<div className="route-loading">Loading…</div>}>
+            <Suspense fallback={<div className="route-loading" role="status" aria-live="polite">Loading view…</div>}>
               <div className="route-fade" key={location.pathname}>
                 <Routes location={location}>
                   <Route path="/" element={<Home />} />
                   <Route path="/path" element={<Path />} />
                   <Route path="/studio" element={<StrategyStudio />} />
                   <Route path="/games" element={<Games />} />
+                  <Route path="/mind-games" element={<MindGames />} />
+                  <Route path="/mind-games/cascade" element={<MindCascade />} />
                   <Route path="/play/:gameId" element={<GameScreen />} />
                   <Route path="/learn/:gameId" element={<Learn />} />
                   <Route path="/puzzles" element={<Puzzles />} />

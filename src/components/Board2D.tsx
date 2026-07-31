@@ -55,44 +55,108 @@ export default function Board2D(props: Props) {
   const dCol = (c: number) => (flipped ? cols - 1 - c : c);
 
   // Drag-to-move: a normal click is activated only by `onClick`; the source is
-  // selected from pointermove only after the drag threshold is crossed. This
-  // prevents pointerdown + click from activating the same square twice.
-  const dragRef = useRef<{ from: number; cell: CellView; x0: number; y0: number; moved: boolean } | null>(null);
+  // selected from pointermove only after the drag threshold is crossed. Pointer
+  // coordinates stay in this ref and the floating piece is painted at most once
+  // per frame, so moving a pointer never re-renders the whole board.
+  const dragRef = useRef<{
+    pointerId: number;
+    from: number;
+    cell: CellView;
+    sourceElement: HTMLDivElement;
+    x0: number;
+    y0: number;
+    x: number;
+    y: number;
+    moved: boolean;
+    sourceWasSelected: boolean;
+    paintFrame: number | null;
+  } | null>(null);
   const suppressClickRef = useRef(false);
+  const suppressClickTimerRef = useRef<number | null>(null);
   const onCellRef = useRef(onCell);
   onCellRef.current = onCell;
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
   const [dragCell, setDragCell] = useState<CellView | null>(null);
-  const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
+
+  const paintGhost = (active: NonNullable<typeof dragRef.current>) => {
+    if (active.paintFrame !== null) return;
+    active.paintFrame = window.requestAnimationFrame(() => {
+      active.paintFrame = null;
+      if (dragRef.current !== active || !active.moved || !ghostRef.current) return;
+      ghostRef.current.style.transform = `translate3d(${active.x}px, ${active.y}px, 0) translate(-50%, -50%) scale(1.06)`;
+    });
+  };
+
+  const clearDrag = (releaseCapture = true) => {
+    const active = dragRef.current;
+    if (!active) return;
+    dragRef.current = null;
+    if (active.paintFrame !== null) window.cancelAnimationFrame(active.paintFrame);
+    setDragCell(null);
+    if (
+      releaseCapture
+      && typeof active.sourceElement.hasPointerCapture === 'function'
+      && active.sourceElement.hasPointerCapture(active.pointerId)
+    ) {
+      try {
+        active.sourceElement.releasePointerCapture(active.pointerId);
+      } catch {
+        // The browser may have released capture while dispatching pointerup.
+      }
+    }
+  };
 
   useEffect(() => {
     const move = (e: PointerEvent) => {
       const d = dragRef.current;
-      if (!d) return;
+      if (!d || e.pointerId !== d.pointerId) return;
+      d.x = e.clientX;
+      d.y = e.clientY;
       if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 6) {
         d.moved = true;
-        onCellRef.current(d.from);
+        if (!d.sourceWasSelected) onCellRef.current(d.from);
         setDragCell(d.cell);
       }
-      if (d.moved) setGhost({ x: e.clientX, y: e.clientY });
+      if (d.moved) {
+        e.preventDefault();
+        paintGhost(d);
+      }
     };
     const up = (e: PointerEvent) => {
       const d = dragRef.current;
-      if (!d) return;
-      dragRef.current = null;
-      setDragCell(null);
-      setGhost(null);
-      if (d.moved) {
+      if (!d || e.pointerId !== d.pointerId) return;
+      const moved = d.moved;
+      const from = d.from;
+      clearDrag();
+      if (moved) {
         suppressClickRef.current = true;
-        window.setTimeout(() => { suppressClickRef.current = false; }, 0);
-        const el = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('.cell') as HTMLElement | null;
-        const idx = el ? Number(el.getAttribute('data-idx')) : -1;
-        if (idx >= 0 && idx !== d.from) onCellRef.current(idx);
+        if (suppressClickTimerRef.current !== null) {
+          window.clearTimeout(suppressClickTimerRef.current);
+        }
+        suppressClickTimerRef.current = window.setTimeout(() => {
+          suppressClickRef.current = false;
+          suppressClickTimerRef.current = null;
+        }, 350);
+
+        const cellElement = (
+          document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
+        )?.closest<HTMLElement>('[data-idx]');
+        const rawIndex = cellElement?.dataset.idx;
+        const idx = rawIndex !== undefined && /^\d+$/.test(rawIndex)
+          ? Number(rawIndex)
+          : -1;
+        const isBoardCell = !!cellElement
+          && !!boardRef.current
+          && boardRef.current.contains(cellElement)
+          && Number.isSafeInteger(idx);
+        if (isBoardCell && idx !== from) onCellRef.current(idx);
       }
     };
-    const cancel = () => {
-      dragRef.current = null;
-      setDragCell(null);
-      setGhost(null);
+    const cancel = (e: PointerEvent) => {
+      if (dragRef.current?.pointerId !== e.pointerId) return;
+      clearDrag(false);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
@@ -101,12 +165,52 @@ export default function Board2D(props: Props) {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', cancel);
+      const active = dragRef.current;
+      if (active && active.paintFrame !== null) {
+        window.cancelAnimationFrame(active.paintFrame);
+      }
+      dragRef.current = null;
+      if (suppressClickTimerRef.current !== null) {
+        window.clearTimeout(suppressClickTimerRef.current);
+        suppressClickTimerRef.current = null;
+      }
     };
   }, []);
 
-  const startDrag = (e: React.PointerEvent, cell: CellView) => {
-    if (readOnly || e.button !== 0 || !cell.piece || cell.playable === false || cell.piece.player !== turn) return;
-    dragRef.current = { from: cell.index, cell, x0: e.clientX, y0: e.clientY, moved: false };
+  useLayoutEffect(() => {
+    const active = dragRef.current;
+    if (dragCell && active?.moved) paintGhost(active);
+  }, [dragCell]);
+
+  const startDrag = (e: React.PointerEvent<HTMLDivElement>, cell: CellView) => {
+    if (
+      readOnly
+      || dragRef.current
+      || e.button !== 0
+      || e.isPrimary === false
+      || !cell.piece
+      || cell.playable === false
+      || cell.piece.player !== turn
+    ) return;
+    const sourceElement = e.currentTarget;
+    dragRef.current = {
+      pointerId: e.pointerId,
+      from: cell.index,
+      cell,
+      sourceElement,
+      x0: e.clientX,
+      y0: e.clientY,
+      x: e.clientX,
+      y: e.clientY,
+      moved: false,
+      sourceWasSelected: selectedRef.current === cell.index,
+      paintFrame: null,
+    };
+    try {
+      sourceElement.setPointerCapture(e.pointerId);
+    } catch {
+      // Pointer capture is an enhancement; window listeners remain the fallback.
+    }
   };
 
   const targetSet = new Map<number, MoveBase>();
@@ -250,10 +354,21 @@ export default function Board2D(props: Props) {
               aria-colindex={cell.playable !== false ? c + 1 : undefined}
               style={{ gridColumn: c + 1, gridRow: r + 1, background: sqColor, touchAction: 'none' }}
               onClick={() => {
-                if (readOnly || suppressClickRef.current) return;
+                if (readOnly) return;
+                if (suppressClickRef.current) {
+                  suppressClickRef.current = false;
+                  if (suppressClickTimerRef.current !== null) {
+                    window.clearTimeout(suppressClickTimerRef.current);
+                    suppressClickTimerRef.current = null;
+                  }
+                  return;
+                }
                 if (cell.playable !== false) { setCursor(cell.index); onCell(cell.index); }
               }}
               onPointerDown={(e) => startDrag(e, cell)}
+              onLostPointerCapture={(e) => {
+                if (dragRef.current?.pointerId === e.pointerId) clearDrag(false);
+              }}
               onMouseEnter={() => def.interaction.type === 'drop' && setHoverCol(cell.col)}
             >
               {isLast && <div className="hl last" />}
@@ -307,8 +422,13 @@ export default function Board2D(props: Props) {
         })}
       </div>
 
-      {dragCell?.piece && ghost && createPortal(
-        <div className="drag-ghost" style={{ left: ghost.x, top: ghost.y, width: cellPx, height: cellPx }}>
+      {dragCell?.piece && createPortal(
+        <div
+          ref={ghostRef}
+          className="drag-ghost"
+          aria-hidden="true"
+          style={{ width: cellPx, height: cellPx }}
+        >
           <div className={`pc ${style}`} style={pieceStyleFor(style, dragCell.piece.player, pieceColor(dragCell.piece.player))}>
             {style === 'chess'
               ? <ChessPiece kind={dragCell.piece.kind} fill={pieceColor(dragCell.piece.player)} stroke={dragCell.piece.player === 0 ? '#3b3f4a' : '#05070c'} shine={dragCell.piece.player === 1 ? 'rgba(255,255,255,0.13)' : undefined} />

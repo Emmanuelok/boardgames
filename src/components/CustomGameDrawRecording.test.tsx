@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 const { recordResult } = vi.hoisted(() => ({
@@ -113,6 +113,8 @@ describe.each(CASES)('%s draw completion', (_name, Game, gameId) => {
         <Game />
       </MemoryRouter>,
     );
+
+    expect(screen.getByRole('button', { name: 'Mute game audio' })).toHaveAttribute('title', 'Mute game audio');
 
     await waitFor(() => {
       expect(recordResult).toHaveBeenCalledTimes(1);

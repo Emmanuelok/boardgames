@@ -44,7 +44,7 @@ export default function BackgammonGame({
 
   const online = useBgOnline({
     onReset: () => { setS(initialState()); setSel(null); setRecorded(false); setLog([]); },
-    onState: (st) => { setS(st); setSel(null); say('Opponent moved.', 'info'); },
+    onState: (st) => { setS(st); setSel(null); playSound('move', { intensity: 0.44 }); say('Opponent moved.', 'info'); },
   });
   const isOnline = online.engaged;
   const myColor: 0 | 1 = isOnline ? online.color : WHITE;
@@ -71,7 +71,7 @@ export default function BackgammonGame({
   useEffect(() => {
     if (win === null || recorded) return;
     setRecorded(true);
-    playSound(win === myColor ? 'win' : 'lose');
+    playSound(win === myColor ? 'win' : 'lose', { intensity: 1 });
     if (!isOnline) recordResult('backgammon', win === WHITE ? 'win' : 'loss', aiDifficulty as any);
   }, [win, recorded, recordResult, aiDifficulty, isOnline, myColor]);
 
@@ -83,7 +83,7 @@ export default function BackgammonGame({
     const t = setTimeout(() => {
       let st = s.dice.length ? s : withRoll(s, rollDice());
       const res = aiPlay(st, aiDifficulty);
-      playSound(res.hit ? 'capture' : 'move');
+      playSound(res.hit ? 'capture' : 'move', { intensity: res.hit ? 0.78 : 0.48 });
       say(`Black rolled ${st.dice.slice(0, st.dice.length === 4 ? 1 : 2).join('-')}${st.dice.length === 4 ? ' (doubles)' : ''} and played.${res.hit ? ' Hit — your blot is on the bar!' : ''}`, res.hit ? 'bad' : 'info');
       setS(endTurn(res.state));
       setThinking(false);
@@ -97,9 +97,9 @@ export default function BackgammonGame({
   const roll = () => {
     resumeAudio();
     if (!myTurn || s.dice.length) return;
-    playSound('select');
     let st = withRoll(s, rollDice());
     const dbl = st.dice.length === 4;
+    playSound('special', { intensity: dbl ? 0.74 : 0.56, depth: dbl ? 2 : 1 });
     const stuck = legalMoves(st).length === 0;
     say(`You rolled ${dbl ? `${st.dice[0]}-${st.dice[0]} (doubles — four moves!)` : st.dice.join('-')}${stuck ? ' — no legal move, turn passes.' : ''}`, 'info');
     if (stuck) st = endTurn(st); // no move possible
@@ -109,15 +109,20 @@ export default function BackgammonGame({
   const clickSource = (from: Src) => {
     resumeAudio();
     if (!myTurn) return;
-    if (!sources.has(from)) { setSel(null); return; }
-    playSound('select');
+    const pan = from === 'bar' ? 0 : ((from % 12) / 11 * 2 - 1) * 0.62;
+    if (!sources.has(from)) { setSel(null); playSound('illegal', { intensity: 0.24, pan }); return; }
+    playSound('select', { intensity: 0.32, pan });
     setSel(from);
   };
 
   const play = (m: BgMove) => {
     let st = applyMove(s, m);
     const hit = m.to !== 'off' && isHit(s, m);
-    playSound(m.to === 'off' ? 'promote' : hit ? 'capture' : 'move');
+    const pan = m.to === 'off' ? (myColor === WHITE ? 0.74 : -0.74) : (((m.to as number) % 12) / 11 * 2 - 1) * 0.62;
+    playSound(m.to === 'off' ? 'score' : hit ? 'capture' : 'move', {
+      intensity: m.to === 'off' ? 0.68 : hit ? 0.8 : 0.46,
+      pan,
+    });
     if (hit) say('You hit a Black blot — it goes to the bar!', 'good');
     else if (m.to === 'off') say('You bear a checker off — closer to victory.', 'good');
     else if (m.from === 'bar') say('You re-enter a checker from the bar.', 'info');
@@ -165,7 +170,7 @@ export default function BackgammonGame({
 
       <div className="bg-controls">
         <button className="btn sm" onClick={newGame}>↻ New game</button>
-        <button className="btn icon sm" onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
+        <button className="btn icon sm" aria-label={muted ? 'Unmute game audio' : 'Mute game audio'} title={muted ? 'Unmute game audio' : 'Mute game audio'} onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
         <Link className="btn sm ghost" to="/learn/backgammon">📖 Rules</Link>
         {isOnline
           ? <button className="btn sm ghost" onClick={() => { online.leave(); setShowOnline(false); }}>Leave room</button>

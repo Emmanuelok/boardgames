@@ -18,6 +18,17 @@ const qNote = (m: QuartoMove) => {
   const c = `${String.fromCharCode(97 + (m.cell % 4))}${4 - ((m.cell / 4) | 0)}`;
   return m.give >= 0 ? `${c} →#${m.give}` : `${c} ✦`;
 };
+const qCoord = (cell: number) => `${String.fromCharCode(97 + (cell % 4))}${4 - ((cell / 4) | 0)}`;
+
+function pieceDescription(piece: number): string {
+  return [
+    attr(piece, 0) ? 'tall' : 'short',
+    attr(piece, 1) ? 'dark' : 'light',
+    attr(piece, 2) ? 'round' : 'square',
+    attr(piece, 3) ? 'hollow' : 'solid',
+    'piece',
+  ].join(' ');
+}
 
 /** A Quarto piece, drawn from its four binary traits. */
 function QPiece({ p, big }: { p: number; big?: boolean }) {
@@ -51,7 +62,7 @@ export default function QuartoGame({ aiDifficulty = 'medium' }: { aiDifficulty?:
   useEffect(() => {
     if (!over || recorded) return;
     setRecorded(true);
-    playSound(w === 0 ? 'win' : w === 1 ? 'lose' : 'draw');
+    playSound(w === 0 ? 'win' : w === 1 ? 'lose' : 'draw', { intensity: 1 });
     recordResult('quarto', w === 'draw' ? 'draw' : w === 0 ? 'win' : 'loss', aiDifficulty as any);
     if (review.length >= 4) try { saveRecord(summarize(qdef, review, qdef.getStatus(s), 0)); } catch { /* ignore */ }
   }, [over, w, recorded, recordResult, aiDifficulty]);
@@ -63,7 +74,7 @@ export default function QuartoGame({ aiDifficulty = 'medium' }: { aiDifficulty?:
       const m = chooseMove(s, aiDifficulty);
       if (!m) return;
       const after = applyMove(s, m);
-      playSound(winnerOf(after) === 1 ? 'win' : 'move');
+      playSound('place', { intensity: winnerOf(after) === 1 ? 0.7 : 0.5, pan: m.cell >= 0 ? ((m.cell % 4) / 3 * 2 - 1) * 0.62 : 0 });
       setLog((l) => [...l, moveComment(s, m, after)]);
       setReview((r) => [...r, { ply: r.length + 1, player: 1, notation: qNote(m), explanation: gradeMove(s, m, after) }]);
       setS(after);
@@ -78,12 +89,12 @@ export default function QuartoGame({ aiDifficulty = 'medium' }: { aiDifficulty?:
     const winMove: QuartoMove = { id: 'w', cell: idx, give: -1, notation: '' };
     const win = applyMove(s, winMove);
     if (winnerOf(win) === 0) {
-      playSound('win');
+      playSound('place', { intensity: 0.72, pan: ((idx % 4) / 3 * 2 - 1) * 0.62 });
       setLog((l) => [...l, moveComment(s, { ...winMove, notation: `${String.fromCharCode(97 + idx % 4)}${4 - ((idx / 4) | 0)} ✦` }, win)]);
       setReview((r) => [...r, { ply: r.length + 1, player: 0, notation: qNote(winMove), explanation: gradeMove(s, winMove, win) }]);
       setS(win); setTentative(null); return;
     }
-    playSound('select');
+    playSound('place', { intensity: 0.42, pan: ((idx % 4) / 3 * 2 - 1) * 0.62 });
     setTentative(idx);
   };
 
@@ -91,7 +102,7 @@ export default function QuartoGame({ aiDifficulty = 'medium' }: { aiDifficulty?:
     if (!givePhase) return;
     const m: QuartoMove = { id: `${tentative ?? -1}-${g}`, cell: tentative ?? -1, give: g, notation: '' };
     const after = applyMove(s, m);
-    playSound('move');
+    playSound('special', { intensity: 0.42, pan: ((g % 4) / 3 * 2 - 1) * 0.48 });
     setLog((l) => [...l, moveComment(s, m, after)]);
     setReview((r) => [...r, { ply: r.length + 1, player: 0, notation: qNote(m), explanation: gradeMove(s, m, after) }]);
     setS(after); setTentative(null);
@@ -112,26 +123,37 @@ export default function QuartoGame({ aiDifficulty = 'medium' }: { aiDifficulty?:
         </div>
 
         <div className="q-board">
-          {s.board.map((p, i) => (
-            <button key={i} className={`q-cell ${p === null && placePhase ? 'live' : ''} ${tentative === i ? 'tent' : ''}`} onClick={() => clickCell(i)} aria-label="cell">
-              {p !== null && <QPiece p={p} />}
-              {p === null && tentative === i && s.held !== null && <span className="q-ghost"><QPiece p={s.held} /></span>}
-            </button>
-          ))}
+          {s.board.map((p, i) => {
+            const label = p !== null
+              ? `${qCoord(i)}, occupied by ${pieceDescription(p)}`
+              : tentative === i && s.held !== null
+                ? `${qCoord(i)}, tentative ${pieceDescription(s.held)}; choose a piece to hand Owl`
+                : placePhase && s.held !== null
+                  ? `${qCoord(i)}, empty; place the held ${pieceDescription(s.held)}`
+                  : `${qCoord(i)}, empty`;
+            return (
+              <button key={i} className={`q-cell ${p === null && placePhase ? 'live' : ''} ${tentative === i ? 'tent' : ''}`}
+                onClick={() => clickCell(i)} aria-label={label} aria-disabled={!placePhase || p !== null}>
+                {p !== null && <QPiece p={p} />}
+                {p === null && tentative === i && s.held !== null && <span className="q-ghost"><QPiece p={s.held} /></span>}
+              </button>
+            );
+          })}
         </div>
 
         <div className={`q-tray ${givePhase ? 'active' : ''}`}>
           <span className="q-tray-label">{givePhase ? 'Hand a piece to Owl:' : 'Pieces left'}</span>
           <div className="q-tray-pieces">
             {avail.map((p) => (
-              <button key={p} className="q-tray-piece" disabled={!givePhase} onClick={() => giveClick(p)} title="Give this piece"><QPiece p={p} /></button>
+              <button key={p} className="q-tray-piece" disabled={!givePhase} onClick={() => giveClick(p)}
+                title={`Give Owl the ${pieceDescription(p)}`} aria-label={`Give Owl the ${pieceDescription(p)}`}><QPiece p={p} /></button>
             ))}
           </div>
         </div>
 
         <div className="q-controls">
           <button className="btn sm" onClick={newGame}>↻ New game</button>
-          <button className="btn icon sm" onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
+          <button className="btn icon sm" aria-label={muted ? 'Unmute game audio' : 'Mute game audio'} title={muted ? 'Unmute game audio' : 'Mute game audio'} onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
           <Link className="btn sm ghost" to="/learn/quarto">📖 Rules</Link>
         </div>
       </div>

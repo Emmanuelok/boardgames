@@ -37,7 +37,7 @@ export default function UltimateGame({ aiDifficulty = 'medium' }: { aiDifficulty
   useEffect(() => {
     if (!over || recorded) return;
     setRecorded(true);
-    playSound(w === 0 ? 'win' : w === 1 ? 'lose' : 'draw');
+    playSound(w === 0 ? 'win' : w === 1 ? 'lose' : 'draw', { intensity: 1 });
     recordResult('ultimate', w === 'draw' ? 'draw' : w === 0 ? 'win' : 'loss', aiDifficulty as any);
     if (review.length >= 4) try { saveRecord(summarize(udef, review, udef.getStatus(s), 0)); } catch { /* ignore */ }
   }, [over, w, recorded, recordResult, aiDifficulty]);
@@ -48,7 +48,11 @@ export default function UltimateGame({ aiDifficulty = 'medium' }: { aiDifficulty
       const m = chooseMove(s, aiDifficulty);
       if (!m) return;
       const after = applyMove(s, m);
-      playSound(winnerOf(after) === 1 ? 'win' : 'move');
+      const claimedBoard = s.boards[m.board] === null && after.boards[m.board] !== null;
+      playSound(claimedBoard ? 'score' : 'place', {
+        intensity: claimedBoard ? 0.78 : 0.46,
+        pan: ((m.board % 3) / 2 * 2 - 1) * 0.62,
+      });
       setLast(m.board * 9 + m.cell);
       setLog((l) => [...l, moveComment(s, m, after)]);
       setReview((r) => [...r, { ply: r.length + 1, player: 1, notation: `B${m.board + 1}-${m.cell + 1}`, explanation: gradeMove(s, m, after) }]);
@@ -62,7 +66,11 @@ export default function UltimateGame({ aiDifficulty = 'medium' }: { aiDifficulty
     if (!humanTurn || !playable.has(b) || s.cells[b * 9 + c] !== null) return;
     const m = { id: `${b}.${c}`, board: b, cell: c, notation: '' };
     const after = applyMove(s, m);
-    playSound(winnerOf(after) === 0 ? 'win' : 'select');
+    const claimedBoard = s.boards[b] === null && after.boards[b] !== null;
+    playSound(claimedBoard ? 'score' : 'place', {
+      intensity: claimedBoard ? 0.8 : 0.48,
+      pan: ((b % 3) / 2 * 2 - 1) * 0.62,
+    });
     setLast(b * 9 + c);
     setLog((l) => [...l, moveComment(s, m, after)]);
     setReview((r) => [...r, { ply: r.length + 1, player: 0, notation: `B${b + 1}-${c + 1}`, explanation: gradeMove(s, m, after) }]);
@@ -123,7 +131,7 @@ export default function UltimateGame({ aiDifficulty = 'medium' }: { aiDifficulty
 
         <div className="utt-controls">
           <button className="btn sm" onClick={newGame}>↻ New game</button>
-          <button className="btn icon sm" onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
+          <button className="btn icon sm" aria-label={muted ? 'Unmute game audio' : 'Mute game audio'} title={muted ? 'Unmute game audio' : 'Mute game audio'} onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
           <Link className="btn sm ghost" to="/learn/ultimate">📖 Rules</Link>
         </div>
       </div>

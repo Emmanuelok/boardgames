@@ -8,8 +8,11 @@
 /* Piece following the cursor/finger while dragging to move. */
 .drag-ghost {
   position: fixed;
+  left: 0;
+  top: 0;
   z-index: 1000;
-  transform: translate(-50%, -50%) scale(1.06);
+  transform: translate3d(-200vw, -200vh, 0) translate(-50%, -50%) scale(1.06);
+  will-change: transform;
   pointer-events: none;
   display: grid;
   place-items: center;

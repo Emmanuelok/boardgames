@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { OPENINGS, type OpeningInfo } from '../games/chess/openings';
 import type { BoardTheme } from '../themes/boardThemes';
 import chess from '../games/chess';
@@ -39,6 +39,19 @@ export default function OpeningGauntlet({ theme, onExit }: { theme: BoardTheme; 
   const [results, setResults] = useState<boolean[]>([]);
   const [phase, setPhase] = useState<'play' | 'reveal' | 'done'>('play');
   const [best, setBest] = useState(loadBest);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceGeneration = useRef(0);
+
+  const cancelPendingAdvance = () => {
+    advanceGeneration.current += 1;
+    if (advanceTimer.current !== null) clearTimeout(advanceTimer.current);
+    advanceTimer.current = null;
+  };
+
+  useEffect(() => () => {
+    advanceGeneration.current += 1;
+    if (advanceTimer.current !== null) clearTimeout(advanceTimer.current);
+  }, []);
 
   const q = quiz[i];
   const side = q ? (q.ply % 2 === 0 ? 'White' : 'Black') : 'White';
@@ -52,13 +65,22 @@ export default function OpeningGauntlet({ theme, onExit }: { theme: BoardTheme; 
       setPhase('done');
       const finalScore = score + (was ? 1 : 0);
       if (finalScore > best) { setBest(finalScore); try { localStorage.setItem(BEST_KEY, String(finalScore)); } catch { /* ignore */ } }
-      playSound(finalScore >= quiz.length * 0.75 ? 'win' : 'move');
+      playSound('complete', { intensity: finalScore >= quiz.length * 0.75 ? 0.92 : 0.68, depth: finalScore });
     }
   };
-  const onSolved = () => { if (phase !== 'play') return; playSound('move'); setScore((s) => s + 1); setPhase('reveal'); setTimeout(() => advance(true), 850); };
-  const onFailed = () => { if (phase !== 'play') return; playSound('illegal'); setPhase('reveal'); setTimeout(() => advance(false), 1700); };
+  const scheduleAdvance = (was: boolean, delay: number) => {
+    const generation = advanceGeneration.current;
+    if (advanceTimer.current !== null) clearTimeout(advanceTimer.current);
+    advanceTimer.current = setTimeout(() => {
+      if (generation !== advanceGeneration.current) return;
+      advanceTimer.current = null;
+      advance(was);
+    }, delay);
+  };
+  const onSolved = () => { if (phase !== 'play') return; playSound('objective', { intensity: 0.64, depth: score + 1 }); setScore((s) => s + 1); setPhase('reveal'); scheduleAdvance(true, 850); };
+  const onFailed = () => { if (phase !== 'play') return; playSound('illegal', { intensity: 0.36 }); setPhase('reveal'); scheduleAdvance(false, 1700); };
 
-  const restart = () => { setQuiz(buildQuiz()); setI(0); setScore(0); setResults([]); setPhase('play'); };
+  const restart = () => { cancelPendingAdvance(); setQuiz(buildQuiz()); setI(0); setScore(0); setResults([]); setPhase('play'); };
 
   return (
     <section className="op-detail glass gauntlet">

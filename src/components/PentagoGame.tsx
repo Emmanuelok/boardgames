@@ -14,6 +14,15 @@ import type { LogEntry } from '../store/useGameStore';
 import './PentagoGame.css';
 
 const pgNote = (m: PentagoMove) => `${String.fromCharCode(97 + (m.cell % 6))}${6 - ((m.cell / 6) | 0)} Q${m.quad + 1}${m.dir > 0 ? '↻' : '↺'}`;
+const pgCoord = (cell: number) => `${String.fromCharCode(97 + (cell % 6))}${6 - ((cell / 6) | 0)}`;
+
+function pgCellLabel(cell: number, value: number | null, placed: number | null, canPlace: boolean): string {
+  const coord = pgCoord(cell);
+  if (value === 0) return `${coord}, Amber marble`;
+  if (value === 1) return `${coord}, Blue marble`;
+  if (placed === cell) return `${coord}, Amber marble selected; choose a quadrant to rotate`;
+  return canPlace ? `${coord}, empty; place an Amber marble` : `${coord}, empty`;
+}
 
 const COLORS = ['#f59e0b', '#3b82f6']; // Amber (you), Blue (AI)
 const QORIGIN = [[0, 0], [0, 3], [3, 0], [3, 3]];
@@ -33,7 +42,7 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
   useEffect(() => {
     if (!over || recorded) return;
     setRecorded(true);
-    playSound(res.winner === 0 ? 'win' : res.winner === 1 ? 'lose' : 'draw');
+    playSound(res.winner === 0 ? 'win' : res.winner === 1 ? 'lose' : 'draw', { intensity: 1 });
     recordResult('pentago', res.draw ? 'draw' : res.winner === 0 ? 'win' : 'loss', aiDifficulty as any);
     if (review.length >= 4) try { saveRecord(summarize(pdef, review, pdef.getStatus(s), 0)); } catch { /* ignore */ }
   }, [over, res.winner, recorded, recordResult, aiDifficulty]);
@@ -45,7 +54,7 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
       const m = chooseMove(s, aiDifficulty);
       if (!m) return;
       const after = applyMove(s, m);
-      playSound(result(after.board).winner === 1 ? 'win' : 'move');
+      playSound('rotate', { intensity: 0.7, pan: m.quad % 2 === 0 ? -0.42 : 0.42 });
       setLog((l) => [...l, moveComment(s, m, after)]);
       setReview((r) => [...r, { ply: r.length + 1, player: 1, notation: pgNote(m), explanation: gradeMove(s, m, after) }]);
       setS(after);
@@ -56,7 +65,7 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
   const clickCell = (idx: number) => {
     resumeAudio();
     if (!myTurn || s.board[idx] !== null) return;
-    playSound('select');
+    playSound('select', { intensity: 0.32, pan: ((idx % 6) / 5 * 2 - 1) * 0.65 });
     setPlaced(idx); // choose / re-choose where to place; now pick a rotation
   };
 
@@ -64,7 +73,7 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
     if (!myTurn || placed === null) return;
     const m: PentagoMove = { id: `${placed}-${quad}-${dir}`, cell: placed, quad, dir, notation: '' };
     const after = applyMove(s, m);
-    playSound(result(after.board).winner === 0 ? 'win' : 'move');
+    playSound('rotate', { intensity: 0.76, pan: quad % 2 === 0 ? -0.42 : 0.42 });
     setLog((l) => [...l, moveComment(s, m, after)]);
     setReview((r) => [...r, { ply: r.length + 1, player: 0, notation: pgNote(m), explanation: gradeMove(s, m, after) }]);
     setS(after);
@@ -94,7 +103,8 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
                   const idx = (or + r) * 6 + (oc + c);
                   const v = s.board[idx];
                   return (
-                    <button key={idx} className={`pg-cell ${v === null && myTurn ? 'live' : ''}`} onClick={() => clickCell(idx)} aria-label="cell">
+                    <button key={idx} className={`pg-cell ${v === null && myTurn ? 'live' : ''}`} onClick={() => clickCell(idx)}
+                      aria-label={pgCellLabel(idx, v, placed, myTurn)} aria-disabled={!myTurn || v !== null}>
                       {v !== null && <span className="pg-marble" style={{ background: `radial-gradient(circle at 35% 30%, #fff6, ${COLORS[v]})` }} />}
                       {v === null && placed === idx && <span className="pg-marble ghost" style={{ background: `radial-gradient(circle at 35% 30%, #fff6, ${COLORS[0]})` }} />}
                     </button>
@@ -102,8 +112,8 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
                 })}
                 {myTurn && placed !== null && (
                   <div className="pg-rot">
-                    <button onClick={() => doRotate(q, -1)} title="Rotate anticlockwise">↺</button>
-                    <button onClick={() => doRotate(q, 1)} title="Rotate clockwise">↻</button>
+                    <button onClick={() => doRotate(q, -1)} title={`Rotate quadrant ${q + 1} anticlockwise`} aria-label={`Rotate quadrant ${q + 1} anticlockwise`}>↺</button>
+                    <button onClick={() => doRotate(q, 1)} title={`Rotate quadrant ${q + 1} clockwise`} aria-label={`Rotate quadrant ${q + 1} clockwise`}>↻</button>
                   </div>
                 )}
               </div>
@@ -113,7 +123,7 @@ export default function PentagoGame({ aiDifficulty = 'medium' }: { aiDifficulty?
 
         <div className="pg-controls">
           <button className="btn sm" onClick={newGame}>↻ New game</button>
-          <button className="btn icon sm" onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
+          <button className="btn icon sm" aria-label={muted ? 'Unmute game audio' : 'Mute game audio'} title={muted ? 'Unmute game audio' : 'Mute game audio'} onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
           <Link className="btn sm ghost" to="/learn/pentago">📖 Rules</Link>
           {placed !== null && !over && <span className="faint" style={{ fontSize: 13 }}>Pick a quadrant’s ↺ / ↻ to spin it and end your turn.</span>}
         </div>

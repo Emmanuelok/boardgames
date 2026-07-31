@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { BOARD_THEMES } from '../themes/boardThemes';
 import { GAME_COUNT } from '../engine/catalogueMeta';
 import ShaderField from '../components/ShaderField';
@@ -11,14 +11,25 @@ import './Home.css';
 const GamesGallery = lazy(() => import('../components/GamesGallery'));
 
 const INTELLIGENCE = [
-  { icon: '◉', title: 'Diagnose', body: 'Reads games, reviews and practice evidence to find the highest-value focus.' },
+  { icon: '◉', title: 'Focus', body: 'Reads games, reviews and practice evidence to find the highest-value strategy focus.' },
   { icon: '◇', title: 'Learn', body: 'Sequences the right lesson and interactive position for your current level.' },
   { icon: '✦', title: 'Practice', body: 'Moves from guided examples to independent calculation with fading support.' },
-  { icon: '⬡', title: 'Play', body: 'Sets a fair opponent and explains the meaning behind every decision.' },
+  { icon: '⬡', title: 'Play', body: 'Sets a fair opponent and can explain the strategic meaning behind each move.' },
   { icon: '⌁', title: 'Reflect', body: 'Turns decisive moments into the next lesson instead of a forgotten result.' },
-];
+] as const;
+
+const HOME_WALLPAPERS = COSMETICS.filter((item) => item.slot === 'wallpaper');
 
 const localDateKey = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+function prefersReducedMotion(): boolean {
+  if (typeof document === 'undefined') return false;
+  const choice = document.documentElement.dataset.motion;
+  if (choice === 'reduced') return true;
+  return choice !== 'full'
+    && typeof matchMedia === 'function'
+    && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 function useNearViewport<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -37,16 +48,20 @@ function useNearViewport<T extends HTMLElement>() {
 }
 
 export default function Home() {
-  const navigate = useNavigate();
-  const profile = useProfile();
-  const progression = useProgression();
+  const profileName = useProfile((state) => state.name);
+  const rating = useProfile((state) => state.rating);
+  const stats = useProfile((state) => state.stats);
+  const totals = useProfile((state) => state.totals);
+  const xp = useProgression((state) => state.xp);
+  const owned = useProgression((state) => state.owned);
+  const equippedWp = useProgression((state) => state.equipped.wallpaper);
+  const equipCosmetic = useProgression((state) => state.equipCosmetic);
   const [galleryRef, galleryReady] = useNearViewport<HTMLElement>();
-  const { level, into, span } = levelFromXp(progression.xp);
+  const [reduceMotion] = useState(prefersReducedMotion);
+  const { level, into, span } = levelFromXp(xp);
   const levelPct = Math.round((into / span) * 100);
 
-  const equippedWp = progression.equipped.wallpaper;
   const activeWp = cosmetic(equippedWp || '')?.value || 'aurora';
-  const wallpapers = useMemo(() => COSMETICS.filter((item) => item.slot === 'wallpaper'), []);
   const training = useMemo(() => {
     try {
       const daily = JSON.parse(localStorage.getItem('gm-daily') || '{}');
@@ -57,8 +72,17 @@ export default function Home() {
     } catch { return { dailyDone: false, streak: 0, puzzles: 0 }; }
   }, []);
 
-  const favoriteId = Object.entries(profile.stats).sort(([, a], [, b]) => b.played - a.played)[0]?.[0] || 'chess';
-  const firstName = profile.name !== 'You' ? profile.name : '';
+  const favoriteId = useMemo(() => {
+    let favorite = 'chess';
+    let mostPlayed = 0;
+    for (const [gameId, tally] of Object.entries(stats)) {
+      if (tally.played <= mostPlayed) continue;
+      favorite = gameId;
+      mostPlayed = tally.played;
+    }
+    return favorite;
+  }, [stats]);
+  const firstName = profileName !== 'You' ? profileName : '';
 
   return (
     <div className="home">
@@ -75,42 +99,42 @@ export default function Home() {
           decoding="async"
           fetchPriority="high"
         />
-        <ShaderField variant={activeWp} className="hh-bg hh-shader" />
+        {reduceMotion ? null : <ShaderField variant={activeWp} className="hh-bg hh-shader" />}
         <div className="hh-veil" />
         <div className="hh-inner">
           <div className="hh-copy">
             <span className="eyebrow"><i aria-hidden="true" /> The adaptive school of strategy · {GAME_COUNT} complete engines</span>
-            <h1 className="hh-title">Every move becomes your <span>next lesson.</span></h1>
-            <p className="hh-sub">Play the world’s great board games inside one connected intelligence that observes, teaches, challenges, reviews and adapts around you.</p>
+            <h1 className="hh-title">Every completed game can shape your <span>next lesson.</span></h1>
+            <p className="hh-sub">Play the world’s great board games inside one connected strategy school that teaches, challenges, reviews and adapts from your recorded play.</p>
             <div className="hh-actions">
-              <Link className="btn primary lg glow" to="/studio">⊹ Open Strategy Studio</Link>
-              <Link className="btn lg hh-secondary" to="/path">✦ Build my path</Link>
-              <button type="button" className="btn lg hh-secondary" onClick={() => navigate(`/play/${favoriteId}`)}>Play now</button>
+              <Link className="btn primary lg glow" to="/studio"><span aria-hidden="true">⊹</span> Open Strategy Studio</Link>
+              <Link className="btn lg hh-secondary" to="/path"><span aria-hidden="true">✦</span> Build my path</Link>
+              <Link className="btn lg hh-secondary" to={`/play/${favoriteId}`}>Play now</Link>
             </div>
             <div className="hh-trust">
-              <span><b>{GAME_COUNT}</b> games</span><i />
-              <span><b>{BOARD_THEMES.length}+</b> board worlds</span><i />
-              <span><b>2D + 3D</b> play</span><i />
+              <span><b>{GAME_COUNT}</b> games</span><i aria-hidden="true" />
+              <span><b>{BOARD_THEMES.length}+</b> board worlds</span><i aria-hidden="true" />
+              <span><b>2D + 3D</b> play</span><i aria-hidden="true" />
               <span><b>Every move</b> explained</span>
             </div>
           </div>
 
           <aside className="hh-snapshot" aria-label="Your live learning snapshot">
             <div className="hh-snapshot-head">
-              <span><i aria-hidden="true" /> Live learner model</span>
+              <span><i aria-hidden="true" /> Live strategy record</span>
               <Link to="/path">Open path →</Link>
             </div>
             <div className="hh-welcome">{firstName ? `Welcome back, ${firstName}` : 'Your evidence starts here'}</div>
             <div className="hh-snapshot-grid" role="list" aria-label="Learning statistics">
-              <div role="listitem"><small>Rating</small><strong>{profile.rating}</strong><span>{ratingTitle(profile.rating)}</span></div>
+              <div role="listitem"><small>Rating</small><strong>{rating}</strong><span>{ratingTitle(rating)}</span></div>
               <div role="listitem"><small>Level</small><strong>{level}</strong><span>{into}/{span} XP</span></div>
-              <div role="listitem"><small>Games</small><strong>{profile.totals.played}</strong><span>{profile.totals.wins} wins</span></div>
+              <div role="listitem"><small>Games</small><strong>{totals.played}</strong><span>{totals.wins} wins</span></div>
               <div role="listitem"><small>Streak</small><strong>{training.streak}</strong><span>day{training.streak === 1 ? '' : 's'}</span></div>
             </div>
             <div className="hh-level" role="progressbar" aria-label={`Progress through level ${level}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={levelPct}><span style={{ width: `${levelPct}%` }} /></div>
             <div className="hh-next">
-              <span className="hh-next-mark">✦</span>
-              <div><small>Recommended now</small><strong>{profile.totals.played ? 'Continue your adaptive route' : 'Take a guided placement game'}</strong></div>
+              <span className="hh-next-mark" aria-hidden="true">✦</span>
+              <div><small>Recommended now</small><strong>{totals.played ? 'Continue your adaptive route' : 'Take a guided placement game'}</strong></div>
               <Link to="/path" aria-label="Open recommended strategy path">→</Link>
             </div>
           </aside>
@@ -118,8 +142,8 @@ export default function Home() {
 
         <div className="hh-wallpapers" role="group" aria-label="Living background">
           <span>Atmosphere</span>
-          {wallpapers.slice(0, 4).map((wallpaper) => progression.owned.includes(wallpaper.id)
-            ? <button type="button" key={wallpaper.id} className={equippedWp === wallpaper.id ? 'on' : ''} aria-pressed={equippedWp === wallpaper.id} onClick={() => progression.equipCosmetic('wallpaper', wallpaper.id)}>{wallpaper.name}</button>
+          {HOME_WALLPAPERS.slice(0, 4).map((wallpaper) => owned.includes(wallpaper.id)
+            ? <button type="button" key={wallpaper.id} className={equippedWp === wallpaper.id ? 'on' : ''} aria-pressed={equippedWp === wallpaper.id} onClick={() => equipCosmetic('wallpaper', wallpaper.id)}>{wallpaper.name}</button>
             : <Link key={wallpaper.id} to="/shop" title={`Unlock ${wallpaper.name}`}>◇ {wallpaper.name}</Link>)}
         </div>
       </header>
@@ -132,8 +156,8 @@ export default function Home() {
         <div className="today-grid">
           <Link to="/path" className="today-primary glass">
             <span className="today-kicker"><i aria-hidden="true" /> Adaptive mission</span>
-            <h3>{profile.totals.played ? 'Turn your latest evidence into progress.' : 'Let the system understand how you think.'}</h3>
-            <p>{profile.totals.played ? 'Your games, puzzles and reviews are already being joined into one recommended sequence.' : 'A short guided session establishes a baseline without locking you into a label.'}</p>
+            <h3>{totals.played ? 'Turn your latest evidence into progress.' : 'Build an evidence-based starting route.'}</h3>
+            <p>{totals.played ? 'Your games, puzzles and reviews are already being joined into one recommended sequence.' : 'A short guided session records how you approach this board without locking you into a label.'}</p>
             <span className="today-go">Open my path <b aria-hidden="true">→</b></span>
           </Link>
           <Link to="/daily" className={`today-card glass-soft ${training.dailyDone ? 'done' : ''}`}>
@@ -143,7 +167,10 @@ export default function Home() {
             <span className="today-icon" aria-hidden="true">◇</span><small>Practice builder</small><strong>{training.puzzles} solved</strong><span>Train patterns across multiple games</span><b aria-hidden="true">→</b>
           </Link>
           <Link to="/reviews" className="today-card glass-soft">
-            <span className="today-icon" aria-hidden="true">⌁</span><small>Review analyst</small><strong>{profile.totals.played ? 'Find the turning point' : 'Awaiting first game'}</strong><span>Accuracy, evaluation and key moments</span><b aria-hidden="true">→</b>
+            <span className="today-icon" aria-hidden="true">⌁</span><small>Review analyst</small><strong>{totals.played ? 'Find the turning point' : 'Awaiting first game'}</strong><span>Accuracy, evaluation and key moments</span><b aria-hidden="true">→</b>
+          </Link>
+          <Link to="/mind-games/cascade?daily=1" className="today-card glass-soft">
+            <span className="today-icon" aria-hidden="true">✧</span><small>Mind Games laboratory</small><strong>Mind Cascade</strong><span>One deterministic seed · deliberate play · no timer</span><b aria-hidden="true">→</b>
           </Link>
         </div>
       </section>
@@ -151,12 +178,12 @@ export default function Home() {
       <section className="home-intelligence" aria-labelledby="intelligence-title">
         <div className="hi-visual">
           <img src="./assets/adaptive-intelligence.webp" alt="Abstract strategy board connected to five analytical layers" width="1659" height="948" loading="lazy" decoding="async" />
-          <div className="hi-visual-label"><span><i aria-hidden="true" /> One shared memory</span><strong>Rules remain engine-verified</strong></div>
+          <div className="hi-visual-label"><span><i aria-hidden="true" /> Connected local records</span><strong>Rules remain engine-verified</strong></div>
         </div>
         <div className="hi-copy">
           <span className="section-overline">Not five disconnected tools</span>
-          <h2 id="intelligence-title">Five specialists. One understanding of you.</h2>
-          <p>The same learner model follows the full cycle—from the idea you study to the move you choose and the moment you review. Each stage updates what comes next.</p>
+          <h2 id="intelligence-title">Five specialists. One view of your recorded play.</h2>
+          <p>The same learner model follows the full cycle—from the idea you study to the move you choose and the moment you review. Each stage can add evidence for what comes next.</p>
           <div className="intelligence-list">
             {INTELLIGENCE.map((item, index) => (
               <article key={item.title}>

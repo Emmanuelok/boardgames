@@ -41,7 +41,7 @@ export default function OrderChaosGame({ aiDifficulty = 'medium' }: { aiDifficul
   useEffect(() => {
     if (!over || recorded) return;
     setRecorded(true);
-    playSound(w === side ? 'win' : 'lose');
+    playSound(w === side ? 'win' : 'lose', { intensity: 1 });
     recordResult('order-and-chaos', w === side ? 'win' : 'loss', aiDifficulty as any);
     if (review.length >= 4) try { saveRecord(summarize(ocdef, review, ocdef.getStatus(s), side)); } catch { /* ignore */ }
   }, [over, w, side, recorded, recordResult, aiDifficulty]);
@@ -54,7 +54,7 @@ export default function OrderChaosGame({ aiDifficulty = 'medium' }: { aiDifficul
       if (!m) return;
       const after = applyMove(s, m);
       const res = winnerOf(after);
-      playSound(res === side ? 'win' : res !== null ? 'lose' : 'move');
+      playSound('place', { intensity: res !== null ? 0.68 : 0.46, pan: ((m.cell % N) / (N - 1) * 2 - 1) * 0.65 });
       setLast(m.cell);
       setLog((l) => [...l, moveComment(s, m, after, side)]);
       setReview((r) => [...r, { ply: r.length + 1, player: s.turn, notation: `${sqName(m.cell)}=${m.sym === 0 ? 'X' : 'O'}`, explanation: gradeMove(s, m, after) }]);
@@ -69,7 +69,7 @@ export default function OrderChaosGame({ aiDifficulty = 'medium' }: { aiDifficul
     const m = { id: `${i}${sel}`, cell: i, sym: sel, notation: `${sqName(i)}=${sel === 0 ? 'X' : 'O'}` };
     const after = applyMove(s, m);
     const res = winnerOf(after);
-    playSound(res === side ? 'win' : res !== null ? 'lose' : 'select');
+    playSound('place', { intensity: res !== null ? 0.68 : 0.48, pan: ((i % N) / (N - 1) * 2 - 1) * 0.65 });
     setLast(i);
     setLog((l) => [...l, moveComment(s, m, after, side)]);
     setReview((r) => [...r, { ply: r.length + 1, player: s.turn, notation: `${sqName(i)}=${sel === 0 ? 'X' : 'O'}`, explanation: gradeMove(s, m, after) }]);
@@ -100,8 +100,8 @@ export default function OrderChaosGame({ aiDifficulty = 'medium' }: { aiDifficul
 
         <div className="oc-picker" role="group" aria-label="Choose a symbol to place">
           <span className="oc-picker-label">Place:</span>
-          <button className={`oc-pick x ${sel === 0 ? 'on' : ''}`} disabled={!humanTurn} onClick={() => setSel(0)} aria-pressed={sel === 0}>✕ X</button>
-          <button className={`oc-pick o ${sel === 1 ? 'on' : ''}`} disabled={!humanTurn} onClick={() => setSel(1)} aria-pressed={sel === 1}>◯ O</button>
+          <button className={`oc-pick x ${sel === 0 ? 'on' : ''}`} disabled={!humanTurn} onClick={() => { setSel(0); playSound('select', { intensity: 0.26, pan: -0.24 }); }} aria-pressed={sel === 0}>✕ X</button>
+          <button className={`oc-pick o ${sel === 1 ? 'on' : ''}`} disabled={!humanTurn} onClick={() => { setSel(1); playSound('select', { intensity: 0.26, pan: 0.24 }); }} aria-pressed={sel === 1}>◯ O</button>
         </div>
 
         <div className="oc-board" style={{ gridTemplateColumns: `repeat(${N}, 1fr)` }}>
@@ -125,7 +125,7 @@ export default function OrderChaosGame({ aiDifficulty = 'medium' }: { aiDifficul
 
         <div className="oc-controls">
           <button className="btn sm" onClick={() => reset(side)}>↻ New game</button>
-          <button className="btn icon sm" onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
+          <button className="btn icon sm" aria-label={muted ? 'Unmute game audio' : 'Mute game audio'} title={muted ? 'Unmute game audio' : 'Mute game audio'} onClick={() => { resumeAudio(); setMutedState(toggleMuted()); }}>{muted ? '🔇' : '🔊'}</button>
           <Link className="btn sm ghost" to="/learn/order-and-chaos">📖 Rules</Link>
         </div>
       </div>

@@ -20,6 +20,7 @@ const GROUPS: { title: string; items: NavigationItem[] }[] = [
   ] },
   { title: 'Explore', items: [
     { to: '/games', icon: '◫', label: 'Games', mobile: true },
+    { to: '/mind-games', icon: '✧', label: 'Mind Games' },
     { to: '/daily', icon: '◉', label: 'Daily' },
     { to: '/puzzles', icon: '◇', label: 'Puzzles' },
     { to: '/openings', icon: '📖', label: 'Openings' },
@@ -40,19 +41,22 @@ const GROUPS: { title: string; items: NavigationItem[] }[] = [
   ] },
 ];
 
+const SECONDARY_NAVIGATION = GROUPS.flatMap((group) => (
+  group.items.filter((item) => !item.mobile)
+));
+
 export default function Sidebar() {
   const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
   const moreToggleRef = useRef<HTMLButtonElement>(null);
   const xp = useProgression((s) => s.xp);
   const coins = useProgression((s) => s.coins);
-  const quests = useProgression((s) => s.quests);
-  const weekly = useProgression((s) => s.weekly);
-  const claimable = [...quests, ...weekly].filter((q) => questComplete(q) && !q.claimed).length;
+  const claimable = useProgression((s) => (
+    [...s.quests, ...s.weekly].filter((quest) => questComplete(quest) && !quest.claimed).length
+  ));
   const { level, into, span } = levelFromXp(xp);
   const pct = Math.round((into / span) * 100);
-  const secondary = GROUPS.flatMap((group) => group.items.filter((item) => !item.mobile));
-  const secondaryActive = secondary.some((item) => (
+  const secondaryActive = SECONDARY_NAVIGATION.some((item) => (
     location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)
   ));
 
@@ -97,6 +101,7 @@ export default function Sidebar() {
         type="button"
         aria-expanded={moreOpen}
         aria-controls="mobile-more"
+        aria-label={secondaryActive ? 'More navigation, current section' : 'More navigation'}
         onClick={() => setMoreOpen((open) => !open)}
       >
         <span className="sb-ic" aria-hidden="true">•••</span><span className="sb-label">More</span>
@@ -119,7 +124,7 @@ export default function Sidebar() {
               </button>
             </div>
             <div className="sb-mobile-more-grid">
-              {secondary.map((item) => (
+              {SECONDARY_NAVIGATION.map((item) => (
                 <NavLink key={item.to} to={item.to} onClick={() => setMoreOpen(false)}>
                   <span aria-hidden="true">{item.icon}</span><strong>{item.label}</strong>
                 </NavLink>
