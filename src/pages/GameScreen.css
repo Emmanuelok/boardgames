@@ -117,6 +117,11 @@
 .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); z-index: 60; padding: 12px 20px; font-weight: 600; font-size: 14px; animation: fadeIn 0.25s ease; }
 
 .rating-chip { background: linear-gradient(120deg, rgba(245,185,69,0.18), rgba(124,92,255,0.14)); border-color: rgba(245,185,69,0.4); color: #fde68a; font-weight: 700; }
+.broadcast-chip { font-weight: 750; font-variant-numeric: tabular-nums; }
+.broadcast-chip.connecting { color: #c7d2fe; border-color: rgba(165,180,252,.38); background: rgba(99,102,241,.12); }
+.broadcast-chip.live { color: #9af1da; border-color: rgba(52,211,153,.42); background: rgba(16,185,129,.12); }
+.broadcast-chip.offline { color: var(--ink-faint); }
+.broadcast-chip.error { color: #fecaca; border-color: rgba(248,113,113,.42); background: rgba(239,68,68,.12); }
 .achievement-toast { position: fixed; bottom: 24px; right: 24px; z-index: 70; display: flex; gap: 12px; padding: 14px 18px; max-width: 330px; animation: slideIn 0.45s cubic-bezier(.2,.8,.2,1); box-shadow: var(--shadow), 0 0 40px -14px var(--accent); }
 .at-ic { font-size: 32px; align-self: center; }
 .at-title { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent-2); font-weight: 800; }

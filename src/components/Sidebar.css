@@ -36,7 +36,7 @@
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); border-right: none; border-top: 1px solid var(--line);
     overflow: visible;
   }
-  .sb-brand, .sb-group-title, .sb-cta, .sb-prog, .mobile-secondary { display: none; }
+  .sb-brand, .sb-group-title, .sidebar .sb-cta, .sb-prog, .mobile-secondary { display: none; }
   .sb-nav { flex-direction: row; gap: 2px; overflow: visible; justify-content: space-around; width: 100%; }
   .sb-group { flex-direction: row; gap: 2px; }
   .sb-link { min-width: 58px; min-height: 48px; flex-direction: column; justify-content: center; padding: 5px 8px; gap: 1px; font-size: 10px; }

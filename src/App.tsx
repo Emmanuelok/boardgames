@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import RewardToast from './components/RewardToast';
 import ErrorBoundary, { type ErrorBoundaryFallbackProps } from './components/ErrorBoundary';
 import { hydrateEntitlements } from './billing/billing';
+import ConnectivityBadge from './pwa/ConnectivityBadge';
 
 // Every page beyond the landing pulls in the game registry (all engines, AIs and
 // tutorials), so we code-split them: the shell + landing load a tiny bundle and
@@ -21,6 +22,14 @@ const ReviewHub = lazy(() => import('./pages/ReviewHub'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Lobby = lazy(() => import('./pages/Lobby'));
 const Shop = lazy(() => import('./pages/Shop'));
+const StrategyOS = lazy(() => import('./pages/StrategyOS'));
+const IntelligenceLab = lazy(() => import('./pages/IntelligenceLab'));
+const Adventures = lazy(() => import('./pages/Adventures'));
+const Community = lazy(() => import('./pages/Community'));
+const CreatorStudio = lazy(() => import('./pages/CreatorStudio'));
+const Scanner = lazy(() => import('./pages/Scanner'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Spectate = lazy(() => import('./pages/Spectate'));
 
 function RouteFailure({ reset }: ErrorBoundaryFallbackProps) {
   return (
@@ -76,6 +85,15 @@ export default function App() {
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/lobby" element={<Lobby />} />
                   <Route path="/shop" element={<Shop />} />
+                  <Route path="/os" element={<StrategyOS />} />
+                  <Route path="/intelligence" element={<IntelligenceLab />} />
+                  <Route path="/adventures" element={<Adventures />} />
+                  <Route path="/community" element={<Community />} />
+                  <Route path="/creator" element={<CreatorStudio />} />
+                  <Route path="/scanner" element={<Scanner />} />
+                  <Route path="/scan" element={<Navigate to="/scanner" replace />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/watch/:broadcastId" element={<Spectate />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </div>
@@ -84,6 +102,7 @@ export default function App() {
         </main>
       </div>
       <RewardToast />
+      <ConnectivityBadge />
     </>
   );
 }

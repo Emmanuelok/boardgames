@@ -1,6 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
+import {
+  ACCESSIBILITY_EVENT,
+  readAccessibilityPreferences,
+  type MotionMode,
+} from '../accessibility/preferences';
 import type { BoardView, CellView, GameDefinition, GameStatus, MoveBase, Player } from '../engine/types';
 import type { BoardTheme } from '../themes/boardThemes';
 import { pieceStyleFor } from './pieceStyle';
@@ -21,11 +26,17 @@ interface Props {
   onCell: (cell: number) => void;
   /** Amazons: the amazon's chosen destination during the shoot phase (extra highlight). */
   pendingCell?: number | null;
+  /** Present the position without focus, keyboard, click, or drag controls. */
+  readOnly?: boolean;
 }
 
 export default function Board2D(props: Props) {
-  const { def, view, theme, turn, flipped, selected, targets, lastMove, status, hint, onCell, pendingCell } = props;
+  const {
+    def, view, theme, turn, flipped, selected, targets, lastMove, status,
+    hint, onCell, pendingCell, readOnly = false,
+  } = props;
   const { rows, cols } = view;
+  const { verboseBoardLabels, reducedMotion } = useBoardAccessibility();
   const boardRef = useRef<HTMLDivElement>(null);
   const [cellPx, setCellPx] = useState(56);
   const [hoverCol, setHoverCol] = useState<number | null>(null);
@@ -94,7 +105,7 @@ export default function Board2D(props: Props) {
   }, []);
 
   const startDrag = (e: React.PointerEvent, cell: CellView) => {
-    if (e.button !== 0 || !cell.piece || cell.playable === false || cell.piece.player !== turn) return;
+    if (readOnly || e.button !== 0 || !cell.piece || cell.playable === false || cell.piece.player !== turn) return;
     dragRef.current = { from: cell.index, cell, x0: e.clientX, y0: e.clientY, moved: false };
   };
 
@@ -137,11 +148,18 @@ export default function Board2D(props: Props) {
     let contents = 'empty';
     if (cell.piece) contents = `${def.players[cell.piece.player].name} ${PIECE_NAMES[cell.piece.kind] ?? cell.piece.glyph ?? cell.piece.kind ?? 'piece'}`;
     else if (cell.count !== undefined) contents = `${cell.count} ${cell.label ?? 'pieces'}`;
-    const extra = targetSet.has(cell.index) ? ', legal move' : selected === cell.index ? ', selected' : '';
-    return `${file}${rank}, ${contents}${extra}`;
+    if (!verboseBoardLabels) return `${file}${rank}, ${contents === 'empty' ? 'empty' : 'occupied'}`;
+    const states = [
+      targetSet.has(cell.index) ? 'legal move' : '',
+      selected === cell.index ? 'selected' : '',
+      lastMove?.to === cell.index ? 'last move destination' : '',
+      hint?.to === cell.index ? 'hint destination' : '',
+    ].filter(Boolean);
+    return `${file}${rank}, ${contents}${states.length ? `, ${states.join(', ')}` : ''}`;
   };
   const focusCell = (idx: number) => { (boardRef.current?.querySelector(`[data-idx="${idx}"]`) as HTMLElement | null)?.focus(); };
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (readOnly) return;
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
       if (cursorIdx >= 0) { e.preventDefault(); onCell(cursorIdx); }
       return;
@@ -164,12 +182,15 @@ export default function Board2D(props: Props) {
     <div className="board-wrap" style={{ ['--glow' as any]: theme.glow ?? 'transparent' }}>
       <div
         ref={boardRef}
-        className={`board ${theme.glass ? 'glassy' : ''} ${intersections ? 'go' : ''}`}
+        className={`board ${theme.glass ? 'glassy' : ''} ${intersections ? 'go' : ''} ${readOnly ? 'readonly' : ''}`}
         role="grid"
-        aria-label={`${def.name} board, ${rows} by ${cols}. Use the arrow keys to move and Enter to select.`}
+        aria-label={readOnly
+          ? `${def.name} board, ${rows} by ${cols}. Read-only position.`
+          : `${def.name} board, ${rows} by ${cols}. Use the arrow keys to move and Enter to select.`}
+        aria-readonly={readOnly || undefined}
         aria-rowcount={rows}
         aria-colcount={cols}
-        onKeyDown={onKeyDown}
+        onKeyDown={readOnly ? undefined : onKeyDown}
         style={{
           aspectRatio: `${cols} / ${rows}`,
           gridTemplateColumns: `repeat(${cols}, 1fr)`,
@@ -222,14 +243,14 @@ export default function Board2D(props: Props) {
               data-idx={cell.index}
               className={`cell ${isDark ? 'dark' : 'light'} ${cell.playable === false ? 'void' : ''}`}
               role={cell.playable !== false ? 'gridcell' : undefined}
-              tabIndex={cell.playable !== false ? (cell.index === cursorIdx ? 0 : -1) : undefined}
+              tabIndex={!readOnly && cell.playable !== false ? (cell.index === cursorIdx ? 0 : -1) : undefined}
               aria-label={cell.playable !== false ? cellLabel(cell) : undefined}
               aria-selected={isSel || undefined}
-              aria-rowindex={r + 1}
-              aria-colindex={c + 1}
+              aria-rowindex={cell.playable !== false ? r + 1 : undefined}
+              aria-colindex={cell.playable !== false ? c + 1 : undefined}
               style={{ gridColumn: c + 1, gridRow: r + 1, background: sqColor, touchAction: 'none' }}
               onClick={() => {
-                if (suppressClickRef.current) return;
+                if (readOnly || suppressClickRef.current) return;
                 if (cell.playable !== false) { setCursor(cell.index); onCell(cell.index); }
               }}
               onPointerDown={(e) => startDrag(e, cell)}
@@ -246,19 +267,21 @@ export default function Board2D(props: Props) {
               {cell.mark && <div className={`cell-mark ${cell.mark}`} />}
 
               {cell.piece && (
-                <motion.div
+                <PieceLayer
                   key={cell.piece.id}
                   className={`pc ${style}`}
-                  initial={dx || dy ? { x: dx, y: dy } : { scale: 0.2, opacity: 0 }}
-                  animate={{ x: 0, y: 0, scale: 1, opacity: dragCell?.index === cell.index ? 0.25 : 1 }}
-                  transition={{ type: 'spring', stiffness: 700, damping: 42, mass: 0.6 }}
+                  player={cell.piece.player}
+                  reducedMotion={reducedMotion}
+                  offsetX={dx}
+                  offsetY={dy}
+                  dragged={dragCell?.index === cell.index}
                   style={pieceStyleFor(style, cell.piece.player, pieceColor(cell.piece.player))}
                 >
                   {style === 'chess'
                     ? <ChessPiece kind={cell.piece.kind} fill={pieceColor(cell.piece.player)} stroke={cell.piece.player === 0 ? '#3b3f4a' : '#05070c'} shine={cell.piece.player === 1 ? 'rgba(255,255,255,0.13)' : undefined} />
                     : (style === 'mark' || style === 'xiangqi') ? <span className="glyph">{cell.piece.glyph}</span> : null}
                   {cell.piece.crowned && <span className="crown">♛</span>}
-                </motion.div>
+                </PieceLayer>
               )}
 
               {cell.count !== undefined && (
@@ -294,6 +317,81 @@ export default function Board2D(props: Props) {
           </div>
         </div>, document.body)}
     </div>
+  );
+}
+
+function useBoardAccessibility(): { verboseBoardLabels: boolean; reducedMotion: boolean } {
+  const read = () => {
+    const preferences = readAccessibilityPreferences();
+    const root = typeof document === 'undefined' ? undefined : document.documentElement;
+    const verbose = root?.dataset.verboseBoardLabels === undefined
+      ? preferences.verboseBoardLabels
+      : root.dataset.verboseBoardLabels === 'true';
+    const motionChoice = (root?.dataset.motion as MotionMode | undefined) ?? preferences.motion;
+    const systemReduced = typeof matchMedia === 'function'
+      && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return {
+      verboseBoardLabels: verbose,
+      reducedMotion: motionChoice === 'reduced' || (motionChoice === 'system' && systemReduced),
+    };
+  };
+  const [options, setOptions] = useState(read);
+
+  useEffect(() => {
+    const update = () => setOptions(read());
+    const media = typeof matchMedia === 'function'
+      ? matchMedia('(prefers-reduced-motion: reduce)')
+      : null;
+    window.addEventListener(ACCESSIBILITY_EVENT, update);
+    window.addEventListener('storage', update);
+    media?.addEventListener?.('change', update);
+    return () => {
+      window.removeEventListener(ACCESSIBILITY_EVENT, update);
+      window.removeEventListener('storage', update);
+      media?.removeEventListener?.('change', update);
+    };
+  }, []);
+
+  return options;
+}
+
+function PieceLayer({
+  children,
+  className,
+  player,
+  reducedMotion,
+  offsetX,
+  offsetY,
+  dragged,
+  style,
+}: {
+  children: ReactNode;
+  className: string;
+  player: Player;
+  reducedMotion: boolean;
+  offsetX: number;
+  offsetY: number;
+  dragged: boolean;
+  style: CSSProperties;
+}) {
+  if (reducedMotion) {
+    return (
+      <div className={className} data-player={player} style={{ ...style, opacity: dragged ? 0.25 : 1 }}>
+        {children}
+      </div>
+    );
+  }
+  return (
+    <motion.div
+      className={className}
+      data-player={player}
+      initial={offsetX || offsetY ? { x: offsetX, y: offsetY } : { scale: 0.2, opacity: 0 }}
+      animate={{ x: 0, y: 0, scale: 1, opacity: dragged ? 0.25 : 1 }}
+      transition={{ type: 'spring', stiffness: 700, damping: 42, mass: 0.6 }}
+      style={style}
+    >
+      {children}
+    </motion.div>
   );
 }
 
