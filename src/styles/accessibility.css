@@ -43,6 +43,14 @@ html[data-ui-theme='light'] :is(
   .community-hero,
   .community-tabs,
   .creator-hero,
+  .home-hero,
+  .home-closing,
+  .hi-visual,
+  .discover-hero,
+  .game-tools,
+  .mind-game-feature,
+  .mind-games-hero,
+  .os-mind-game,
   .connectivity-badge
 ) {
   --ink: #f4f7ff;
@@ -64,6 +72,36 @@ html[data-ui-theme='light'] :is(
   background: rgba(255,255,255,.92);
   color: #111827;
   border-color: rgba(15,23,42,.22);
+}
+html[data-ui-theme='light'] :is(
+  .section-overline,
+  .text-link,
+  .today-kicker,
+  .today-go,
+  .mind-games-skill-grid span,
+  .mind-games-pillars article > span
+) {
+  color: #0f766e;
+}
+html[data-ui-theme='light'] .mind-games-daily-card > span {
+  color: #92400e;
+}
+html[data-ui-theme='light'] :is(
+  .mind-games-research-grid small,
+  .os-grid article > small
+) {
+  color: #4338ca;
+}
+html[data-ui-theme='light'] :is(
+  .home-hero,
+  .home-closing,
+  .discover-hero,
+  .mind-game-feature,
+  .mind-games-hero,
+  .os-hero,
+  .os-mind-game
+) .section-overline {
+  color: #8bdccd;
 }
 
 html[data-contrast='high'] {
@@ -87,6 +125,19 @@ html[data-ui-theme='light'][data-contrast='high'] {
 html[data-contrast='high'] :focus-visible { outline-width: 4px; outline-color: #facc15; }
 html[data-contrast='high'] .faint,
 html[data-contrast='high'] .muted { opacity: 1; }
+html[data-contrast='high'] :is(
+  .section-overline,
+  .text-link,
+  .today-kicker,
+  .today-go,
+  .mind-games-skill-grid span,
+  .mind-games-pillars article > span,
+  .mind-games-daily-card > span,
+  .mind-games-research-grid small,
+  .os-grid article > small
+) {
+  color: var(--ink);
+}
 
 html[data-color-vision='deuteranopia'] {
   --accent: #6366f1; --accent-2: #f59e0b; --good: #38bdf8; --bad: #f97316;
@@ -124,6 +175,24 @@ html[data-motion='reduced'] *::after {
   scroll-behavior: auto !important;
 }
 html[data-motion='full'] .route-fade { animation: route-in .18s ease !important; }
+html[data-motion='reduced'] .hh-shader { display: none; }
+html[data-motion='reduced'] .hg-skel-card,
+html[data-motion='reduced'] .mind-game-scanline { animation: none !important; }
+html[data-motion='reduced'] :is(
+  .today-primary:hover,
+  .today-card:hover,
+  .today-primary:focus-visible,
+  .today-card:focus-visible,
+  .game-card:hover,
+  .discover-worlds button:hover,
+  .discover-worlds button:focus-visible,
+  .os-grid article:hover
+) {
+  transform: none !important;
+}
+html[data-motion='reduced'] .mind-game-scanline,
+html[data-motion='reduced'] .game-card:hover .gt-emoji { transform: none !important; }
+html[data-motion='reduced'] .game-card:hover .gt-photo { transform: scale(1.012) !important; }
 
 /* Board2D integration: add data-player to the `.pc` element. The patterns keep
    player identity visible when colours are unavailable or indistinguishable. */
@@ -145,4 +214,22 @@ html[data-player-patterns='true'] .pc[data-player='1']::after {
     transition-duration: .001ms !important;
     scroll-behavior: auto !important;
   }
+  html[data-motion='system'] .hh-shader { display: none; }
+  html[data-motion='system'] .hg-skel-card,
+  html[data-motion='system'] .mind-game-scanline { animation: none !important; }
+  html[data-motion='system'] :is(
+    .today-primary:hover,
+    .today-card:hover,
+    .today-primary:focus-visible,
+    .today-card:focus-visible,
+    .game-card:hover,
+    .discover-worlds button:hover,
+    .discover-worlds button:focus-visible,
+    .os-grid article:hover
+  ) {
+    transform: none !important;
+  }
+  html[data-motion='system'] .mind-game-scanline,
+  html[data-motion='system'] .game-card:hover .gt-emoji { transform: none !important; }
+  html[data-motion='system'] .game-card:hover .gt-photo { transform: scale(1.012) !important; }
 }

@@ -2,8 +2,9 @@
 
 **One connected learning system for players who want to understand strategy—not merely finish games.**
 
-GrandMaster connects **38 complete game engines**, lessons, adaptive practice,
-fair AI sparring and post-game review through one learner model. The new
+GrandMaster connects **38 complete board-game engines**, original intelligent
+games, lessons, adaptive practice, fair AI sparring and post-game review
+through one learner model. The new
 **Strategy Path** turns evidence from every session into a clear next move while
 the underlying engines remain deterministic and rules-verified.
 
@@ -59,6 +60,33 @@ The feature domains are intentionally separate (`src/intelligence`,
 `src/accessibility`, and `src/pwa`) while sharing the existing learner ledger,
 game registry and validated game store. Local payloads are versioned, bounded
 and normalized on read.
+
+### ✧ Mind Games — original games built for the learner model
+
+`/mind-games` is a laboratory for original strategy games that can produce
+evidence the platform understands. Its first complete release is **Mind
+Cascade**, a deterministic pattern-cascade game that replaces reflex pressure
+with deliberate planning:
+
+- Four objective families—collection, cascade depth, geometric formation and
+  marked-cell clearing—can be combined into authored levels.
+- Every board is seeded, starts without accidental matches, preserves at least
+  one legal swap and can be replayed exactly.
+- Candidate swaps can be forecast and ranked by objective progress, cascade
+  depth and future setup value, with a plain-language reason.
+- Original **Mirror** and **Orbit** powers reward rotational and spatial
+  planning instead of copying candy-themed pieces or level designs.
+- Difficulty changes only between sessions. The recommendation cites observed
+  precision, objective efficiency, cascade vision, planning rhythm and support
+  use, and remains reversible.
+- A local, versioned record preserves resumable sessions, bounded replays,
+  deterministic daily challenges and fixed evidence-based badges.
+- The interface supports pointer, touch and keyboard play; every tile has a
+  glyph/pattern so colour is never the only identifying signal.
+
+The profile describes only evidence observed inside Mind Cascade. It does not
+claim to measure IQ or general intelligence. There are no pressure timers,
+purchasable lives, loot boxes, streak penalties or randomized rewards.
 
 ### 🧠 A world-class step-by-step tutor
 
@@ -134,6 +162,10 @@ src/
     orchestrator.ts   # one adaptive mission assembled from shared learner evidence
     learningMemory.ts # persisted, ordered evidence ledger for the five-stage loop
     missionRouting.ts # validated mission context shared across every route
+  mindgames/
+    engine.ts       # seeded board generation, objectives, cascades and replay
+    intelligence.ts # explainable coaching, skill evidence and adaptation
+    progress.ts     # versioned resume, replay, daily and fixed-badge records
   engine/
     types.ts        # GameDefinition — the universal interface every game implements
     ai.ts           # generic alpha-beta search shared by the lighter games
@@ -152,6 +184,7 @@ src/
   progression/progression.ts  # XP, levels, coins, daily quests & cosmetic economy
   profile/profile.ts      # player profile, Elo rating & achievements
   pages/  Home  Path  Games  GameScreen  Learn  Daily  Puzzles  Reviews  Profile
+          MindGames  MindCascade
 ```
 
 Because the UI talks only to `GameDefinition`, the 2D board, 3D board, tutor and
@@ -190,6 +223,7 @@ npm test
 npm run build
 npm run smoke:thumbnails  # all 32 realistic catalogue images
 npm run smoke:expansion   # all ten systems, interactions, PWA and mobile shell
+npm run smoke:mind-games  # Mind Cascade play, forecast, persistence and mobile
 node --experimental-strip-types scripts/perft.ts     # verify chess move generation
 ```
 

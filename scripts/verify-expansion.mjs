@@ -75,7 +75,7 @@ try {
   });
 
   console.log('Strategy OS');
-  await route('strategy-os', '/os', '.os-page', 'Everything now learns from the same move.');
+  await route('strategy-os', '/os', '.os-page', 'Everything now connects around the same evidence.');
   check('Strategy OS exposes all ten connected systems', await page.$$eval('.os-grid > article', (cards) => cards.length === 10));
   check('Strategy OS cards all lead to real routes', await page.$$eval('.os-grid > article a', (links) => (
     links.length === 10 && links.every((link) => link.getAttribute('href')?.startsWith('#/'))

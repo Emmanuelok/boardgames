@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import GamesGallery, { GAME_CATEGORIES } from '../components/GamesGallery';
 import { CATALOGUE_WORLD_COUNT, GAME_COUNT } from '../engine/catalogueMeta';
 import './Games.css';
@@ -9,6 +9,8 @@ const WORLD_COPY: Record<string, { mark: string; description: string }> = {
   Abstract: { mark: '⬡', description: 'Pure patterns, connection, territory and tempo.' },
   Family: { mark: '✦', description: 'Related variants gathered into one playable world.' },
 };
+
+const CASCADE_PREVIEW = ['◇', '○', '△', '◇', '⬡', '△', '○', '⬡', '◇'];
 
 function categoryFromParam(value: string | null): string {
   if (!value) return 'All';
@@ -59,19 +61,43 @@ export default function Games() {
           </ul>
         </div>
         <div className="discover-worlds" role="group" aria-label="Browse strategy categories">
-          <button type="button" className={category === 'All' ? 'on' : ''} aria-pressed={category === 'All'} onClick={() => chooseWorld('All')}>
+          <button type="button" className={category === 'All' ? 'on' : ''} aria-pressed={category === 'All'} aria-controls="game-catalogue" onClick={() => chooseWorld('All')}>
             <span aria-hidden="true">◎</span><strong>All worlds</strong><small>{CATALOGUE_WORLD_COUNT} places to begin</small>
           </button>
           {GAME_CATEGORIES.filter((item) => item !== 'All').map((item) => {
             const world = WORLD_COPY[item] ?? { mark: '◫', description: 'A distinct family of strategic ideas.' };
             return (
-              <button type="button" key={item} className={category === item ? 'on' : ''} aria-pressed={category === item} onClick={() => chooseWorld(item)}>
+              <button type="button" key={item} className={category === item ? 'on' : ''} aria-pressed={category === item} aria-controls="game-catalogue" onClick={() => chooseWorld(item)}>
                 <span aria-hidden="true">{world.mark}</span><strong>{item}</strong><small>{world.description}</small>
               </button>
             );
           })}
         </div>
       </header>
+      <section className="mind-game-feature" aria-labelledby="mind-game-feature-title">
+        <div className="mind-game-feature-copy">
+          <span className="section-overline">GrandMaster original · intelligent game 01</span>
+          <h2 id="mind-game-feature-title">A cascade game where planning matters more than speed.</h2>
+          <p>Mind Cascade turns pattern matching into a deliberate strategy puzzle. Forecast swaps, satisfy linked objectives, manage limited moves and learn from an explainable coach on a reproducible board.</p>
+          <ul aria-label="Mind Cascade features">
+            <li><b>Seeded boards</b><span>Every challenge can be replayed exactly.</span></li>
+            <li><b>Visible adaptation</b><span>The next difficulty is suggested between rounds—and tells you why.</span></li>
+            <li><b>No pressure mechanics</b><span>No timer, paid lives or randomized rewards.</span></li>
+          </ul>
+          <div className="mind-game-feature-actions">
+            <Link className="btn primary lg glow" to="/mind-games/cascade">Play Mind Cascade →</Link>
+            <Link className="btn lg" to="/mind-games">Open Mind Games</Link>
+          </div>
+        </div>
+        <div className="mind-game-feature-board" aria-hidden="true">
+          <span className="mind-game-scanline" />
+          <div className="mind-game-board-kicker">Forecasting one move ahead</div>
+          <div className="mind-game-board-grid">
+            {CASCADE_PREVIEW.map((glyph, index) => <i key={`${glyph}-${index}`} data-tone={index % 5}>{glyph}</i>)}
+          </div>
+          <div className="mind-game-forecast"><span>Best candidate</span><strong>C2 → C3</strong><small>Completes sequence · opens two continuations</small></div>
+        </div>
+      </section>
       <section id="game-catalogue" className="discover-catalogue" aria-label={`${category} game worlds`}>
         <GamesGallery filters headingLevel="h2" category={category} onCategoryChange={updateCategory} />
       </section>

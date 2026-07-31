@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { CSSProperties } from 'react';
 import { loadRecords } from '../engine/reviewSummary';
@@ -22,7 +23,7 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   { n: '01', icon: '⌁', title: 'Replay Lab', promise: 'Turn completed games into inspectable evidence.', detail: 'Scrub saved positions, annotate decisions and generate focused practice from turning points.', to: '/intelligence?tab=replay', cta: 'Open replay lab', color: '#8e79ff' },
-  { n: '02', icon: '✦', title: 'Strategy DNA', promise: 'See transferable skill—not isolated ratings.', detail: 'Confidence-weighted concepts connect reviews, game results and learning activity.', to: '/intelligence?tab=dna', cta: 'Read my strategy DNA', color: '#5de0c0' },
+  { n: '02', icon: '✦', title: 'Strategy DNA', promise: 'See observed strategy patterns—not isolated ratings.', detail: 'Confidence-weighted concepts connect reviews, game results and learning activity.', to: '/intelligence?tab=dna', cta: 'Read my strategy DNA', color: '#5de0c0' },
   { n: '03', icon: '⇄', title: 'Cross-game Training', promise: 'Learn an idea here and test it somewhere new.', detail: 'Concept overlap produces clear source-board, bridge-board and transfer-board pathways.', to: '/intelligence?tab=transfer', cta: 'Build a transfer route', color: '#65b9ff' },
   { n: '04', icon: '◉', title: 'Explainable Coach', promise: 'Recommendations show their evidence and purpose.', detail: 'Review-aware briefings explain what to notice, why it matters and where to practise next.', to: '/intelligence?tab=coach', cta: 'Ask the coach', color: '#f3c66e' },
   { n: '05', icon: '⬡', title: 'Adventure Campaigns', promise: 'Carry one concept through three complete worlds.', detail: 'Nine chapters use the real observe, learn, practise, play and reflect evidence loop.', to: '/adventures', cta: 'Choose an expedition', color: '#ff77b3' },
@@ -34,15 +35,16 @@ const FEATURES: Feature[] = [
 ];
 
 export default function StrategyOS() {
-  const profile = useProfile();
-  const events = useLearningMemory((state) => state.events);
-  const adventure = useAdventureStore();
-  const community = useCommunityStore();
-  const creator = useCreatorStore();
-  const reviews = loadRecords();
-  const chapters = Object.values(adventure.completed).reduce((sum, values) => sum + values.length, 0);
-  const scans = readScanDraft() ? 1 : 0;
-  const evidence = profile.totals.played + reviews.length + events.length;
+  const completedGames = useProfile((state) => state.totals.played);
+  const learningEvents = useLearningMemory((state) => state.events.length);
+  const chapters = useAdventureStore((state) =>
+    Object.values(state.completed).reduce((sum, values) => sum + values.length, 0));
+  const clubCount = useCommunityStore((state) => state.clubs.length);
+  const tournamentCount = useCommunityStore((state) => state.tournaments.length);
+  const creationCount = useCreatorStore((state) => state.creations.length);
+  const [reviews] = useState(loadRecords);
+  const [scans] = useState(() => readScanDraft() ? 1 : 0);
+  const evidence = completedGames + reviews.length + learningEvents;
 
   return (
     <div className="os-page">
@@ -50,46 +52,69 @@ export default function StrategyOS() {
         <div className="os-orbit" aria-hidden="true"><i /><i /><i /></div>
         <div className="os-hero-copy">
           <span className="section-overline">GrandMaster Strategy OS · ten connected systems</span>
-          <h1>Everything now learns from the same move.</h1>
-          <p>Replay, coaching, campaigns, community, creation, physical boards, accessibility and offline play use one on-device evidence foundation in this browser. Nothing is a decorative destination.</p>
-          <div className="os-actions"><Link className="btn primary lg glow" to="/intelligence">Open intelligence lab →</Link><Link className="btn lg" to="/adventures">Begin an adventure</Link></div>
+          <h1>Everything now connects around the same evidence.</h1>
+          <p>Replay and coaching share on-device play evidence in this browser. Campaigns, community, creation, physical boards, accessibility and offline play connect through shared routes and local state. Nothing here is presented as a finished feature unless it is usable.</p>
+          <div className="os-actions"><Link className="btn primary lg glow" to="/intelligence">Open intelligence lab →</Link><Link className="btn lg" to="/mind-games/cascade">Play Mind Cascade</Link><Link className="btn lg" to="/adventures">Begin an adventure</Link></div>
         </div>
-        <aside className="os-live glass-soft">
-          <span><i /> On-device learner record ready</span>
-          <div><strong>{evidence}</strong><small>evidence signals</small></div>
-          <div><strong>{profile.totals.played}</strong><small>completed games</small></div>
+        <aside className="os-live glass-soft" aria-label="On-device activity summary">
+          <span><i aria-hidden="true" /> On-device play record ready</span>
+          <div><strong>{evidence}</strong><small>recorded activity items</small></div>
+          <div><strong>{completedGames}</strong><small>completed games</small></div>
           <div><strong>{reviews.length}</strong><small>saved reviews</small></div>
         </aside>
       </header>
 
       <section className="os-flow" aria-label="Connected platform flow">
-        <span>Play</span><b>→</b><span>Replay</span><b>→</b><span>Strategy DNA</span><b>→</b><span>Transfer</span><b>→</b><span>Coach</span>
+        <span>Play</span><b aria-hidden="true">→</b><span>Replay</span><b aria-hidden="true">→</b><span>Strategy DNA</span><b aria-hidden="true">→</b><span>Transfer</span><b aria-hidden="true">→</b><span>Coach</span>
       </section>
 
-      <section className="os-feature-head">
-        <div><span className="section-overline">The complete expansion</span><h2>Ten features, one coherent platform.</h2></div>
-        <p>Each surface states what evidence it uses, what remains on this device and which online abilities depend on a connection.</p>
-      </section>
-      <section className="os-grid">
-        {FEATURES.map((feature) => (
-          <article key={feature.n} style={{ '--os-color': feature.color } as CSSProperties}>
-            <div className="os-card-top"><span>{feature.n}</span><i aria-hidden="true">{feature.icon}</i></div>
-            <small>{feature.promise}</small>
-            <h3>{feature.title}</h3>
-            <p>{feature.detail}</p>
-            <Link to={feature.to}>{feature.cta} <b>→</b></Link>
-          </article>
-        ))}
+      <section className="os-mind-game" aria-labelledby="os-mind-game-title">
+        <div>
+          <span className="section-overline">The next original strategy layer · now playable</span>
+          <h2 id="os-mind-game-title">Strategy now has an original experimental playground.</h2>
+          <p>Mind Cascade is the first game created specifically for GrandMaster’s learner model. It records in-game signals such as planning intervals, sequencing, objective efficiency and cascade depth on deterministic boards, then explains the evidence behind the next challenge.</p>
+          <p className="os-scope-note">These signals describe play inside Mind Cascade. They are not an IQ, aptitude or general-intelligence assessment.</p>
+          <div className="os-mind-signals" role="list" aria-label="Mind Cascade design principles">
+            <span role="listitem"><b>Forecastable</b><small>Ranked swaps with reasons</small></span>
+            <span role="listitem"><b>Reproducible</b><small>Seeded daily boards</small></span>
+            <span role="listitem"><b>Transparent</b><small>Between-round adaptation</small></span>
+          </div>
+          <Link className="btn primary lg" to="/mind-games/cascade">Enter Mind Cascade →</Link>
+        </div>
+        <div className="os-mind-diagram" aria-hidden="true">
+          <span>Observe</span><b>01</b><i />
+          <span>Forecast</span><b>02</b><i />
+          <span>Commit</span><b>03</b><i />
+          <span>Explain</span><b>04</b>
+        </div>
       </section>
 
-      <section className="os-footprint">
-        <div><span className="section-overline">Your current footprint</span><h2>The OS grows from real activity.</h2><p>These numbers are read from your saved platform state. They are never invented to make an empty dashboard look busy.</p></div>
-        <div className="os-footprint-grid" role="list">
+      <section className="os-features" aria-labelledby="os-features-title">
+        <div className="os-feature-head">
+          <div><span className="section-overline">The complete expansion</span><h2 id="os-features-title">Ten features, one coherent platform.</h2></div>
+          <p>Each surface states what evidence it uses, what remains on this device and which online abilities depend on a connection.</p>
+        </div>
+        <div className="os-grid">
+          {FEATURES.map((feature) => (
+            <article key={feature.n} style={{ '--os-color': feature.color } as CSSProperties}>
+              <div className="os-card-top"><span>{feature.n}</span><i aria-hidden="true">{feature.icon}</i></div>
+              <small>{feature.promise}</small>
+              <h3>{feature.title}</h3>
+              <p>{feature.detail}</p>
+              <Link to={feature.to}>{feature.cta} <b aria-hidden="true">→</b></Link>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="os-footprint" aria-labelledby="os-footprint-title">
+        <div><span className="section-overline">Your current footprint</span><h2 id="os-footprint-title">The OS grows from real activity.</h2><p>These numbers are read from your saved platform state. They are never invented to make an empty dashboard look busy.</p></div>
+        <div className="os-footprint-grid" role="list" aria-label="Saved platform activity">
           <span role="listitem"><strong>{chapters}</strong><small>adventure chapters</small></span>
-          <span role="listitem"><strong>{community.clubs.length}</strong><small>joined clubs</small></span>
-          <span role="listitem"><strong>{community.tournaments.length}</strong><small>saved brackets</small></span>
-          <span role="listitem"><strong>{creator.creations.length}</strong><small>authored creations</small></span>
-          <span role="listitem"><strong>{scans}</strong><small>verified scan ready</small></span>
+          <span role="listitem"><strong>{clubCount}</strong><small>joined clubs</small></span>
+          <span role="listitem"><strong>{tournamentCount}</strong><small>saved brackets</small></span>
+          <span role="listitem"><strong>{creationCount}</strong><small>authored creations</small></span>
+          <span role="listitem"><strong>{scans}</strong><small>saved scan draft</small></span>
         </div>
       </section>
     </div>

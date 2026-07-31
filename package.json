@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "smoke": "node scripts/smoke.mjs",
     "smoke:thumbnails": "node scripts/verify-thumbnails.mjs",
-    "smoke:expansion": "node scripts/verify-expansion.mjs"
+    "smoke:expansion": "node scripts/verify-expansion.mjs",
+    "smoke:mind-games": "node scripts/verify-mind-games.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.114.0",
